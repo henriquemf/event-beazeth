@@ -69,14 +69,14 @@
                 locale: "pt",
                 dateFormat: "Y-m",
                 altInput: true,
-                altFormat: "F de Y",
+                altFormat: "F Y",
                 allowInput: false,
             };
             if (typeof monthSelectPlugin !== "undefined") {
                 monthOptions.plugins = [new monthSelectPlugin({
                     shorthand: true,
                     dateFormat: "Y-m",
-                    altFormat: "F de Y",
+                    altFormat: "F Y",
                 })];
             }
             monthFlatpickr = flatpickr(monthPicker, monthOptions);

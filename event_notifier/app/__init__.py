@@ -1,4 +1,5 @@
 from datetime import datetime
+import json
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask, flash, jsonify, redirect, render_template, request, url_for
@@ -225,15 +226,44 @@ def create_app():
                     flash("Ative o lembrete de água para testar a notificação.", "error")
                     return redirect(url_for("hydration_view"))
 
-                ok, msg = send_desktop_notification(
-                    "MOMO BEBA ÁGUA 💗",
-                    "Meu amorzinho, hora de BEBER ÁGUA <3",
-                    exact_title=True,
-                )
-                if ok:
-                    flash("Teste enviado para a central de notificações do Windows.", "success")
+                sent_channels = 0
+
+                if app.config.get("ENABLE_DESKTOP_NOTIFICATIONS", False):
+                    ok, _ = send_desktop_notification(
+                        "MOMO BEBA ÁGUA 💗",
+                        "Meu amorzinho, hora de BEBER ÁGUA <3",
+                        exact_title=True,
+                    )
+                    if ok:
+                        sent_channels += 1
+
+                subscriptions = list_push_subscriptions(app.config["DB_PATH"])
+                if subscriptions:
+                    payload = json.dumps(
+                        {
+                            "title": "MOMO BEBA ÁGUA 💗",
+                            "body": "Meu amorzinho, hora de BEBER ÁGUA <3",
+                            "icon": "/static/icon.svg",
+                            "tag": "hydration-test",
+                        }
+                    )
+
+                    for sub in subscriptions:
+                        info = {
+                            "endpoint": sub["endpoint"],
+                            "keys": {
+                                "p256dh": sub["p256dh"],
+                                "auth": sub["auth"],
+                            },
+                        }
+                        ok, _ = send_web_push(app.config, info, payload)
+                        if ok:
+                            sent_channels += 1
+
+                if sent_channels > 0:
+                    flash("Teste de notificação enviado com sucesso.", "success")
                 else:
-                    flash(msg, "error")
+                    flash("Não foi possível enviar o teste. Ative notificações web na lateral e tente novamente.", "error")
             else:
                 flash("Lembrete de água atualizado.", "success")
             return redirect(url_for("hydration_view"))

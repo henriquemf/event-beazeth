@@ -304,6 +304,7 @@ body.page-leaving {
     background: var(--surface);
     color: var(--ink);
     font-family: var(--font-main);
+    z-index: 70;
 }
 
 .flatpickr-calendar.hasTime .flatpickr-time {
@@ -330,6 +331,11 @@ body.page-leaving {
 .flatpickr-current-month .flatpickr-monthDropdown-months,
 .flatpickr-current-month input.cur-year {
     color: var(--ink);
+    fill: var(--ink);
+}
+
+.flatpickr-months .flatpickr-prev-month svg,
+.flatpickr-months .flatpickr-next-month svg {
     fill: var(--ink);
 }
 
@@ -519,6 +525,15 @@ td small {
 
 .flatpickr-monthSelect-months .flatpickr-monthSelect-month {
     border-radius: 10px;
+    color: var(--ink);
+    border: 1px solid transparent;
+    background: color-mix(in srgb, var(--input-bg) 72%, transparent);
+    font-weight: 700;
+}
+
+.flatpickr-monthSelect-months .flatpickr-monthSelect-month:hover {
+    border-color: color-mix(in srgb, var(--accent) 55%, var(--stroke));
+    background: color-mix(in srgb, var(--accent) 22%, var(--input-bg));
 }
 
 .flatpickr-monthSelect-months .flatpickr-monthSelect-month.selected,
@@ -527,6 +542,17 @@ td small {
     background: var(--accent);
     border-color: var(--accent-dark);
     color: #fff;
+}
+
+body[data-dark="true"] .flatpickr-monthSelect-months .flatpickr-monthSelect-month {
+    color: #f8deff;
+    border-color: rgba(255, 186, 231, 0.16);
+    background: rgba(74, 44, 92, 0.72);
+}
+
+body[data-dark="true"] .flatpickr-monthSelect-months .flatpickr-monthSelect-month:hover {
+    border-color: rgba(255, 186, 231, 0.38);
+    background: rgba(95, 55, 119, 0.88);
 }
 
 .event-modal {

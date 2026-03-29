@@ -49,6 +49,20 @@
         return (err && err.message) ? err.message : "Erro ao ativar";
     }
 
+    function canEnableFallback(message) {
+        const msg = (message || "").toLowerCase();
+        if (!msg) {
+            return true;
+        }
+        if (msg.includes("permissão") || msg.includes("permission") || msg.includes("denied")) {
+            return false;
+        }
+        if (msg.includes("vapid") || msg.includes("applicationserverkey") || msg.includes("invalidaccess")) {
+            return false;
+        }
+        return true;
+    }
+
     function urlBase64ToUint8Array(base64String) {
         const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
         const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
@@ -217,7 +231,7 @@
         enableBtn.disabled = true;
         registerSubscription().catch(function (err) {
             const msg = formatSubscribeError(err);
-            if (msg.includes("Modo em tempo real")) {
+            if (msg.includes("Modo em tempo real") || canEnableFallback(msg)) {
                 setFallbackEnabled(true);
                 startLiveFallbackLoop();
             }
