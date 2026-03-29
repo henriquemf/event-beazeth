@@ -12,7 +12,7 @@ class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-key")
     DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 
-    DB_PATH = os.getenv("DB_PATH", str(BASE_DIR / "notifier.db"))
+    DB_PATH = os.getenv("DB_PATH", str(BASE_DIR / "notifier.db")).strip().strip('"').strip("'")
 
     ENABLE_DESKTOP_NOTIFICATIONS = os.getenv("ENABLE_DESKTOP_NOTIFICATIONS", "True").lower() == "true"
 

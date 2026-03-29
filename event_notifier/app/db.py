@@ -1,6 +1,7 @@
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime
+from pathlib import Path
 
 
 def _utc_now_iso() -> str:
@@ -9,7 +10,9 @@ def _utc_now_iso() -> str:
 
 @contextmanager
 def get_connection(db_path: str):
-    conn = sqlite3.connect(db_path)
+    db_file = Path(db_path)
+    db_file.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(str(db_file))
     conn.row_factory = sqlite3.Row
     try:
         yield conn
