@@ -163,6 +163,20 @@ body.page-leaving {
     animation: pageSlideIn 0.24s ease;
 }
 
+.site-love-footer {
+    width: min(1280px, 96vw);
+    margin: 0 auto 14px;
+    padding: 10px 14px;
+    text-align: center;
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--ink);
+    border: 1px solid var(--stroke);
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--surface) 82%, transparent);
+    backdrop-filter: blur(8px);
+}
+
 @keyframes pageSlideIn {
     from {
         opacity: 0.85;
