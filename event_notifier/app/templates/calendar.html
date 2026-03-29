@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}Calendário | Event Notifier{% endblock %}
+
+{% block head_extra %}
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.17/index.global.min.css" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/style.css" />
+{% endblock %}
+
+{% block content %}
+<section class="hero-card">
+    <h2>Calendário de Eventos e Cursos</h2>
+    <p>Visualize tudo em um calendário maior e identifique rapidamente por cor.</p>
+</section>
+
+<section class="panel-card calendar-panel">
+    <div class="calendar-topbar">
+        <label for="month-picker">Ir direto para mês/ano</label>
+        <input id="month-picker" type="text" placeholder="Selecione mês e ano" />
+    </div>
+    <div id="events-calendar" data-events-url="{{ url_for('events_api') }}"></div>
+</section>
+
+<div id="event-modal" class="event-modal" aria-hidden="true">
+    <div class="event-modal-backdrop" data-close-modal="1"></div>
+    <div class="event-modal-card" role="dialog" aria-modal="true" aria-labelledby="event-modal-title">
+        <button class="event-modal-close" type="button" data-close-modal="1" aria-label="Fechar">×</button>
+        <h3 id="event-modal-title">Detalhes do evento</h3>
+
+        <div class="event-preview">
+            <p class="event-preview-tag" id="event-preview-tag"></p>
+            <p class="event-preview-title" id="event-preview-title"></p>
+            <p class="event-preview-time" id="event-preview-time"></p>
+            <p class="event-preview-desc" id="event-preview-desc"></p>
+        </div>
+
+        <form id="event-edit-form" class="event-form event-modal-form" method="post">
+            <label>
+                Título
+                <input type="text" id="event-edit-title" name="title" required />
+            </label>
+            <label>
+                Descrição
+                <textarea id="event-edit-description" name="description" rows="3"></textarea>
+            </label>
+            <div class="inline-group">
+                <label>
+                    Data e hora
+                    <input type="text" id="event-edit-datetime" name="event_datetime" required />
+                </label>
+                <label>
+                    Tipo
+                    <select id="event-edit-tag" name="tag_type">
+                        <option value="evento">Evento</option>
+                        <option value="curso">Curso</option>
+                    </select>
+                </label>
+            </div>
+            <div class="event-modal-actions">
+                <button class="btn-primary" type="submit">Salvar edição</button>
+            </div>
+        </form>
+
+        <form id="event-delete-form" method="post" class="event-delete-form">
+            <button class="btn-danger" type="submit">Remover evento</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.17/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/index.js"></script>
+<script src="{{ url_for('static', filename='calendar-page.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,15 @@
+{
+  "name": "Event Notifier",
+  "short_name": "Notifier",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1320",
+  "theme_color": "#ff78b2",
+  "icons": [
+    {
+      "src": "/static/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

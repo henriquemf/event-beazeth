@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}Event Notifier{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Quicksand:wght@400;500;700&family=Fredoka:wght@400;600;700&family=Nunito:wght@400;600;700&family=Cherry+Bomb+One&family=Varela+Round&family=Poppins:wght@400;600;700&family=Pacifico&family=Montserrat:wght@400;600;700&family=Lobster+Two:wght@400;700&family=Raleway:wght@400;600;700&family=Comfortaa:wght@500;700&family=Rubik:wght@400;500;700&family=Caveat+Brush&family=Manrope:wght@400;600;700&family=Satisfy&family=Urbanist:wght@400;600;700&family=Great+Vibes&family=Lexend:wght@400;600;700&family=Berkshire+Swash&display=swap" rel="stylesheet" />
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='icon.svg') }}" />
+    <link rel="shortcut icon" href="{{ url_for('static', filename='icon.svg') }}" />
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+    {% block head_extra %}{% endblock %}
+</head>
+<body>
+    <div class="bg-candy"></div>
+    <div class="layout-shell">
+        <aside class="sidebar">
+            <div class="brand">
+                <span class="brand-dot"></span>
+                <div>
+                    <h1>Event Notifier</h1>
+                    <small>Organize seus momentos</small>
+                </div>
+            </div>
+
+            <nav class="menu">
+                <a class="menu-link {% if active_page == 'home' %}active{% endif %}" href="{{ url_for('home') }}">
+                    <span>📝</span>
+                    <span>Cadastro e lista</span>
+                </a>
+                <a class="menu-link {% if active_page == 'calendar' %}active{% endif %}" href="{{ url_for('calendar_view') }}">
+                    <span>📅</span>
+                    <span>Calendário</span>
+                </a>
+                <a class="menu-link {% if active_page == 'appearance' %}active{% endif %}" href="{{ url_for('appearance_view') }}">
+                    <span>🎨</span>
+                    <span>Aparência</span>
+                </a>
+                <a class="menu-link {% if active_page == 'hydration' %}active{% endif %}" href="{{ url_for('hydration_view') }}">
+                    <span>💧</span>
+                    <span>Beber água</span>
+                </a>
+            </nav>
+
+            <div class="legend-box">
+                <h3>Tags</h3>
+                <p><span class="tag tag-evento">Evento</span> Lembrete no Dia</p>
+                <p><span class="tag tag-curso">Curso</span> Lembrete no Dia + 15 e 7 Dias</p>
+            </div>
+
+            <div class="mode-box">
+                <h3>Modo</h3>
+                <label class="dark-toggle fancy" for="dark-toggle">
+                    <input id="dark-toggle" type="checkbox" />
+                    <span class="track"><span class="dot"></span></span>
+                    <span class="text">Dark mode</span>
+                </label>
+            </div>
+
+            <div class="mode-box push-box">
+                <h3>Notificações</h3>
+                <button id="push-enable-btn" class="btn-secondary" type="button">Ativar notificações web</button>
+                <button id="push-test-btn" class="btn-secondary" type="button">Testar notificação web</button>
+                <small id="push-status" class="field-help">Status: Não configurado</small>
+            </div>
+
+        </aside>
+
+        <main class="main-content">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <section class="alerts">
+                        {% for category, message in messages %}
+                            <div class="alert {{ category }}">{{ message }}</div>
+                        {% endfor %}
+                    </section>
+                {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    <script src="{{ url_for('static', filename='theme.js') }}"></script>
+    <script src="{{ url_for('static', filename='ui-effects.js') }}"></script>
+    <script src="{{ url_for('static', filename='push.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

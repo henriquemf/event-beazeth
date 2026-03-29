@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% block title %}Cadastro | Event Notifier{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+{% endblock %}
+
+{% block content %}
+<section class="hero-card">
+    <h2>Crie seus lembretes fofinhos</h2>
+    <p>Cadastre eventos e cursos com tags coloridas e receba alertas direto nas notificações do Windows.</p>
+</section>
+
+<section class="panel-card">
+    <h3>Novo registro</h3>
+    <form method="post" class="event-form">
+        <label>
+            Título do evento
+            <input type="text" name="title" placeholder="Ex: Workshop de maquiagem" required />
+        </label>
+
+        <label>
+            Descrição
+            <textarea name="description" rows="3" placeholder="Detalhes do evento..."></textarea>
+        </label>
+
+        <label>
+            Data e hora
+            <input id="event-datetime" type="text" name="event_datetime" placeholder="Selecione data e hora" required />
+        </label>
+
+        <label class="dark-toggle fancy time-toggle" for="include-time">
+            <input id="include-time" type="checkbox" name="include_time" />
+            <span class="track"><span class="dot"></span></span>
+            <span class="text">Incluir horário (opcional)</span>
+        </label>
+
+        <label>
+            Tag
+            <select name="tag_type" required>
+                <option value="evento">Evento</option>
+                <option value="curso">Curso</option>
+            </select>
+        </label>
+
+        <button type="submit" class="btn-primary">Salvar evento</button>
+    </form>
+</section>
+
+<section class="panel-card">
+    <h3>Próximos eventos</h3>
+    {% if events %}
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Título</th>
+                        <th>Data</th>
+                        <th>Tag</th>
+                        <th>Ação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for event in events %}
+                        <tr>
+                            <td>
+                                <strong>{{ event['title'] }}</strong>
+                                <small>{{ event['description'] or '-' }}</small>
+                            </td>
+                            <td>{{ event['event_datetime'].replace('T', ' ') }}</td>
+                            <td>
+                                {% if event['tag_type'] == 'curso' %}
+                                    <span class="tag tag-curso">Curso</span>
+                                {% else %}
+                                    <span class="tag tag-evento">Evento</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <form method="post" action="{{ url_for('remove_event', event_id=event['id']) }}" onsubmit="return confirm('Deseja excluir este evento?');">
+                                    <button class="btn-danger" type="submit">Excluir</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="empty">Nenhum evento cadastrado ainda.</p>
+    {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const input = document.getElementById('event-datetime');
+        const includeTimeToggle = document.getElementById('include-time');
+        if (!input || typeof flatpickr === 'undefined') {
+            return;
+        }
+
+        let picker;
+
+        function mountPicker(withTime) {
+            if (picker) {
+                picker.destroy();
+            }
+
+            picker = flatpickr(input, {
+                locale: 'pt',
+                enableTime: withTime,
+                time_24hr: true,
+                dateFormat: withTime ? 'Y-m-d\\TH:i' : 'Y-m-d',
+                altInput: true,
+                altFormat: withTime ? 'd/m/Y H:i' : 'd/m/Y',
+                minuteIncrement: 5,
+                allowInput: false,
+            });
+        }
+
+        mountPicker(false);
+
+        if (includeTimeToggle) {
+            includeTimeToggle.addEventListener('change', function () {
+                const current = picker && picker.selectedDates && picker.selectedDates[0] ? picker.selectedDates[0] : null;
+                mountPicker(includeTimeToggle.checked);
+                if (current) {
+                    picker.setDate(current, true);
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

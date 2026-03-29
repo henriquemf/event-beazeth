@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block title %}Beber água | Event Notifier{% endblock %}
+
+{% block content %}
+<section class="hero-card">
+    <h2>Lembrete de Beber Água</h2>
+    <p>Ative lembretes desktop durante seu período do dia para manter uma rotina saudável.</p>
+</section>
+
+<section class="panel-card">
+    <h3>Configuração</h3>
+    <form method="post" class="event-form hydration-form">
+        <label class="dark-toggle fancy" for="hydration-enabled">
+            <input id="hydration-enabled" type="checkbox" name="enabled" {% if settings and settings['enabled'] %}checked{% endif %} />
+            <span class="track"><span class="dot"></span></span>
+            <span class="text">Ativar lembrete de água</span>
+        </label>
+
+        <div class="hydration-block">
+            <h4>Intervalo do lembrete</h4>
+            <label>
+                A cada quantos minutos?
+                <input type="number" name="interval_minutes" min="1" step="1" value="{{ settings['interval_minutes'] if settings else 60 }}" required />
+            </label>
+            <small class="field-help">Exemplo: 37 minutos. Você escolhe qualquer valor.</small>
+        </div>
+
+        <div class="hydration-block">
+            <h4>Período do dia</h4>
+            <div class="inline-group">
+                <label>
+                    Início
+                    <input type="time" name="start_time" step="60" value="{{ settings['start_time'] if settings else '08:00' }}" required />
+                </label>
+
+                <label>
+                    Fim
+                    <input type="time" name="end_time" step="60" value="{{ settings['end_time'] if settings else '22:00' }}" required />
+                </label>
+            </div>
+            <small class="field-help">Pode cruzar meia-noite: ex. início 22:30 e fim 06:00.</small>
+        </div>
+
+        <div class="hydration-actions">
+            <button type="submit" name="action" value="save" class="btn-primary">Salvar lembrete</button>
+            <button type="submit" name="action" value="test" class="btn-secondary">Testar notificação agora</button>
+        </div>
+    </form>
+</section>
+{% endblock %}

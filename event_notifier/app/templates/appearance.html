@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block title %}Aparência | Event Notifier{% endblock %}
+
+{% block content %}
+<section class="hero-card">
+    <h2>Estúdio de Aparência</h2>
+    <p>Escolha o visual pelo preview. O dark mode agora fica no menu da esquerda.</p>
+</section>
+
+<section class="panel-card">
+    <h3>Preview de Temas</h3>
+    <div class="theme-grid">
+        <button type="button" class="theme-preview theme-rose" data-theme="rose"><span>Rose Dream</span></button>
+        <button type="button" class="theme-preview theme-berry" data-theme="berry"><span>Berry Pop</span></button>
+        <button type="button" class="theme-preview theme-peach" data-theme="peach"><span>Peach Glow</span></button>
+        <button type="button" class="theme-preview theme-lavender" data-theme="lavender"><span>Lavender Kiss</span></button>
+        <button type="button" class="theme-preview theme-mint" data-theme="mint"><span>Mint Candy</span></button>
+        <button type="button" class="theme-preview theme-sunset" data-theme="sunset"><span>Sunset Blush</span></button>
+        <button type="button" class="theme-preview theme-ocean" data-theme="ocean"><span>Ocean Doll</span></button>
+        <button type="button" class="theme-preview theme-plum" data-theme="plum"><span>Plum Glow</span></button>
+        <button type="button" class="theme-preview theme-cocoa" data-theme="cocoa"><span>Cocoa Berry</span></button>
+        <button type="button" class="theme-preview theme-strawberry" data-theme="strawberry"><span>Strawberry Milk</span></button>
+    </div>
+</section>
+
+<section class="panel-card">
+    <h3>Preview de Fontes</h3>
+    <div class="font-grid">
+        <button type="button" class="font-preview font-sugar" data-font="sugar"><strong>Sugar</strong><small>Eventos encantadores</small></button>
+        <button type="button" class="font-preview font-bubble" data-font="bubble"><strong>Bubble</strong><small>Eventos encantadores</small></button>
+        <button type="button" class="font-preview font-love" data-font="love"><strong>Love Note</strong><small>Eventos encantadores</small></button>
+        <button type="button" class="font-preview font-daisy" data-font="daisy"><strong>Daisy</strong><small>Eventos encantadores</small></button>
+        <button type="button" class="font-preview font-glam" data-font="glam"><strong>Glam</strong><small>Eventos encantadores</small></button>
+        <button type="button" class="font-preview font-cotton" data-font="cotton"><strong>Cotton</strong><small>Eventos encantadores</small></button>
+        <button type="button" class="font-preview font-diary" data-font="diary"><strong>Diary</strong><small>Eventos encantadores</small></button>
+        <button type="button" class="font-preview font-pearl" data-font="pearl"><strong>Pearl</strong><small>Eventos encantadores</small></button>
+        <button type="button" class="font-preview font-chic" data-font="chic"><strong>Chic</strong><small>Eventos encantadores</small></button>
+        <button type="button" class="font-preview font-dream" data-font="dream"><strong>Dream</strong><small>Eventos encantadores</small></button>
+    </div>
+</section>
+{% endblock %}
