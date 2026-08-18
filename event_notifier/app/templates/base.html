@@ -15,22 +15,42 @@
     {# Só as fontes do tema padrão bloqueiam a renderização. #}
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Quicksand:wght@400;500;700&display=swap" />
 
-    {# As outras 18 famílias só existem para os previews de fonte: carregam sem bloquear. #}
-    <link rel="stylesheet" media="print" onload="this.media='all'"
-          href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Nunito:wght@400;600;700&family=Cherry+Bomb+One&family=Varela+Round&family=Poppins:wght@400;600;700&family=Pacifico&family=Montserrat:wght@400;600;700&family=Lobster+Two:wght@400;700&family=Raleway:wght@400;600;700&family=Comfortaa:wght@500;700&family=Rubik:wght@400;500;700&family=Caveat+Brush&family=Manrope:wght@400;600;700&family=Satisfy&family=Urbanist:wght@400;600;700&family=Great+Vibes&family=Lexend:wght@400;600;700&family=Berkshire+Swash&display=swap" />
-    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Nunito:wght@400;600;700&family=Cherry+Bomb+One&family=Varela+Round&family=Poppins:wght@400;600;700&family=Pacifico&family=Montserrat:wght@400;600;700&family=Lobster+Two:wght@400;700&family=Raleway:wght@400;600;700&family=Comfortaa:wght@500;700&family=Rubik:wght@400;500;700&family=Caveat+Brush&family=Manrope:wght@400;600;700&family=Satisfy&family=Urbanist:wght@400;600;700&family=Great+Vibes&family=Lexend:wght@400;600;700&family=Berkshire+Swash&display=swap" /></noscript>
-
     <link rel="icon" type="image/svg+xml" href="{{ static_url('icon.svg') }}" />
     <link rel="manifest" href="{{ static_url('manifest.webmanifest') }}" />
     <link rel="stylesheet" href="{{ static_url('style.css') }}" />
     <script>
-        /* Aplica tema/fonte antes da primeira pintura: evita flash de tema errado. */
+        /* Aplica tema/fonte antes da primeira pintura: evita flash de tema errado
+           e dispara o download da fonte escolhida o mais cedo possível. */
         (function () {
+            var FONT_FAMILIES = {
+                bubble: "Nunito:wght@400;600;700&family=Fredoka:wght@400;600;700",
+                love: "Varela+Round&family=Cherry+Bomb+One",
+                daisy: "Poppins:wght@400;600;700&family=Pacifico",
+                glam: "Montserrat:wght@400;600;700&family=Lobster+Two:wght@400;700",
+                cotton: "Raleway:wght@400;600;700&family=Comfortaa:wght@500;700",
+                diary: "Rubik:wght@400;500;700&family=Caveat+Brush",
+                pearl: "Manrope:wght@400;600;700&family=Satisfy",
+                chic: "Urbanist:wght@400;600;700&family=Great+Vibes",
+                dream: "Lexend:wght@400;600;700&family=Berkshire+Swash"
+            };
+
             try {
                 var root = document.documentElement;
+                var font = localStorage.getItem("en_font") || "sugar";
+
+                /* Segura as transições até a página estar montada. */
+                root.classList.add("en-preload");
                 root.dataset.theme = localStorage.getItem("en_theme") || "rose";
-                root.dataset.font = localStorage.getItem("en_font") || "sugar";
+                root.dataset.font = font;
                 root.dataset.dark = localStorage.getItem("en_dark") === "true" ? "true" : "false";
+
+                /* "sugar" já vem no CSS bloqueante; as demais só baixam se escolhidas. */
+                if (FONT_FAMILIES[font]) {
+                    var link = document.createElement("link");
+                    link.rel = "stylesheet";
+                    link.href = "https://fonts.googleapis.com/css2?family=" + FONT_FAMILIES[font] + "&display=swap";
+                    document.head.appendChild(link);
+                }
             } catch (e) {}
         })();
     </script>

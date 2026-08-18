@@ -115,6 +115,7 @@
         grid.style.setProperty("--days", days.length);
         grid.style.setProperty("--hour-h", hourHeight + "px");
         grid.style.setProperty("--hours-count", (range.end - range.start) / 60);
+        grid.style.setProperty("--view-start", range.start);
         grid.dataset.weekend = showWeekend ? "on" : "off";
 
         head.innerHTML = days
@@ -209,12 +210,22 @@
     }
 
     function applyGeometry(el, block, lane, lanes) {
-        const height = Math.max(durationToPx(block.endMinute - block.startMinute), 16);
-        el.style.top = minuteToPx(block.startMinute) + "px";
-        el.style.height = height + "px";
-        el.style.left = "calc(" + (lane / lanes) * 100 + "% + 3px)";
-        el.style.width = "calc(" + (1 / lanes) * 100 + "% - 6px)";
-        el.classList.toggle("is-tiny", height < 34);
+        el.style.setProperty("--b-start", block.startMinute);
+        el.style.setProperty("--b-dur", block.endMinute - block.startMinute);
+        if (lane !== undefined) {
+            el.style.setProperty("--lane", lane);
+            el.style.setProperty("--lanes", lanes);
+        }
+        el.classList.toggle("is-tiny", durationToPx(block.endMinute - block.startMinute) < 34);
+    }
+
+    /* Reaplica só o rótulo de bloco curto após mudar o zoom: nenhuma leitura de
+       layout, então não força reflow. */
+    function refreshTinyFlags() {
+        canvas.querySelectorAll(".planner-block").forEach(function (el) {
+            const duration = Number(el.style.getPropertyValue("--b-dur")) || 60;
+            el.classList.toggle("is-tiny", durationToPx(duration) < 34);
+        });
     }
 
     function renderBlocks() {
@@ -268,21 +279,34 @@
 
         const line = document.createElement("div");
         line.className = "planner-now";
-        line.style.top = minuteToPx(minute) + "px";
+        line.style.setProperty("--now-min", minute);
         column.appendChild(line);
     }
 
     /* -------------------------------------------------------------- pointer */
 
+    let cachedRect = null;
+
+    function canvasRect() {
+        if (!cachedRect) {
+            cachedRect = canvas.getBoundingClientRect();
+        }
+        return cachedRect;
+    }
+
+    function invalidateRect() {
+        cachedRect = null;
+    }
+
     function minuteFromPointer(clientY) {
-        const rect = canvas.getBoundingClientRect();
+        const rect = canvasRect();
         const raw = range.start + ((clientY - rect.top) / hourHeight) * 60;
         return clamp(raw, range.start, range.end);
     }
 
     function dayFromPointer(clientX) {
         const days = visibleDays();
-        const rect = canvas.getBoundingClientRect();
+        const rect = canvasRect();
         const width = rect.width / days.length;
         const index = clamp(Math.floor((clientX - rect.left) / width), 0, days.length - 1);
         return days[index];
@@ -349,8 +373,12 @@
         }
 
         event.preventDefault();
-        window.addEventListener("pointermove", onPointerMove);
+        invalidateRect();
+        window.addEventListener("pointermove", onPointerMove, { passive: true });
         window.addEventListener("pointerup", onPointerUp);
+        if (scroller) {
+            scroller.addEventListener("scroll", invalidateRect, { passive: true });
+        }
     }
 
     function updateGhostLabel() {
@@ -373,7 +401,25 @@
         }
     }
 
+    let pendingMove = null;
+    let moveFrame = 0;
+
     function onPointerMove(event) {
+        pendingMove = { clientX: event.clientX, clientY: event.clientY };
+        if (moveFrame) {
+            return;
+        }
+        moveFrame = window.requestAnimationFrame(function () {
+            moveFrame = 0;
+            const point = pendingMove;
+            pendingMove = null;
+            if (point) {
+                processMove(point);
+            }
+        });
+    }
+
+    function processMove(event) {
         if (!drag) {
             return;
         }
@@ -427,6 +473,15 @@
     function onPointerUp() {
         window.removeEventListener("pointermove", onPointerMove);
         window.removeEventListener("pointerup", onPointerUp);
+        if (scroller) {
+            scroller.removeEventListener("scroll", invalidateRect);
+        }
+        if (moveFrame) {
+            window.cancelAnimationFrame(moveFrame);
+            moveFrame = 0;
+        }
+        pendingMove = null;
+        invalidateRect();
 
         const current = drag;
         drag = null;
@@ -628,10 +683,12 @@
     function refresh(rebuild) {
         if (rebuild) {
             buildSkeleton();
-        } else {
-            grid.style.setProperty("--hour-h", hourHeight + "px");
+            renderBlocks();
+            return;
         }
-        renderBlocks();
+        // Zoom: uma variável muda e o CSS reposiciona tudo. Sem rebuild de DOM.
+        grid.style.setProperty("--hour-h", hourHeight + "px");
+        refreshTinyFlags();
     }
 
     weekendToggle.checked = showWeekend;
@@ -644,8 +701,11 @@
     zoomInput.value = String(hourHeight);
     zoomInput.addEventListener("input", function () {
         hourHeight = clamp(parseInt(zoomInput.value, 10) || 52, 28, 110);
-        localStorage.setItem(STORE.zoom, String(hourHeight));
         refresh(false);
+    });
+    // Grava só ao soltar o slider, em vez de a cada tick.
+    zoomInput.addEventListener("change", function () {
+        localStorage.setItem(STORE.zoom, String(hourHeight));
     });
 
     function syncCompactButton() {
@@ -715,6 +775,7 @@
     });
 
     window.addEventListener("resize", function () {
+        invalidateRect();
         renderNowLine();
     });
 

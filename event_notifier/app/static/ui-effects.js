@@ -90,6 +90,14 @@
     function initEffects() {
         document.body.classList.add("page-ready");
 
+        // Libera as transições só depois do primeiro quadro pintado, para que
+        // estados restaurados de localStorage não apareçam animando.
+        requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+                document.documentElement.classList.remove("en-preload");
+            });
+        });
+
         document.addEventListener("click", function (event) {
             const clickable = event.target.closest("button, .btn-primary, .btn-danger, .theme-preview, .font-preview, .fc-button");
             if (clickable) {
@@ -97,20 +105,15 @@
             }
 
             const anchor = event.target.closest("a.menu-link");
-            if (!anchor || !isPrimaryLeftClick(event)) {
-                return;
-            }
-            if (!shouldHandleNavLink(anchor)) {
+            if (!anchor || !isPrimaryLeftClick(event) || !shouldHandleNavLink(anchor)) {
                 return;
             }
 
-            event.preventDefault();
+            // Navegação segue nativa (sem preventDefault + setTimeout): o atraso
+            // de 80ms por clique era o que dava a sensação de travado. A transição
+            // visual fica por conta de @view-transition no CSS.
             playSoftTone("nav");
             document.body.classList.add("page-leaving");
-
-            window.setTimeout(function () {
-                window.location.href = anchor.href;
-            }, 80);
         });
     }
 

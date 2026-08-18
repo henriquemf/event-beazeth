@@ -4,6 +4,9 @@ Aplicativo simples para cadastrar eventos e enviar notificações em:
 - Web Push (notificação do navegador/Windows sem Python local)
 - Desktop local opcional (quando rodando no Windows)
 
+Website:
+- https://events-beazeth.onrender.com/
+
 Recursos de interface:
 - Tag de tipo no cadastro: `Evento` ou `Curso`, cada uma com cor própria
 - Sidebar com menu de navegação
@@ -47,6 +50,23 @@ Endpoints:
 
 Blocos de rotina são gravados com `day_of_week = -1` e renderizados em todas as colunas visíveis.
 
+## Performance
+
+Medido com Playwright + throttle de CPU 4x, 35 blocos no planner, mediana de 5 execuções:
+
+| Cenário | Antes | Depois |
+| --- | --- | --- |
+| Scroll do planner | 7 fps (70% dos frames perdidos) | **60 fps (0% perdidos)** |
+| Scroll da home | 8 fps | **58 fps** |
+| Slider de zoom do planner | 4 fps | **60 fps** |
+| CSS de fontes por página | 102 KB | **8 KB** (102 KB só em `/appearance`) |
+
+As três causas, isoladas por teste A/B:
+
+1. **`backdrop-filter: blur()` nos cartões** — obrigava o compositor a reamostrar o fundo a cada frame. Sozinho respondia por toda a queda de 60 para 30 fps. Substituído por uma superfície opaca equivalente (`--surface-solid`, o `--surface` translúcido sobre uma camada sólida do fundo do tema). O blur ficou só no fundo do modal, que é um elemento único e sem scroll atrás.
+2. **`repeating-linear-gradient` das linhas da grade** — mudar o zoom repintava a grade inteira (24h x 7 colunas). Trocado por um tile pequeno com `background-size`, que o browser rasteriza uma vez e replica.
+3. **Atraso artificial de 80 ms em cada navegação** — o clique no menu dava `preventDefault` e esperava um `setTimeout` antes de trocar de página. Removido; a transição visual agora é `@view-transition` nativa, que não custa nada e não atrasa.
+
 ## Otimizações aplicadas
 
 - Fontes: só as duas famílias do tema padrão bloqueiam a renderização; as outras 18 (usadas apenas nos previews) carregam de forma assíncrona
@@ -56,6 +76,10 @@ Blocos de rotina são gravados com `day_of_week = -1` e renderizados em todas as
 - SQLite em modo WAL com `busy_timeout`, para o scheduler não travar as requisições
 - Índices em `events(event_datetime)`, `reminder_dispatches` e `planner_blocks(day_of_week, start_minute)`
 - `preconnect`/`dns-prefetch` para os CDNs usados
+- Geometria dos blocos do planner derivada de CSS custom properties: o zoom vira recálculo de estilo, sem reconstruir DOM
+- `pointermove` do arraste agrupado em `requestAnimationFrame`, com o rect do canvas em cache (evita reflow síncrono por evento)
+- `contain: layout paint style` nas colunas do planner
+- Animações restritas a `transform`/`opacity` (rodam no compositor), respeitando `prefers-reduced-motion`
 
 ## Estrutura
 
