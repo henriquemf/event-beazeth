@@ -1,4 +1,5 @@
 from datetime import datetime
+from pathlib import Path
 import json
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -7,13 +8,17 @@ from flask import Flask, flash, jsonify, redirect, render_template, request, url
 from app.config import Config
 from app.db import (
     delete_event,
+    delete_planner_block,
     get_hydration_settings,
     init_db,
     insert_event,
+    insert_planner_block,
+    list_planner_blocks,
     list_push_subscriptions,
     list_events,
     delete_push_subscription,
     update_event,
+    update_planner_block,
     upsert_push_subscription,
     upsert_hydration_settings,
 )
@@ -34,12 +39,31 @@ def create_app():
 
     init_db(app.config["DB_PATH"])
 
+    static_dir = Path(app.static_folder)
+    asset_versions = {}
+
+    def static_url(filename):
+        """URL de estático com hash de mtime, para cache longo sem servir arquivo velho."""
+        if filename not in asset_versions or app.config["DEBUG"]:
+            try:
+                asset_versions[filename] = int((static_dir / filename).stat().st_mtime)
+            except OSError:
+                asset_versions[filename] = 0
+        return url_for("static", filename=filename, v=asset_versions[filename])
+
+    app.jinja_env.globals["static_url"] = static_url
+    app.jinja_env.trim_blocks = True
+    app.jinja_env.lstrip_blocks = True
+
     @app.after_request
     def add_security_headers(response):
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+        # Estáticos são versionados por ?v=<mtime>, então podem ficar em cache longo.
+        if request.path.startswith("/static/") and request.args.get("v"):
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
         return response
 
     @app.get("/healthz")
@@ -105,6 +129,86 @@ def create_app():
     @app.get("/appearance")
     def appearance_view():
         return render_template("appearance.html", active_page="appearance")
+
+    @app.get("/planner")
+    def planner_view():
+        return render_template("planner.html", active_page="planner")
+
+    def _parse_planner_payload(payload):
+        """Valida e normaliza o corpo de um bloco do planner.
+
+        Retorna (dados, None) em sucesso ou (None, mensagem de erro).
+        """
+        title = (payload.get("title") or "").strip()
+        if not title:
+            return None, "Informe o título do bloco."
+        if len(title) > 120:
+            title = title[:120]
+
+        notes = (payload.get("notes") or "").strip()[:500]
+
+        try:
+            start_minute = int(payload.get("startMinute"))
+            end_minute = int(payload.get("endMinute"))
+        except (TypeError, ValueError):
+            return None, "Horário inválido."
+
+        is_routine = bool(payload.get("isRoutine"))
+
+        try:
+            day_of_week = int(payload.get("dayOfWeek", 0))
+        except (TypeError, ValueError):
+            day_of_week = 0
+
+        if not is_routine and not 0 <= day_of_week <= 6:
+            return None, "Dia da semana inválido."
+
+        # Grade de 15 minutos, mínimo de um slot, limite no fim do dia.
+        start_minute = max(0, min(start_minute, 1425))
+        end_minute = max(start_minute + 15, min(end_minute, 1440))
+
+        return (
+            {
+                "title": title,
+                "notes": notes,
+                "day_of_week": day_of_week,
+                "start_minute": start_minute,
+                "end_minute": end_minute,
+                "color": payload.get("color") or "rose",
+                "is_routine": is_routine,
+            },
+            None,
+        )
+
+    @app.get("/api/planner/blocks")
+    def planner_blocks_list():
+        return jsonify({"ok": True, "blocks": list_planner_blocks(app.config["DB_PATH"])})
+
+    @app.post("/api/planner/blocks")
+    def planner_blocks_create():
+        data, error = _parse_planner_payload(request.get_json(silent=True) or {})
+        if error:
+            return jsonify({"ok": False, "message": error}), 400
+
+        block = insert_planner_block(app.config["DB_PATH"], **data)
+        return jsonify({"ok": True, "block": block}), 201
+
+    @app.put("/api/planner/blocks/<int:block_id>")
+    def planner_blocks_update(block_id: int):
+        data, error = _parse_planner_payload(request.get_json(silent=True) or {})
+        if error:
+            return jsonify({"ok": False, "message": error}), 400
+
+        block = update_planner_block(app.config["DB_PATH"], block_id, **data)
+        if block is None:
+            return jsonify({"ok": False, "message": "Bloco não encontrado."}), 404
+        return jsonify({"ok": True, "block": block})
+
+    @app.delete("/api/planner/blocks/<int:block_id>")
+    def planner_blocks_delete(block_id: int):
+        if not delete_planner_block(app.config["DB_PATH"], block_id):
+            return jsonify({"ok": False, "message": "Bloco não encontrado."}), 404
+        return jsonify({"ok": True})
 
     @app.get("/api/events")
     def events_api():

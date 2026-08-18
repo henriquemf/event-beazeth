@@ -43,9 +43,16 @@
     }
 
     function applyPreferences(theme, font, dark) {
-        document.body.dataset.theme = theme;
-        document.body.dataset.font = font;
-        document.body.dataset.dark = String(Boolean(dark));
+        // Aplicado no <html> e no <body>: o <html> pinta o fundo do canvas
+        // (área de overscroll) e o <body> mantém os seletores existentes.
+        [document.documentElement, document.body].forEach(function (node) {
+            if (!node) {
+                return;
+            }
+            node.dataset.theme = theme;
+            node.dataset.font = font;
+            node.dataset.dark = String(Boolean(dark));
+        });
     }
 
     function normalizeTheme(theme) {
