@@ -1,0 +1,104 @@
+"""Tela do weekly planner: grade semanal e CRUD dos blocos."""
+
+from flask import Blueprint, current_app, jsonify, render_template, request
+
+from app.db import (
+    delete_planner_block,
+    insert_planner_block,
+    list_planner_blocks,
+    update_planner_block,
+)
+
+
+bp = Blueprint("planner", __name__)
+
+SNAP_MINUTES = 15
+DAY_MINUTES = 1440
+MAX_TITLE = 120
+MAX_NOTES = 500
+
+
+def parse_block_payload(payload):
+    """Valida e normaliza o corpo de um bloco do planner.
+
+    Retorna (dados, None) em sucesso ou (None, mensagem de erro).
+    """
+    title = (payload.get("title") or "").strip()
+    if not title:
+        return None, "Informe o título do bloco."
+    if len(title) > MAX_TITLE:
+        title = title[:MAX_TITLE]
+
+    notes = (payload.get("notes") or "").strip()[:MAX_NOTES]
+
+    try:
+        start_minute = int(payload.get("startMinute"))
+        end_minute = int(payload.get("endMinute"))
+    except (TypeError, ValueError):
+        return None, "Horário inválido."
+
+    is_routine = bool(payload.get("isRoutine"))
+
+    try:
+        day_of_week = int(payload.get("dayOfWeek", 0))
+    except (TypeError, ValueError):
+        day_of_week = 0
+
+    if not is_routine and not 0 <= day_of_week <= 6:
+        return None, "Dia da semana inválido."
+
+    # Grade de 15 minutos, mínimo de um slot, limite no fim do dia.
+    start_minute = max(0, min(start_minute, DAY_MINUTES - SNAP_MINUTES))
+    end_minute = max(start_minute + SNAP_MINUTES, min(end_minute, DAY_MINUTES))
+
+    return (
+        {
+            "title": title,
+            "notes": notes,
+            "day_of_week": day_of_week,
+            "start_minute": start_minute,
+            "end_minute": end_minute,
+            "color": payload.get("color") or "rose",
+            "is_routine": is_routine,
+        },
+        None,
+    )
+
+
+@bp.get("/planner")
+def index():
+    return render_template("pages/planner.html", active_page="planner")
+
+
+@bp.get("/api/planner/blocks")
+def blocks_list():
+    return jsonify({"ok": True, "blocks": list_planner_blocks(current_app.config["DB_PATH"])})
+
+
+@bp.post("/api/planner/blocks")
+def blocks_create():
+    data, error = parse_block_payload(request.get_json(silent=True) or {})
+    if error:
+        return jsonify({"ok": False, "message": error}), 400
+
+    block = insert_planner_block(current_app.config["DB_PATH"], **data)
+    return jsonify({"ok": True, "block": block}), 201
+
+
+@bp.put("/api/planner/blocks/<int:block_id>")
+def blocks_update(block_id: int):
+    data, error = parse_block_payload(request.get_json(silent=True) or {})
+    if error:
+        return jsonify({"ok": False, "message": error}), 400
+
+    block = update_planner_block(current_app.config["DB_PATH"], block_id, **data)
+    if block is None:
+        return jsonify({"ok": False, "message": "Bloco não encontrado."}), 404
+    return jsonify({"ok": True, "block": block})
+
+
+@bp.delete("/api/planner/blocks/<int:block_id>")
+def blocks_delete(block_id: int):
+    if not delete_planner_block(current_app.config["DB_PATH"], block_id):
+        return jsonify({"ok": False, "message": "Bloco não encontrado."}), 404
+    return jsonify({"ok": True})

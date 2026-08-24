@@ -1,0 +1,112 @@
+/* Tema do flatpickr (biblioteca de terceiros) nas cores do app. */
+
+.flatpickr-calendar {
+    border: 1px solid var(--stroke);
+    box-shadow: 0 12px 30px -20px var(--shadow);
+    background: var(--surface);
+    color: var(--ink);
+    font-family: var(--font-main);
+    z-index: 70;
+}
+
+.flatpickr-calendar.hasTime .flatpickr-time {
+    border-top: 1px solid var(--stroke);
+    background: var(--input-bg);
+}
+
+.flatpickr-time .numInputWrapper,
+.flatpickr-time .flatpickr-am-pm,
+.flatpickr-time .numInput {
+    background: transparent;
+    color: var(--ink);
+}
+
+.flatpickr-time .numInputWrapper span.arrowUp:after {
+    border-bottom-color: var(--ink-soft);
+}
+
+.flatpickr-time .numInputWrapper span.arrowDown:after {
+    border-top-color: var(--ink-soft);
+}
+
+.flatpickr-months .flatpickr-month,
+.flatpickr-current-month .flatpickr-monthDropdown-months,
+.flatpickr-current-month input.cur-year {
+    color: var(--ink);
+    fill: var(--ink);
+}
+
+.flatpickr-months .flatpickr-prev-month svg,
+.flatpickr-months .flatpickr-next-month svg {
+    fill: var(--ink);
+}
+
+.flatpickr-day,
+.flatpickr-weekday {
+    color: var(--ink);
+}
+
+.flatpickr-day.today {
+    border-color: var(--accent);
+}
+
+.flatpickr-day.selected,
+.flatpickr-day.selected:hover {
+    background: var(--accent);
+    border-color: var(--accent-dark);
+}
+
+.flatpickr-time input,
+.flatpickr-time .flatpickr-am-pm {
+    color: var(--ink);
+}
+
+[data-dark="true"] .flatpickr-calendar {
+    background: rgba(40, 23, 48, 0.96);
+    border-color: var(--stroke);
+}
+
+[data-dark="true"] .flatpickr-calendar.hasTime .flatpickr-time {
+    background: rgba(58, 33, 70, 0.95);
+}
+
+[data-dark="true"] .flatpickr-day,
+[data-dark="true"] .flatpickr-weekday,
+[data-dark="true"] .flatpickr-current-month .flatpickr-monthDropdown-months,
+[data-dark="true"] .flatpickr-current-month input.cur-year {
+    color: var(--ink);
+}
+
+.calendar-topbar .flatpickr-input[readonly] {
+    cursor: pointer;
+}
+
+.flatpickr-monthSelect-months .flatpickr-monthSelect-month {
+    border-radius: 10px;
+    color: var(--ink);
+    border: 1px solid transparent;
+    background: color-mix(in srgb, var(--input-bg) 72%, transparent);
+    font-weight: 700;
+}
+
+.flatpickr-monthSelect-months .flatpickr-monthSelect-month:hover {
+    border-color: color-mix(in srgb, var(--accent) 55%, var(--stroke));
+    background: color-mix(in srgb, var(--accent) 22%, var(--input-bg));
+}
+
+.flatpickr-monthSelect-months .flatpickr-monthSelect-month.selected {
+    background: var(--accent);
+    border-color: var(--accent-dark);
+    color: #fff;
+}
+
+[data-dark="true"] .flatpickr-monthSelect-months .flatpickr-monthSelect-month {
+    color: #f8deff;
+    border-color: rgba(255, 186, 231, 0.16);
+    background: rgba(74, 44, 92, 0.72);
+}
+
+[data-dark="true"] .flatpickr-monthSelect-months .flatpickr-monthSelect-month:hover {
+    border-color: rgba(255, 186, 231, 0.38);
+    background: rgba(95, 55, 119, 0.88);
+}

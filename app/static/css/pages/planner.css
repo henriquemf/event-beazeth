@@ -1,0 +1,534 @@
+/* Weekly planner: grade semanal e blocos arrastaveis. */
+
+/* ============================== Weekly Planner ============================ */
+
+.planner-panel {
+    display: grid;
+    gap: 12px;
+}
+
+/* Falha ao carregar os blocos: sem isto o erro era silencioso e a grade
+   aparecia vazia, sem explicacao nenhuma. */
+.planner-panel.has-error::after {
+    content: "Nao foi possivel carregar os blocos. Verifique a conexao e recarregue a pagina.";
+    display: block;
+    margin-top: 12px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    background: var(--error-bg);
+    border: 1px solid var(--error-bd);
+}
+
+.planner-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.planner-toolbar-right {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+.planner-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.86rem;
+    font-weight: 700;
+    color: var(--ink-soft);
+}
+
+.planner-field input[type="range"] {
+    width: 120px;
+    accent-color: var(--accent);
+}
+
+.planner-toolbar .btn-secondary {
+    border-radius: 999px;
+    padding: 9px 16px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.planner-toolbar .btn-secondary[aria-pressed="true"] {
+    background: color-mix(in srgb, var(--accent) 26%, var(--input-bg));
+    border-color: color-mix(in srgb, var(--accent) 50%, var(--stroke));
+}
+
+.planner-hint {
+    margin: 0;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: var(--ink-soft);
+}
+
+.planner-hint kbd {
+    font: inherit;
+    font-size: 0.78rem;
+    border: 1px solid var(--stroke);
+    border-bottom-width: 2px;
+    border-radius: 6px;
+    padding: 1px 6px;
+    background: var(--input-bg);
+}
+
+.planner-scroll {
+    position: relative;
+    overflow: auto;
+    max-height: min(72vh, 780px);
+    border: 1px solid var(--stroke);
+    border-radius: 18px;
+    background: color-mix(in srgb, var(--surface) 55%, transparent);
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--accent) 45%, transparent) transparent;
+    overscroll-behavior: contain;
+}
+
+.planner-scroll::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.planner-scroll::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--accent) 42%, transparent);
+}
+
+.planner-grid {
+    --days: 5;
+    --hour-h: 52px;
+    --hours-count: 24;
+    --view-start: 0;
+    --planner-gutter: 62px;
+    --planner-line: color-mix(in srgb, var(--stroke) 90%, transparent);
+    --planner-line-soft: color-mix(in srgb, var(--stroke) 42%, transparent);
+    display: grid;
+    grid-template-columns: var(--planner-gutter) minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    min-width: calc(var(--planner-gutter) + var(--days) * 108px);
+}
+
+.planner-corner {
+    position: sticky;
+    top: 0;
+    left: 0;
+    z-index: 4;
+    background: var(--surface-solid);
+    border-right: 1px solid var(--planner-line);
+    border-bottom: 1px solid var(--planner-line);
+    border-top-left-radius: 18px;
+}
+
+.planner-head {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    display: grid;
+    grid-template-columns: repeat(var(--days), minmax(0, 1fr));
+    background: var(--surface-solid);
+    border-bottom: 1px solid var(--planner-line);
+}
+
+.planner-day-head {
+    display: grid;
+    justify-items: center;
+    align-content: center;
+    gap: 1px;
+    padding: 9px 6px;
+    border-left: 1px solid var(--planner-line-soft);
+}
+
+.planner-day-head:first-child {
+    border-left: 0;
+}
+
+.planner-day-name {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.95rem;
+    line-height: 1.1;
+}
+
+.planner-day-abbr {
+    display: none;
+    font-weight: 800;
+    font-size: 0.82rem;
+    letter-spacing: 0.08em;
+}
+
+.planner-day-head.is-today {
+    color: var(--accent-dark);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.planner-hours {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    height: calc(var(--hours-count) * var(--hour-h));
+    background: var(--surface-solid);
+    border-right: 1px solid var(--planner-line);
+}
+
+.planner-hour {
+    height: var(--hour-h);
+    position: relative;
+}
+
+.planner-hour span {
+    position: absolute;
+    top: -0.55em;
+    right: 8px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-soft);
+}
+
+.planner-hour:first-child span {
+    top: 2px;
+}
+
+.planner-canvas {
+    display: grid;
+    grid-template-columns: repeat(var(--days), minmax(0, 1fr));
+    height: calc(var(--hours-count) * var(--hour-h));
+}
+
+.planner-col {
+    position: relative;
+    overflow: hidden;
+    contain: layout paint style;
+    border-left: 1px solid var(--planner-line-soft);
+    touch-action: none;
+    cursor: crosshair;
+    /* Um tile pequeno repetido, em vez de repeating-linear-gradient: o browser
+       rasteriza só o tile e replica. Com repeating-*, mudar --hour-h obrigava a
+       repintar a grade inteira (24h x 7 colunas) e derrubava o zoom a 30fps. */
+    background-image:
+        linear-gradient(to bottom, var(--planner-line) 0 1px, transparent 1px),
+        linear-gradient(to bottom, var(--planner-line-soft) 0 1px, transparent 1px);
+    background-size: 100% var(--hour-h), 100% calc(var(--hour-h) / 2);
+    background-repeat: repeat;
+}
+
+.planner-col:first-child {
+    border-left: 0;
+}
+
+.planner-col.is-today {
+    background-color: color-mix(in srgb, var(--accent) 7%, transparent);
+}
+
+.planner-now {
+    position: absolute;
+    top: calc((var(--now-min) - var(--view-start)) * var(--hour-h) / 60);
+    left: 0;
+    right: 0;
+    height: 2px;
+    z-index: 5;
+    pointer-events: none;
+    background: var(--accent-dark);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 70%, transparent);
+}
+
+.planner-now::before {
+    content: "";
+    position: absolute;
+    left: -4px;
+    top: -3px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent-dark);
+}
+
+.planner-block {
+    --block-tint: var(--accent);
+    --b-start: 0;
+    --b-dur: 60;
+    --lane: 0;
+    --lanes: 1;
+    position: absolute;
+    top: calc((var(--b-start) - var(--view-start)) * var(--hour-h) / 60);
+    height: max(16px, calc(var(--b-dur) * var(--hour-h) / 60));
+    left: calc(100% * var(--lane) / var(--lanes) + 3px);
+    width: calc(100% / var(--lanes) - 6px);
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: 10px;
+    border: 1px solid color-mix(in srgb, var(--block-tint) 62%, transparent);
+    border-left: 4px solid var(--block-tint);
+    background: color-mix(in srgb, var(--block-tint) 24%, var(--surface));
+    box-shadow: 0 6px 16px -12px var(--shadow);
+    cursor: grab;
+    user-select: none;
+    animation: blockPop 0.2s cubic-bezier(0.22, 0.61, 0.36, 1);
+    transition: transform 0.14s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.planner-block:hover {
+    transform: scale(1.014);
+    z-index: 4;
+}
+
+@keyframes blockPop {
+    from {
+        opacity: 0;
+        transform: scale(0.97);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.planner-block.is-selected {
+    outline: 2px solid var(--accent-dark);
+    outline-offset: 1px;
+}
+
+.planner-block.is-dragging {
+    cursor: grabbing;
+    will-change: top, height;
+    animation: none;
+    transition: none;
+    transform: none;
+    z-index: 8;
+    opacity: 0.94;
+}
+
+.planner-block.is-routine {
+    border-style: dashed;
+    border-left-style: solid;
+    background-image: repeating-linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--block-tint) 16%, transparent) 0 6px,
+        transparent 6px 12px
+    );
+}
+
+.planner-block-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    padding: 4px 7px;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.planner-block-title {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 800;
+    font-size: 0.8rem;
+    line-height: 1.2;
+    color: var(--ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.planner-block-time {
+    font-size: 0.7rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: color-mix(in srgb, var(--ink) 68%, transparent);
+}
+
+.planner-block-notes {
+    font-size: 0.7rem;
+    line-height: 1.25;
+    color: var(--ink-soft);
+    overflow: hidden;
+}
+
+.planner-block-badge {
+    font-size: 0.66rem;
+    line-height: 1;
+}
+
+.planner-block.is-tiny .planner-block-body {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    padding: 1px 6px;
+}
+
+.planner-block.is-tiny .planner-block-notes {
+    display: none;
+}
+
+.planner-block.is-tiny .planner-block-title {
+    font-size: 0.72rem;
+}
+
+.planner-handle {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 8px;
+    z-index: 3;
+    cursor: ns-resize;
+}
+
+.planner-handle::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 26px;
+    height: 3px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--block-tint) 80%, transparent);
+    opacity: 0;
+    transition: opacity 0.14s ease;
+}
+
+.planner-block:hover .planner-handle::after,
+.planner-block.is-selected .planner-handle::after {
+    opacity: 0.85;
+}
+
+.planner-handle-top {
+    top: 0;
+}
+
+.planner-handle-top::after {
+    top: 2px;
+}
+
+.planner-handle-bottom {
+    bottom: 0;
+}
+
+.planner-handle-bottom::after {
+    bottom: 2px;
+}
+
+.planner-ghost {
+    z-index: 9;
+    pointer-events: none;
+    opacity: 0.72;
+    border-style: dashed;
+}
+
+.planner-block.color-rose { --block-tint: #ff78b2; }
+.planner-block.color-blue { --block-tint: #6cb6f5; }
+.planner-block.color-mint { --block-tint: #4fc7a4; }
+.planner-block.color-lavender { --block-tint: #a98cf5; }
+.planner-block.color-peach { --block-tint: #ff9d7a; }
+.planner-block.color-sun { --block-tint: #f2c14e; }
+
+.planner-colors {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    padding: 10px 12px;
+    border: 1px dashed var(--stroke);
+    border-radius: 14px;
+}
+
+.planner-colors legend {
+    padding: 0 6px;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--ink-soft);
+}
+
+.planner-swatch {
+    cursor: pointer;
+    line-height: 0;
+}
+
+.planner-swatch input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.planner-swatch span {
+    display: inline-block;
+    width: 28px;
+    height: 28px;
+    border-radius: 9px;
+    border: 2px solid transparent;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+    transition: transform 0.14s ease, border-color 0.14s ease;
+}
+
+.planner-swatch:hover span {
+    transform: translateY(-2px);
+}
+
+.planner-swatch input:checked + span {
+    border-color: var(--ink);
+    transform: translateY(-2px) scale(1.06);
+}
+
+.planner-swatch.color-rose span { background: #ff78b2; }
+.planner-swatch.color-blue span { background: #6cb6f5; }
+.planner-swatch.color-mint span { background: #4fc7a4; }
+.planner-swatch.color-lavender span { background: #a98cf5; }
+.planner-swatch.color-peach span { background: #ff9d7a; }
+.planner-swatch.color-sun span { background: #f2c14e; }
+
+.planner-error {
+    margin: 0;
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 0.86rem;
+    background: var(--error-bg);
+    border: 1px solid var(--error-bd);
+}
+
+.planner-modal-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 4px;
+}
+
+[data-dark="true"] .planner-block {
+    background: color-mix(in srgb, var(--block-tint) 30%, rgba(30, 18, 40, 0.92));
+    color: #fdf1ff;
+}
+
+[data-dark="true"] .planner-block-time {
+    color: color-mix(in srgb, #fdf1ff 72%, transparent);
+}
+
+@media (max-width: 900px) {
+    .planner-grid {
+        --planner-gutter: 48px;
+        min-width: calc(var(--planner-gutter) + var(--days) * 92px);
+    }
+
+    .planner-day-name {
+        display: none;
+    }
+
+    .planner-day-abbr {
+        display: block;
+    }
+
+    .planner-toolbar {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}

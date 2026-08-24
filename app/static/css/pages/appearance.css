@@ -1,0 +1,104 @@
+/* Tela de aparencia: previews de tema e fonte. */
+
+[data-dark="true"] .theme-preview,
+[data-dark="true"] .font-preview {
+    border-color: rgba(255, 189, 228, 0.35);
+}
+
+.theme-grid,
+.font-grid {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.theme-preview,
+.font-preview {
+    border: 1px solid var(--stroke);
+    border-radius: 14px;
+    cursor: pointer;
+    transition: transform 0.18s cubic-bezier(0.22, 0.61, 0.36, 1), outline-color 0.18s ease;
+}
+
+.theme-preview {
+    min-height: 92px;
+    text-align: left;
+    padding: 10px;
+    display: flex;
+    align-items: end;
+    color: #301529;
+    font-weight: 700;
+}
+
+.theme-preview.active,
+.font-preview.active {
+    outline: 2px solid var(--accent);
+    transform: translateY(-2px);
+}
+
+.theme-preview:hover,
+.font-preview:hover {
+    transform: translateY(-2px);
+}
+
+.font-preview {
+    padding: 10px;
+    text-align: left;
+    background: var(--surface);
+    color: var(--ink);
+}
+
+.font-preview strong,
+.font-preview small {
+    display: block;
+}
+
+.font-preview small {
+    color: var(--ink-soft);
+}
+
+.theme-rose { background: linear-gradient(120deg, #ffd5eb, #ffdff2, #fff2fb); }
+.theme-berry { background: linear-gradient(120deg, #f4d3ff, #edd8ff, #e5e9ff); }
+.theme-peach { background: linear-gradient(120deg, #ffd9cf, #ffe7dd, #fff5eb); }
+.theme-lavender { background: linear-gradient(120deg, #ead5ff, #f0e1ff, #fdf3ff); }
+.theme-mint { background: linear-gradient(120deg, #d6fff0, #e4fff3, #f2fff8); }
+.theme-sunset { background: linear-gradient(120deg, #ffd4c8, #ffe3d4, #fff0e3); }
+.theme-ocean { background: linear-gradient(120deg, #d5f0ff, #e0f5ff, #effbff); }
+.theme-plum { background: linear-gradient(120deg, #f1cff0, #f7dcf6, #fff0ff); }
+.theme-cocoa { background: linear-gradient(120deg, #ffe0d5, #ffebe1, #fff5ef); }
+.theme-strawberry { background: linear-gradient(120deg, #ffd2e4, #ffe1eb, #fff1f7); }
+
+.font-sugar strong { font-family: "Baloo 2", cursive; }
+.font-sugar small { font-family: "Quicksand", sans-serif; }
+.font-bubble strong { font-family: "Fredoka", sans-serif; }
+.font-bubble small { font-family: "Nunito", sans-serif; }
+.font-love strong { font-family: "Cherry Bomb One", system-ui; }
+.font-love small { font-family: "Varela Round", sans-serif; }
+.font-daisy strong { font-family: "Pacifico", cursive; }
+.font-daisy small { font-family: "Poppins", sans-serif; }
+.font-glam strong { font-family: "Lobster Two", cursive; }
+.font-glam small { font-family: "Montserrat", sans-serif; }
+.font-cotton strong { font-family: "Comfortaa", cursive; }
+.font-cotton small { font-family: "Raleway", sans-serif; }
+.font-diary strong { font-family: "Caveat Brush", cursive; }
+.font-diary small { font-family: "Rubik", sans-serif; }
+.font-pearl strong { font-family: "Satisfy", cursive; }
+.font-pearl small { font-family: "Manrope", sans-serif; }
+.font-chic strong { font-family: "Great Vibes", cursive; }
+.font-chic small { font-family: "Urbanist", sans-serif; }
+.font-dream strong { font-family: "Berkshire Swash", cursive; }
+.font-dream small { font-family: "Lexend", sans-serif; }
+
+@media (max-width: 1100px) {
+    .theme-grid,
+    .font-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 760px) {
+    .theme-grid,
+    .font-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}

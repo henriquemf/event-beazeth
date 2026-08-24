@@ -1,0 +1,17 @@
+{# Menu lateral. `active_page` vem de cada blueprint. #}
+{% set links = [
+    ('home',       url_for('home.index'),       '🗒️', 'Post-its'),
+    ('events',     url_for('events.index'),     '📝', 'Cadastro e lista'),
+    ('calendar',   url_for('calendar.index'),   '📅', 'Calendário'),
+    ('planner',    url_for('planner.index'),    '🗓️', 'Weekly Planner'),
+    ('appearance', url_for('appearance.index'), '🎨', 'Aparência'),
+    ('hydration',  url_for('hydration.index'),  '💧', 'Beber água'),
+] %}
+<nav class="menu">
+    {% for key, href, icon, label in links %}
+    <a class="menu-link {% if active_page == key %}active{% endif %}" href="{{ href }}">
+        <span>{{ icon }}</span>
+        <span>{{ label }}</span>
+    </a>
+    {% endfor %}
+</nav>

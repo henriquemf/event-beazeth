@@ -1,0 +1,201 @@
+/* Componentes compartilhados: modal, caixas da barra lateral, botao de
+   notificacoes e o interruptor de dark mode.
+
+   Carregar depois de base.css. */
+
+.event-modal {
+    position: fixed;
+    inset: 0;
+    display: none;
+    z-index: 60;
+}
+
+.event-modal.show {
+    display: block;
+}
+
+.event-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(18, 10, 26, 0.5);
+    backdrop-filter: blur(4px);
+}
+
+.event-modal-card {
+    position: relative;
+    width: min(640px, 92vw);
+    margin: 6vh auto;
+    border: 1px solid var(--stroke);
+    border-radius: 22px;
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    box-shadow: 0 20px 40px -24px var(--shadow);
+    padding: 18px;
+    animation: modalPop 0.24s ease;
+}
+
+@keyframes modalPop {
+    from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.event-modal-close {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    border: 1px solid var(--stroke);
+    background: color-mix(in srgb, var(--surface) 80%, transparent);
+    color: var(--ink);
+    border-radius: 999px;
+    width: 34px;
+    height: 34px;
+    font-size: 1.2rem;
+    cursor: pointer;
+}
+
+.event-modal-card h3 {
+    margin: 0 0 10px;
+}
+
+.event-modal-form {
+    gap: 10px;
+}
+
+.event-modal-actions,
+.event-delete-form {
+    margin-top: 10px;
+}
+
+.event-delete-form .btn-danger {
+    border-radius: 12px;
+    padding: 10px 14px;
+}
+
+.mode-box {
+    border: 1px dashed rgba(173, 113, 167, 0.42);
+    border-radius: 16px;
+    padding: 10px 12px;
+    display: grid;
+    gap: 8px;
+}
+
+.mode-box h3 {
+    margin: 0;
+    font-family: var(--font-display);
+}
+
+.push-box {
+    gap: 10px;
+}
+
+.push-box .btn-secondary {
+    width: 100%;
+    border-radius: 12px;
+    padding: 10px 12px;
+    font-weight: 700;
+    background: color-mix(in srgb, var(--surface) 80%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--stroke));
+    color: var(--ink);
+    text-align: center;
+}
+
+.push-box .btn-secondary:hover {
+    background: linear-gradient(110deg, color-mix(in srgb, var(--accent) 42%, transparent), color-mix(in srgb, var(--blue-soft) 35%, transparent));
+    color: #fff;
+}
+
+#push-status {
+    border: 1px solid var(--stroke);
+    border-radius: 10px;
+    padding: 8px 10px;
+    background: color-mix(in srgb, var(--surface) 85%, transparent);
+}
+
+#push-status[data-state="success"] {
+    border-color: color-mix(in srgb, var(--success-bd) 70%, var(--stroke));
+    color: color-mix(in srgb, var(--ok, #1f8f53) 70%, var(--ink));
+}
+
+#push-status[data-state="error"] {
+    border-color: color-mix(in srgb, var(--error-bd) 70%, var(--stroke));
+    color: color-mix(in srgb, #d16a9e 75%, var(--ink));
+}
+
+.dark-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--ink);
+}
+
+.dark-toggle.fancy {
+    cursor: pointer;
+    user-select: none;
+    width: fit-content;
+}
+
+.dark-toggle.fancy input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.dark-toggle.fancy .track {
+    width: 54px;
+    height: 30px;
+    border-radius: 999px;
+    background: linear-gradient(120deg, rgba(255, 120, 178, 0.35), rgba(126, 200, 255, 0.35));
+    border: 1px solid var(--stroke);
+    display: inline-flex;
+    align-items: center;
+    padding: 3px;
+    transition: 0.2s ease;
+}
+
+.dark-toggle.fancy .dot {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+    transition: 0.2s ease;
+}
+
+.dark-toggle.fancy .text {
+    font-weight: 700;
+    color: var(--ink-soft);
+}
+
+.dark-toggle.fancy input:checked + .track {
+    background: linear-gradient(120deg, rgba(130, 86, 222, 0.6), rgba(230, 113, 183, 0.6));
+}
+
+.dark-toggle.fancy input:checked + .track .dot {
+    transform: translateX(24px);
+}
+
+/* O checkbox do dark mode nasce desmarcado no HTML e só é marcado pelo JS, que
+   roda depois da primeira pintura — o resultado era o botão "ligando" sozinho a
+   cada troca de página. O estado visual passa a vir do atributo em <html>, que é
+   definido antes de pintar. O :checked acima continua valendo para o clique. */
+[data-dark="true"] #dark-toggle + .track {
+    background: linear-gradient(120deg, rgba(130, 86, 222, 0.6), rgba(230, 113, 183, 0.6));
+}
+
+[data-dark="true"] #dark-toggle + .track .dot {
+    transform: translateX(24px);
+}
+
+/* Mesma classe de problema para toggles restaurados de localStorage (ex: fins de
+   semana no planner): sem transição até a página estar pronta, o estado inicial
+   aparece direto em vez de animar. */
+.en-preload *,
+.en-preload *::before,
+.en-preload *::after {
+    transition: none !important;
+}

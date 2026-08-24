@@ -1,0 +1,45 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %}Post-its | Event Notifier{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ static_url('css/pages/notes.css') }}" />
+{% endblock %}
+
+{% block content %}
+<section class="notes-stage">
+    <header class="notes-header">
+        <div class="notes-title">
+            <h2>Post-its</h2>
+            <p>Solte aqui os lembretes do dia. Arraste pela fita do topo, escreva direto no papel.</p>
+        </div>
+        <div class="notes-toolbar-right">
+            <span id="notes-count" class="notes-count"></span>
+            <button id="notes-tidy" class="btn-secondary" type="button">Organizar</button>
+            <button id="notes-add" class="btn-primary" type="button">Novo post-it</button>
+        </div>
+    </header>
+
+    <div id="notes-filters" class="notes-filters" role="group" aria-label="Filtrar post-its por categoria"></div>
+
+    <p id="notes-status" class="notes-status" hidden></p>
+
+    <div id="notes-board" class="notes-board">
+        <div id="notes-empty" class="notes-empty" hidden>
+            <span aria-hidden="true">&#128209;</span>
+            <strong>Nenhum post-it por aqui</strong>
+            <small>Toque em &#8220;Novo post-it&#8221; para escrever seu primeiro lembrete.</small>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script defer src="{{ static_url('js/pages/notes/constants.js') }}"></script>
+<script defer src="{{ static_url('js/pages/notes/context.js') }}"></script>
+<script defer src="{{ static_url('js/pages/notes/store.js') }}"></script>
+<script defer src="{{ static_url('js/pages/notes/card.js') }}"></script>
+<script defer src="{{ static_url('js/pages/notes/board.js') }}"></script>
+<script defer src="{{ static_url('js/pages/notes/interactions.js') }}"></script>
+<script defer src="{{ static_url('js/pages/notes/main.js') }}"></script>
+{% endblock %}

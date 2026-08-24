@@ -1,0 +1,344 @@
+/* Temas, fontes, dark mode e ajustes responsivos.
+
+   Vem por ultimo de proposito: sobrescreve as cores definidas em
+   base.css e components.css. */
+
+[data-theme="rose"] {
+    --bg-top: #ffe5f3;
+    --bg-mid: #ffeef8;
+    --bg-bottom: #fff6ff;
+    --ink: #3f1d43;
+    --ink-soft: #7a5a81;
+    --surface: rgba(255, 255, 255, 0.8);
+    --stroke: rgba(173, 113, 167, 0.25);
+    --shadow: rgba(189, 128, 181, 0.2);
+    --accent: #ff78b2;
+    --accent-dark: #e45a98;
+    --blue-soft: #7ec8ff;
+    --pink-soft: #f38ab7;
+    --danger: #b23a7d;
+    --success-bg: rgba(68, 178, 117, 0.13);
+    --success-bd: rgba(68, 178, 117, 0.4);
+    --error-bg: rgba(201, 67, 131, 0.13);
+    --error-bd: rgba(201, 67, 131, 0.35);
+    --input-bg: rgba(255, 255, 255, 0.9);
+}
+
+[data-theme="berry"] {
+    --bg-top: #ffd6ea;
+    --bg-mid: #fbe4ff;
+    --bg-bottom: #eef2ff;
+    --ink: #341944;
+    --ink-soft: #674f78;
+    --surface: rgba(255, 255, 255, 0.82);
+    --stroke: rgba(139, 100, 178, 0.25);
+    --shadow: rgba(130, 99, 173, 0.22);
+    --accent: #b56dff;
+    --accent-dark: #9d55e8;
+    --blue-soft: #9ac1ff;
+    --pink-soft: #e9a0ff;
+    --danger: #9b3aa7;
+    --success-bg: rgba(86, 168, 136, 0.14);
+    --success-bd: rgba(86, 168, 136, 0.38);
+    --error-bg: rgba(186, 83, 160, 0.13);
+    --error-bd: rgba(186, 83, 160, 0.32);
+    --input-bg: rgba(255, 255, 255, 0.92);
+}
+
+[data-theme="peach"] {
+    --bg-top: #ffe9df;
+    --bg-mid: #fff0ea;
+    --bg-bottom: #fff7ef;
+    --ink: #422026;
+    --ink-soft: #7d5b63;
+    --surface: rgba(255, 255, 255, 0.82);
+    --stroke: rgba(201, 129, 148, 0.24);
+    --shadow: rgba(191, 136, 139, 0.22);
+    --accent: #ff8d91;
+    --accent-dark: #ea697e;
+    --blue-soft: #89c9d8;
+    --pink-soft: #ffb2b4;
+    --danger: #b54a65;
+    --success-bg: rgba(88, 172, 127, 0.13);
+    --success-bd: rgba(88, 172, 127, 0.38);
+    --error-bg: rgba(201, 97, 126, 0.12);
+    --error-bd: rgba(201, 97, 126, 0.32);
+    --input-bg: rgba(255, 255, 255, 0.92);
+}
+
+[data-theme="lavender"] {
+    --bg-top: #f1e4ff;
+    --bg-mid: #f6ebff;
+    --bg-bottom: #fff5ff;
+    --ink: #352245;
+    --ink-soft: #6d5981;
+    --surface: rgba(255, 255, 255, 0.82);
+    --stroke: rgba(167, 136, 205, 0.25);
+    --shadow: rgba(141, 114, 190, 0.21);
+    --accent: #b084ff;
+    --accent-dark: #9667ef;
+    --danger: #9655bf;
+    --input-bg: rgba(255, 255, 255, 0.93);
+}
+
+[data-theme="mint"] {
+    --bg-top: #e3fff7;
+    --bg-mid: #e9fff5;
+    --bg-bottom: #f7fff9;
+    --ink: #1f3a34;
+    --ink-soft: #567a72;
+    --surface: rgba(255, 255, 255, 0.84);
+    --stroke: rgba(100, 177, 151, 0.24);
+    --shadow: rgba(84, 153, 136, 0.19);
+    --accent: #53c7a2;
+    --accent-dark: #3db48f;
+    --danger: #a85d88;
+    --input-bg: rgba(255, 255, 255, 0.93);
+}
+
+[data-theme="sunset"] {
+    --bg-top: #ffe2dc;
+    --bg-mid: #ffece3;
+    --bg-bottom: #fff5ec;
+    --ink: #46222a;
+    --ink-soft: #815766;
+    --surface: rgba(255, 255, 255, 0.84);
+    --stroke: rgba(220, 132, 135, 0.24);
+    --shadow: rgba(211, 130, 111, 0.2);
+    --accent: #ff8577;
+    --accent-dark: #f06a5b;
+    --danger: #bb4f71;
+    --input-bg: rgba(255, 255, 255, 0.93);
+}
+
+[data-theme="ocean"] {
+    --bg-top: #dff7ff;
+    --bg-mid: #e8f7ff;
+    --bg-bottom: #f4fbff;
+    --ink: #173348;
+    --ink-soft: #4a6c84;
+    --surface: rgba(255, 255, 255, 0.84);
+    --stroke: rgba(115, 174, 214, 0.24);
+    --shadow: rgba(108, 166, 203, 0.21);
+    --accent: #4ca9df;
+    --accent-dark: #368ec2;
+    --danger: #84549f;
+    --input-bg: rgba(255, 255, 255, 0.93);
+}
+
+[data-theme="plum"] {
+    --bg-top: #f6ddf3;
+    --bg-mid: #fce8fa;
+    --bg-bottom: #fff2ff;
+    --ink: #3d1f3f;
+    --ink-soft: #744f77;
+    --surface: rgba(255, 255, 255, 0.83);
+    --stroke: rgba(177, 117, 173, 0.25);
+    --shadow: rgba(160, 104, 157, 0.21);
+    --accent: #c768c1;
+    --accent-dark: #b653ad;
+    --danger: #9f3b7f;
+    --input-bg: rgba(255, 255, 255, 0.92);
+}
+
+[data-theme="cocoa"] {
+    --bg-top: #ffe9e2;
+    --bg-mid: #fff1ea;
+    --bg-bottom: #fff8f4;
+    --ink: #3c2a29;
+    --ink-soft: #6f5753;
+    --surface: rgba(255, 255, 255, 0.85);
+    --stroke: rgba(189, 134, 123, 0.24);
+    --shadow: rgba(182, 128, 113, 0.2);
+    --accent: #d98e79;
+    --accent-dark: #c77a68;
+    --danger: #a65e74;
+    --input-bg: rgba(255, 255, 255, 0.93);
+}
+
+[data-theme="strawberry"] {
+    --bg-top: #ffe4ef;
+    --bg-mid: #ffeef4;
+    --bg-bottom: #fff6fa;
+    --ink: #441e35;
+    --ink-soft: #81586e;
+    --surface: rgba(255, 255, 255, 0.84);
+    --stroke: rgba(221, 141, 172, 0.25);
+    --shadow: rgba(202, 126, 158, 0.2);
+    --accent: #f06aa0;
+    --accent-dark: #de4b8b;
+    --danger: #b74472;
+    --input-bg: rgba(255, 255, 255, 0.93);
+}
+
+[data-font="sugar"] {
+    --font-main: "Quicksand", sans-serif;
+    --font-display: "Baloo 2", cursive;
+}
+
+[data-font="bubble"] {
+    --font-main: "Nunito", sans-serif;
+    --font-display: "Fredoka", sans-serif;
+}
+
+[data-font="love"] {
+    --font-main: "Varela Round", sans-serif;
+    --font-display: "Cherry Bomb One", system-ui;
+}
+
+[data-font="daisy"] {
+    --font-main: "Poppins", sans-serif;
+    --font-display: "Pacifico", cursive;
+}
+
+[data-font="glam"] {
+    --font-main: "Montserrat", sans-serif;
+    --font-display: "Lobster Two", cursive;
+}
+
+[data-font="cotton"] {
+    --font-main: "Raleway", sans-serif;
+    --font-display: "Comfortaa", cursive;
+}
+
+[data-font="diary"] {
+    --font-main: "Rubik", sans-serif;
+    --font-display: "Caveat Brush", cursive;
+}
+
+[data-font="pearl"] {
+    --font-main: "Manrope", sans-serif;
+    --font-display: "Satisfy", cursive;
+}
+
+[data-font="chic"] {
+    --font-main: "Urbanist", sans-serif;
+    --font-display: "Great Vibes", cursive;
+}
+
+[data-font="dream"] {
+    --font-main: "Lexend", sans-serif;
+    --font-display: "Berkshire Swash", cursive;
+}
+
+[data-dark="true"] {
+    --bg-top: #1a1320;
+    --bg-mid: #21192a;
+    --bg-bottom: #18111f;
+    --surface: rgba(34, 20, 45, 0.9);
+    --ink: #f8deff;
+    --ink-soft: #d6b6e2;
+    --stroke: rgba(255, 179, 230, 0.22);
+    --shadow: rgba(18, 6, 24, 0.45);
+    --success-bg: rgba(52, 133, 99, 0.22);
+    --success-bd: rgba(111, 216, 170, 0.4);
+    --error-bg: rgba(166, 50, 110, 0.24);
+    --error-bd: rgba(230, 131, 180, 0.42);
+    --input-bg: rgba(78, 44, 86, 0.75);
+}
+
+[data-dark="true"] .bg-candy {
+    background:
+        radial-gradient(circle at 12% 18%, rgba(202, 84, 154, 0.28), transparent 33%),
+        radial-gradient(circle at 84% 18%, rgba(104, 140, 231, 0.24), transparent 35%),
+        radial-gradient(circle at 20% 82%, rgba(255, 145, 178, 0.2), transparent 34%);
+}
+
+html[data-dark="true"] {
+    background-color: var(--bg-mid);
+    background-image: linear-gradient(170deg, var(--bg-top), var(--bg-mid) 48%, var(--bg-bottom));
+}
+
+[data-dark="true"] table,
+[data-dark="true"] .table-wrap,
+[data-dark="true"] .fc,
+[data-dark="true"] .fc-theme-standard td,
+[data-dark="true"] .fc-theme-standard th,
+[data-dark="true"] .fc-theme-standard .fc-scrollgrid,
+[data-dark="true"] .fc-theme-standard .fc-list {
+    background: transparent;
+    color: var(--ink);
+    border-color: var(--stroke);
+}
+
+[data-dark="true"] input,
+[data-dark="true"] textarea,
+[data-dark="true"] select {
+    color: var(--ink);
+}
+
+[data-dark="true"] .menu-link:hover,
+[data-dark="true"] .menu-link.active {
+    color: #fff;
+}
+
+[data-dark="true"] .tag-evento {
+    background: rgba(126, 200, 255, 0.22);
+    color: #d0ecff;
+}
+
+[data-dark="true"] .tag-curso {
+    background: rgba(243, 138, 183, 0.28);
+    color: #ffd7eb;
+}
+
+@media (max-width: 1024px) {
+    .layout-shell {
+        grid-template-columns: 1fr;
+    }
+
+    .sidebar {
+        position: static;
+        max-height: none;
+    }
+}
+@media (max-width: 760px) {
+    .inline-group {
+        grid-template-columns: 1fr;
+    }
+
+    .layout-shell {
+        width: min(100%, 96vw);
+        margin: 12px auto 20px;
+        gap: 12px;
+    }
+
+    .hero-card,
+    .panel-card,
+    .sidebar {
+        border-radius: 16px;
+        padding: 14px;
+    }
+
+    .event-modal-card {
+        margin-top: 4vh;
+        padding: 14px;
+        border-radius: 16px;
+    }
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+    @view-transition {
+        navigation: none;
+    }
+
+    * {
+        animation: none !important;
+        transition: none !important;
+    }
+
+    body,
+    body.page-ready,
+    body.page-leaving {
+        opacity: 1;
+        transform: none;
+    }
+
+    .sidebar,
+    .hero-card,
+    .panel-card,
+    .alerts .alert {
+        backdrop-filter: none;
+    }
+}

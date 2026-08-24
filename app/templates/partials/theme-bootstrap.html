@@ -1,0 +1,37 @@
+{# Precisa ficar inline e síncrono: roda antes da primeira pintura para evitar
+   flash de tema errado. Virar arquivo externo adicionaria uma requisição
+   bloqueante no caminho crítico, que é exatamente o que se quer evitar aqui. #}
+<script>
+    (function () {
+        var FONT_FAMILIES = {
+            bubble: "Nunito:wght@400;600;700&family=Fredoka:wght@400;600;700",
+            love: "Varela+Round&family=Cherry+Bomb+One",
+            daisy: "Poppins:wght@400;600;700&family=Pacifico",
+            glam: "Montserrat:wght@400;600;700&family=Lobster+Two:wght@400;700",
+            cotton: "Raleway:wght@400;600;700&family=Comfortaa:wght@500;700",
+            diary: "Rubik:wght@400;500;700&family=Caveat+Brush",
+            pearl: "Manrope:wght@400;600;700&family=Satisfy",
+            chic: "Urbanist:wght@400;600;700&family=Great+Vibes",
+            dream: "Lexend:wght@400;600;700&family=Berkshire+Swash"
+        };
+
+        try {
+            var root = document.documentElement;
+            var font = localStorage.getItem("en_font") || "sugar";
+
+            /* Segura as transições até a página estar montada. */
+            root.classList.add("en-preload");
+            root.dataset.theme = localStorage.getItem("en_theme") || "rose";
+            root.dataset.font = font;
+            root.dataset.dark = localStorage.getItem("en_dark") === "true" ? "true" : "false";
+
+            /* "sugar" já vem no CSS bloqueante; as demais só baixam se escolhidas. */
+            if (FONT_FAMILIES[font]) {
+                var link = document.createElement("link");
+                link.rel = "stylesheet";
+                link.href = "https://fonts.googleapis.com/css2?family=" + FONT_FAMILIES[font] + "&display=swap";
+                document.head.appendChild(link);
+            }
+        } catch (e) {}
+    })();
+</script>

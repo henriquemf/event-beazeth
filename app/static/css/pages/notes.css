@@ -1,0 +1,548 @@
+/* Post-its: quadro livre da home.
+
+   O quadro não é uma caixa com moldura e rolagem própria — ocupa a largura da
+   página e cresce em altura, então os cartões parecem soltos sobre a mesa.
+
+   Padrões reimplementados nativamente (o projeto não usa React/Tailwind, então
+   Origin UI / Skiper UI / Cult UI entraram como referência visual):
+     Cult UI "texture card"     -> camadas de papel do cartão
+     Cult UI "expandable"       -> relevo do cartão em edição
+     Cult UI "dock"             -> barra de ações do cartão
+     Origin UI swatch/segmented -> chips de filtro e troca de cor
+     Skiper UI spring motion    -> easing elástico ao criar/soltar */
+
+.notes-stage {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-height: 60vh;
+}
+
+.notes-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.notes-title h2 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 1.7rem;
+}
+
+.notes-title p {
+    margin: 4px 0 0;
+    color: var(--ink-soft);
+    font-size: 0.92rem;
+}
+
+.notes-toolbar-right {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.notes-count {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--ink-soft);
+}
+
+/* Origin UI: grupo segmentado. */
+.notes-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 4px;
+    width: fit-content;
+    max-width: 100%;
+    border: 1px solid var(--stroke);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--input-bg) 55%, transparent);
+}
+
+.notes-chip {
+    border: 0;
+    border-radius: 999px;
+    padding: 7px 13px;
+    font-family: var(--font-main);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--ink-soft);
+    background: transparent;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color 0.15s ease, background 0.15s ease;
+}
+
+.notes-chip:hover {
+    color: var(--ink);
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.notes-chip[aria-pressed="true"] {
+    color: #fff;
+    background: linear-gradient(110deg, var(--accent), #ff96c2);
+    box-shadow: 0 6px 16px -10px rgba(228, 90, 152, 0.8);
+}
+
+.notes-status {
+    margin: 0;
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    background: var(--error-bg);
+    border: 1px solid var(--error-bd);
+}
+
+/* ------------------------------------------------------------- o quadro */
+
+.notes-board {
+    --board-h: 360px;
+    position: relative;
+    width: 100%;
+    height: var(--board-h);
+    /* Sem moldura, sem grade, sem scroll próprio: a página é a mesa. */
+    transition: height 0.24s ease;
+}
+
+.notes-empty {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    gap: 6px;
+    text-align: center;
+    padding: 20px;
+    color: var(--ink-soft);
+    pointer-events: none;
+}
+
+.notes-empty strong {
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    color: var(--ink);
+}
+
+.notes-empty span {
+    font-size: 2.2rem;
+    line-height: 1;
+}
+
+/* ------------------------------------------------------------- o post-it */
+
+.note {
+    --note-tint: #ffd76b;
+    --n-x: 18;
+    --n-y: 18;
+    --n-w: 232;
+    --n-h: 216;
+    --n-z: 1;
+    --n-tilt: 0;
+
+    position: absolute;
+    top: 0;
+    left: 0;
+    /* Geometria vem de custom properties: arrastar só recalcula estilo e o
+       transform roda no compositor, sem layout por frame. */
+    width: calc(var(--n-w) * 1px);
+    height: calc(var(--n-h) * 1px);
+    transform: translate3d(calc(var(--n-x) * 1px), calc(var(--n-y) * 1px), 0);
+    rotate: calc(var(--n-tilt) * 1deg);
+    z-index: var(--n-z);
+
+    display: flex;
+    flex-direction: column;
+    /* Papel quase reto: só o canto de baixo à direita é dobrado. */
+    border-radius: 2px 2px 14px 2px;
+    background:
+        linear-gradient(168deg,
+            color-mix(in srgb, var(--note-tint) 74%, #fff) 0%,
+            color-mix(in srgb, var(--note-tint) 90%, #fff) 58%,
+            var(--note-tint) 100%);
+    color: #40203f;
+    /* Sombra curta embaixo = papel encostado na mesa. */
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.6),
+        0 1px 1px rgba(84, 44, 76, 0.2),
+        0 12px 20px -14px rgba(84, 44, 76, 0.75);
+    contain: layout paint style;
+    cursor: grab;
+    transition:
+        box-shadow 0.18s ease,
+        rotate 0.2s cubic-bezier(0.34, 1.4, 0.64, 1),
+        transform 0.2s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+/* Fita adesiva no topo. */
+.note::before {
+    content: "";
+    position: absolute;
+    top: -7px;
+    left: 50%;
+    width: 62px;
+    height: 16px;
+    transform: translateX(-50%) rotate(-1.5deg);
+    background: linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.55),
+        rgba(255, 255, 255, 0.22)
+    );
+    box-shadow: 0 1px 2px rgba(84, 44, 76, 0.18);
+    pointer-events: none;
+}
+
+/* Canto dobrado. */
+.note-curl {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 22px;
+    height: 22px;
+    background: linear-gradient(
+        135deg,
+        transparent 0 50%,
+        color-mix(in srgb, var(--note-tint) 60%, #000 18%) 50% 100%
+    );
+    border-radius: 0 0 14px 0;
+    opacity: 0.35;
+    pointer-events: none;
+}
+
+.note:hover {
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.65),
+        0 2px 3px rgba(84, 44, 76, 0.22),
+        0 20px 30px -16px rgba(84, 44, 76, 0.8);
+}
+
+.note:focus-visible {
+    outline: 2px solid var(--accent-dark);
+    outline-offset: 3px;
+}
+
+/* Entrada com mola curta. */
+.note.is-new {
+    animation: notePop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+}
+
+@keyframes notePop {
+    from {
+        opacity: 0;
+        transform: translate3d(calc(var(--n-x) * 1px), calc(var(--n-y) * 1px + 10px), 0) scale(0.88);
+    }
+    to {
+        opacity: 1;
+        transform: translate3d(calc(var(--n-x) * 1px), calc(var(--n-y) * 1px), 0) scale(1);
+    }
+}
+
+/* Saída: o cartão "descola" do quadro. */
+.note.is-leaving {
+    pointer-events: none;
+    animation: noteLeave 0.24s cubic-bezier(0.36, 0, 0.66, -0.3) forwards;
+}
+
+@keyframes noteLeave {
+    to {
+        opacity: 0;
+        transform: translate3d(calc(var(--n-x) * 1px), calc(var(--n-y) * 1px + 16px), 0) scale(0.84);
+    }
+}
+
+/* Durante o arraste a transição sai do caminho: cada frame já vem do rAF. */
+.note.is-dragging,
+.note.is-resizing {
+    transition: none;
+    animation: none;
+    cursor: grabbing;
+    will-change: transform;
+    z-index: 99999;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.65),
+        0 26px 44px -18px rgba(84, 44, 76, 0.85);
+}
+
+/* Papel levantado da mesa. */
+.note.is-dragging {
+    rotate: calc(var(--n-tilt) * 1deg - 2deg);
+}
+
+.note.is-resizing {
+    cursor: nwse-resize;
+}
+
+/* Só o "Organizar" anima o reposicionamento; o arraste não. */
+.note.is-tidying {
+    transition: transform 0.34s cubic-bezier(0.34, 1.3, 0.64, 1),
+                rotate 0.34s ease;
+}
+
+/* Em edição o papel se endireita e ganha relevo. */
+.note.is-editing {
+    rotate: 0deg;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.65),
+        0 0 0 2px color-mix(in srgb, var(--note-tint) 55%, var(--accent-dark)),
+        0 24px 40px -18px rgba(84, 44, 76, 0.8);
+}
+
+.note-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 8px 2px 10px;
+    flex: 0 0 auto;
+    touch-action: none;
+}
+
+.note-grip {
+    flex: 1;
+    height: 10px;
+    border-radius: 999px;
+    background: repeating-linear-gradient(
+        90deg,
+        color-mix(in srgb, #40203f 20%, transparent) 0 3px,
+        transparent 3px 7px
+    );
+    opacity: 0.4;
+}
+
+/* Ações só aparecem quando o cartão está em hover/foco. */
+.note-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    opacity: 0;
+    transform: translateY(-2px);
+    transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.note:hover .note-actions,
+.note:focus-within .note-actions {
+    opacity: 1;
+    transform: none;
+}
+
+.note-btn {
+    border: 0;
+    border-radius: 8px;
+    padding: 2px 6px;
+    font-family: var(--font-main);
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.5;
+    color: #40203f;
+    background: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    transition: background 0.14s ease, transform 0.12s ease;
+}
+
+.note-btn:hover {
+    background: rgba(255, 255, 255, 0.9);
+    transform: translateY(-1px);
+}
+
+.note-btn-danger {
+    font-size: 1rem;
+    line-height: 1.1;
+    padding: 0 7px;
+}
+
+.note-btn-danger:hover {
+    background: rgba(201, 67, 131, 0.9);
+    color: #fff;
+}
+
+.note-bucket {
+    max-width: 108px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Edição inline: o textarea é o próprio corpo do post-it. */
+.note-text {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    margin: 0;
+    padding: 4px 14px 16px;
+    border: 0;
+    outline: none;
+    resize: none;
+    background: transparent;
+    font-family: var(--font-main);
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1.5;
+    color: inherit;
+    cursor: text;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, #40203f 30%, transparent) transparent;
+}
+
+.note-text::placeholder {
+    color: color-mix(in srgb, #40203f 40%, transparent);
+    font-weight: 500;
+}
+
+/* Origin UI: popover de swatches, dentro dos limites do cartão. */
+.note-swatches {
+    position: absolute;
+    top: 34px;
+    left: 10px;
+    right: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 10px 24px -14px rgba(84, 44, 76, 0.85);
+    /* Animação própria: notePop carrega o translate do cartão e deslocaria
+       o popover para fora do lugar. */
+    animation: swatchPop 0.16s cubic-bezier(0.34, 1.4, 0.64, 1) backwards;
+}
+
+@keyframes swatchPop {
+    from {
+        opacity: 0;
+        transform: translateY(-6px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.note-swatch {
+    width: 22px;
+    height: 22px;
+    border-radius: 7px;
+    border: 2px solid transparent;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: transform 0.14s ease, border-color 0.14s ease;
+}
+
+.note-swatch:hover {
+    transform: translateY(-2px) scale(1.08);
+}
+
+.note-swatch[aria-pressed="true"] {
+    border-color: #40203f;
+    transform: scale(1.08);
+}
+
+.note-resize {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 24px;
+    height: 24px;
+    cursor: nwse-resize;
+    touch-action: none;
+    opacity: 0;
+    transition: opacity 0.16s ease;
+}
+
+.note:hover .note-resize,
+.note:focus-within .note-resize {
+    opacity: 1;
+}
+
+/* Paleta: as mesmas famílias de cor do planner, em versão papel. */
+.note.color-sun { --note-tint: #ffe066; }
+.note.color-rose { --note-tint: #ff9ec4; }
+.note.color-mint { --note-tint: #7fe0c0; }
+.note.color-blue { --note-tint: #8fcdff; }
+.note.color-peach { --note-tint: #ffb08a; }
+.note.color-lavender { --note-tint: #c0a8fb; }
+
+.note-swatch.color-sun { background: #ffe066; }
+.note-swatch.color-rose { background: #ff9ec4; }
+.note-swatch.color-mint { background: #7fe0c0; }
+.note-swatch.color-blue { background: #8fcdff; }
+.note-swatch.color-peach { background: #ffb08a; }
+.note-swatch.color-lavender { background: #c0a8fb; }
+
+[data-dark="true"] .note {
+    background:
+        linear-gradient(168deg,
+            color-mix(in srgb, var(--note-tint) 32%, rgba(34, 20, 44, 0.96)) 0%,
+            color-mix(in srgb, var(--note-tint) 22%, rgba(30, 18, 40, 0.96)) 100%);
+    color: #fdf1ff;
+}
+
+[data-dark="true"] .note::before {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.07));
+}
+
+[data-dark="true"] .note-grip {
+    background: repeating-linear-gradient(
+        90deg,
+        rgba(253, 241, 255, 0.45) 0 3px,
+        transparent 3px 7px
+    );
+}
+
+[data-dark="true"] .note-btn {
+    color: #fdf1ff;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+[data-dark="true"] .note-btn:hover {
+    background: rgba(255, 255, 255, 0.24);
+}
+
+[data-dark="true"] .note-text::placeholder {
+    color: rgba(253, 241, 255, 0.45);
+}
+
+[data-dark="true"] .note-swatches {
+    background: rgba(38, 22, 48, 0.96);
+}
+
+@media (max-width: 760px) {
+    .notes-header {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .notes-toolbar-right {
+        justify-content: space-between;
+    }
+
+    .notes-filters {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        scrollbar-width: none;
+    }
+
+    .notes-filters::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* No toque as ações ficam sempre visíveis: não existe hover. */
+    .note-actions,
+    .note-resize {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* O bloco global de prefers-reduced-motion usa `* { animation: none }` com
+   !important, então a entrada/saída animada já é neutralizada lá. Aqui só
+   garantimos que o papel fique reto. */
+@media (prefers-reduced-motion: reduce) {
+    .note,
+    .note.is-dragging {
+        rotate: none;
+    }
+}

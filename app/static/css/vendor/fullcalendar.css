@@ -1,0 +1,47 @@
+/* Tema do FullCalendar (biblioteca de terceiros) nas cores do app. */
+
+#events-calendar {
+    padding: 8px;
+}
+
+.fc .fc-toolbar-title {
+    font-family: var(--font-display);
+    color: var(--ink);
+    text-transform: capitalize;
+    letter-spacing: 0.2px;
+}
+
+[data-dark="true"] .fc .fc-button {
+    background: rgba(255, 120, 178, 0.3);
+    color: #ffeaff;
+}
+
+[data-dark="true"] .fc .fc-daygrid-day.fc-day-today {
+    background: rgba(126, 200, 255, 0.2);
+}
+
+.fc .fc-button {
+    border: 1px solid var(--stroke);
+    border-radius: 999px;
+    padding: 0.45rem 0.85rem;
+    background: linear-gradient(120deg, rgba(255, 120, 178, 0.25), rgba(126, 200, 255, 0.22));
+    color: var(--ink);
+    font-weight: 700;
+    box-shadow: 0 7px 18px -12px var(--shadow);
+    transition: transform 0.14s ease, filter 0.2s ease, background 0.2s ease;
+}
+
+.fc .fc-button:hover,
+.fc .fc-button.fc-button-active {
+    background: linear-gradient(120deg, rgba(255, 120, 178, 0.6), rgba(126, 200, 255, 0.5));
+    color: #fff;
+    transform: translateY(-1px);
+}
+
+.fc .fc-button-primary:disabled {
+    opacity: 0.55;
+}
+
+.fc .fc-daygrid-day.fc-day-today {
+    background: rgba(126, 200, 255, 0.16);
+}

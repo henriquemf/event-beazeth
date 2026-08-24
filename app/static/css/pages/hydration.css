@@ -1,0 +1,27 @@
+/* Tela do lembrete de beber agua. */
+
+.hydration-form {
+    gap: 16px;
+}
+
+.hydration-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.hydration-block {
+    border: 1px dashed var(--stroke);
+    border-radius: 14px;
+    padding: 12px;
+    display: grid;
+    gap: 10px;
+    background: color-mix(in srgb, var(--surface) 84%, transparent);
+}
+
+.hydration-block h4 {
+    margin: 0;
+    font-family: var(--font-display);
+    color: var(--ink);
+    font-size: 1.02rem;
+}

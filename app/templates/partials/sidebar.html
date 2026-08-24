@@ -1,0 +1,34 @@
+<aside class="sidebar">
+    <div class="brand">
+        <span class="brand-dot"></span>
+        <div>
+            <h1>Event Notifier</h1>
+            <small>Organize seus momentos</small>
+        </div>
+    </div>
+
+    {% include 'partials/nav-menu.html' %}
+
+    <div class="legend-box">
+        <h3>Tags</h3>
+        <p><span class="tag tag-evento">Evento</span> Lembrete no Dia</p>
+        <p><span class="tag tag-curso">Curso</span> Lembrete no Dia + 15 e 7 Dias</p>
+    </div>
+
+    <div class="mode-box">
+        <h3>Modo</h3>
+        <label class="dark-toggle fancy" for="dark-toggle">
+            <input id="dark-toggle" type="checkbox" />
+            <span class="track"><span class="dot"></span></span>
+            <span class="text">Dark mode</span>
+        </label>
+    </div>
+
+    <div class="mode-box push-box">
+        <h3>Notificações</h3>
+        <button id="push-enable-btn" class="btn-secondary" type="button">Ativar notificações web</button>
+        <button id="push-test-btn" class="btn-secondary" type="button">Testar notificação web</button>
+        <small id="push-status" class="field-help">Status: Não configurado</small>
+    </div>
+
+</aside>

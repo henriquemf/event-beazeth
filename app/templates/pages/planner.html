@@ -1,0 +1,126 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %}Weekly Planner | Event Notifier{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ static_url('css/pages/planner.css') }}" />
+{% endblock %}
+
+{% block content %}
+<section class="hero-card">
+    <h2>Weekly Planner</h2>
+    <p>Arraste na grade para criar um bloco, mova e redimensione à vontade. Marque como rotina para repetir em todos os dias.</p>
+</section>
+
+<section class="panel-card planner-panel" data-blocks-url="{{ url_for('planner.blocks_list') }}">
+    <div class="planner-toolbar">
+        <label class="dark-toggle fancy" for="planner-weekend">
+            <input id="planner-weekend" type="checkbox" />
+            <span class="track"><span class="dot"></span></span>
+            <span class="text">Mostrar fins de semana</span>
+        </label>
+
+        <div class="planner-toolbar-right">
+            <label class="planner-field" for="planner-zoom">
+                Zoom
+                <input id="planner-zoom" type="range" min="28" max="110" step="2" value="52" />
+            </label>
+            <button id="planner-compact" class="btn-secondary" type="button">Horário útil</button>
+            <button id="planner-new" class="btn-primary" type="button">Novo bloco</button>
+        </div>
+    </div>
+
+    <p class="planner-hint">
+        <strong>Dica:</strong> arraste numa coluna para criar · clique num bloco para editar ·
+        arraste as bordas para redimensionar · <kbd>Delete</kbd> remove o bloco selecionado.
+    </p>
+
+    <div class="planner-scroll">
+        <div id="planner-grid" class="planner-grid" data-weekend="off">
+            <div class="planner-corner"></div>
+            <div id="planner-head" class="planner-head"></div>
+            <div id="planner-hours" class="planner-hours"></div>
+            <div id="planner-canvas" class="planner-canvas"></div>
+        </div>
+    </div>
+</section>
+
+<div id="planner-modal" class="event-modal" aria-hidden="true">
+    <div class="event-modal-backdrop" data-close-planner="1"></div>
+    <div class="event-modal-card" role="dialog" aria-modal="true" aria-labelledby="planner-modal-title">
+        <button class="event-modal-close" type="button" data-close-planner="1" aria-label="Fechar">×</button>
+        <h3 id="planner-modal-title">Novo bloco</h3>
+
+        <form id="planner-form" class="event-form event-modal-form">
+            <label>
+                Título
+                <input type="text" id="planner-title" maxlength="120" placeholder="Ex: Academia" required />
+            </label>
+
+            <label>
+                Notas
+                <textarea id="planner-notes" rows="2" maxlength="500" placeholder="Detalhes (opcional)"></textarea>
+            </label>
+
+            <div class="inline-group">
+                <label>
+                    Início
+                    <input type="time" id="planner-start" step="900" required />
+                </label>
+                <label>
+                    Fim
+                    <input type="time" id="planner-end" step="900" required />
+                </label>
+            </div>
+
+            <label id="planner-day-field">
+                Dia
+                <select id="planner-day">
+                    <option value="0">Segunda</option>
+                    <option value="1">Terça</option>
+                    <option value="2">Quarta</option>
+                    <option value="3">Quinta</option>
+                    <option value="4">Sexta</option>
+                    <option value="5">Sábado</option>
+                    <option value="6">Domingo</option>
+                </select>
+            </label>
+
+            <label class="dark-toggle fancy" for="planner-routine">
+                <input id="planner-routine" type="checkbox" />
+                <span class="track"><span class="dot"></span></span>
+                <span class="text">Rotina (repete todos os dias)</span>
+            </label>
+
+            <fieldset class="planner-colors">
+                <legend>Cor do bloco</legend>
+                <label class="planner-swatch color-rose"><input type="radio" name="planner-color" value="rose" checked /><span></span></label>
+                <label class="planner-swatch color-blue"><input type="radio" name="planner-color" value="blue" /><span></span></label>
+                <label class="planner-swatch color-mint"><input type="radio" name="planner-color" value="mint" /><span></span></label>
+                <label class="planner-swatch color-lavender"><input type="radio" name="planner-color" value="lavender" /><span></span></label>
+                <label class="planner-swatch color-peach"><input type="radio" name="planner-color" value="peach" /><span></span></label>
+                <label class="planner-swatch color-sun"><input type="radio" name="planner-color" value="sun" /><span></span></label>
+            </fieldset>
+
+            <p id="planner-error" class="planner-error" hidden></p>
+
+            <div class="planner-modal-actions">
+                <button class="btn-primary" type="submit">Salvar bloco</button>
+                <button id="planner-delete" class="btn-danger" type="button" hidden>Remover</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script defer src="{{ static_url('js/pages/planner/constants.js') }}"></script>
+<script defer src="{{ static_url('js/pages/planner/time.js') }}"></script>
+<script defer src="{{ static_url('js/pages/planner/context.js') }}"></script>
+<script defer src="{{ static_url('js/pages/planner/grid.js') }}"></script>
+<script defer src="{{ static_url('js/pages/planner/blocks.js') }}"></script>
+<script defer src="{{ static_url('js/pages/planner/store.js') }}"></script>
+<script defer src="{{ static_url('js/pages/planner/drag.js') }}"></script>
+<script defer src="{{ static_url('js/pages/planner/editor.js') }}"></script>
+<script defer src="{{ static_url('js/pages/planner/main.js') }}"></script>
+{% endblock %}

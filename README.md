@@ -12,7 +12,8 @@ Recursos de interface:
 - Sidebar com menu de navegação
 - Aba de calendário grande para visualizar eventos e cursos
 - Aba **Weekly Planner**: grade semanal de 24 horas com blocos arrastáveis
-- Quadro de **post-its** na home: lembretes do dia, arrastáveis, redimensionáveis e coloridos
+- **Home** é o quadro de **post-its**: papel livre, arrastável, redimensionável e colorido
+- Cadastro e lista de eventos numa aba própria (`/events`)
 - Aba de aparência com preview visual
 - 10 temas e 10 fontes selecionáveis
 - Seleção de tema e fonte por cards de preview (sem dropdown)
@@ -51,22 +52,26 @@ Endpoints:
 
 Blocos de rotina são gravados com `day_of_week = -1` e renderizados em todas as colunas visíveis.
 
-## Post-its da home
+## Post-its (tela inicial)
 
-Quadro de lembretes livres em `/`, logo abaixo do cabeçalho:
+O quadro de post-its é a home (`/`). Não é uma caixa com moldura e rolagem
+própria: ocupa a largura da página e cresce em altura conforme os papéis descem,
+então os cartões ficam soltos sobre a mesa em vez de presos a uma grade.
 
 - **Novo post-it** cria a nota já em modo de edição, num espaço livre do quadro
 - Edição inline: o corpo do cartão é o próprio campo de texto, sem modal
-- Arraste pela barra do topo e redimensione pelo canto inferior direito
+- Arraste pela fita do topo e redimensione pelo canto inferior direito
+- Cada papel nasce com uma inclinação leve, derivada do id (não muda a cada render)
 - O botão 🎨 abre a paleta com as seis cores do projeto
 - Cada post-it tem uma categoria (Hoje, Amanhã, Semana, Ideias); o botão da categoria alterna entre elas
 - Os chips do topo filtram por categoria, e o filtro escolhido fica no `localStorage`
-- **Organizar** realinha os post-its visíveis numa grade
+- **Organizar** realinha os post-its visíveis em fileiras
 - `Esc` sai da edição
 
 No desktop o cartão arrasta de qualquer ponto que não seja o texto ou um botão.
-No toque só a barra do topo e o canto de redimensionar arrastam, para o resto da
-área continuar rolando a página.
+No toque só a fita do topo e o canto de redimensionar arrastam, para o resto da
+área continuar rolando a página. O eixo vertical é livre e o quadro acompanha; o
+horizontal é limitado à largura visível para nenhum papel sumir da tela.
 
 A persistência é no SQLite, no mesmo banco do resto do app. O `localStorage`
 guarda apenas uma cópia de leitura, usada para o quadro continuar visível quando
@@ -91,7 +96,7 @@ sem npm e sem build. Instalá-las exigiria trazer React, Tailwind e um bundler
 para um projeto que hoje não tem nenhum dos três. Os padrões aproveitados delas
 (cartão com textura de papel, cartão que ganha relevo em edição, dock de ações,
 grupo de swatches, molas de entrada e saída) foram reimplementados sobre os
-tokens de tema que já existem no `style.css`.
+tokens de tema que já existem no CSS.
 
 ## Performance
 
@@ -127,64 +132,91 @@ As três causas, isoladas por teste A/B:
 
 ## Estrutura
 
+O projeto fica na raiz do repositório. Cada camada tem seu lugar: rotas por
+tela, acesso a dados por tabela, e CSS/JS por página.
+
 ```
-event_notifier/
-  app/
-    __init__.py
-    config.py
-    db.py
-    services/
-      notifier.py
-      scheduler_service.py
-    static/
-      sw.js
-      manifest.webmanifest
-      style.css
-      planner-page.js
-      notes-board.js
-    templates/
-      index.html
-      planner.html
-  .env.example
-  .dockerignore
-  Dockerfile
-  .gitignore
-  requirements.txt
-  wsgi.py
-  run.py
-  README.md
+app/
+  __init__.py            fábrica da aplicação (só monta e agenda)
+  config.py              variáveis de ambiente
+  assets.py              versionamento de estáticos + headers de resposta
+  extensions.py          scheduler compartilhado
+  blueprints/            uma rota por tela/recurso
+    system.py            /healthz, /sw.js, /favicon.ico
+    home.py              /            (quadro de post-its)
+    events.py            /events      (cadastro e lista)
+    calendar.py          /calendar    + /api/events
+    planner.py           /planner     + /api/planner/blocks
+    notes.py             /api/notes
+    appearance.py        /appearance
+    hydration.py         /hydration
+    push.py              /api/push/*  + /api/live/notifications
+  db/                    uma tabela por módulo
+    connection.py        conexão SQLite (WAL, timeouts)
+    schema.py            CREATE TABLE, migrações e índices
+    events.py  reminders.py  hydration.py  push.py  planner.py  notes.py
+  services/
+    notifier.py          envio desktop e web push
+    scheduler_service.py varredura de lembretes
+  static/
+    css/
+      base.css           tokens, reset, layout, sidebar, cartões, forms, botões
+      components.css     modal, caixas da sidebar, toggle de dark mode
+      themes.css         10 temas, 10 fontes, dark mode, responsivo
+      pages/             notes, planner, calendar, appearance, hydration
+      vendor/            tema do flatpickr e do FullCalendar
+    js/
+      core/              shared (namespace + utils), theme, ui-effects, push
+      pages/
+        notes/           constants, context, store, card, board, interactions, main
+        planner/         constants, time, context, grid, blocks, store, drag, editor, main
+        calendar/        calendar.js
+        events/          datepicker.js
+    sw.js  manifest.webmanifest  icon.svg
+  templates/
+    layouts/base.html    casca da página
+    partials/            sidebar, menu, flash, bootstrap de tema
+    pages/               home, events, calendar, planner, appearance, hydration
+tools/                   geração de chaves VAPID
+Dockerfile  requirements.txt  run.py  wsgi.py  .env.example
 ```
+
+Cada página carrega só o CSS e o JS da própria tela, além da base comum.
+
+Os três arquivos da base são faixas contíguas do CSS original e precisam
+ser carregados nesta ordem (`base` → `components` → `themes`): trocar a
+sequência muda a cascata, porque `themes.css` sobrescreve cores das outras duas.
+
+**Por que namespace global e não `import` no JS:** os estáticos são servidos com
+`?v=<mtime>` e o service worker usa cache-first justamente porque as URLs são
+versionadas. Um `import "./x.js"` estático não carrega a versão, então o service
+worker serviria submódulo velho para sempre. Os módulos conversam por
+`window.EN` e a ordem vem das tags `<script defer>`, que executam em ordem.
 
 ## Como rodar
 
-1. Entre na pasta do projeto:
-
-```bash
-cd event_notifier
-```
-
-2. Crie e ative ambiente virtual (Windows PowerShell):
+1. Crie e ative o ambiente virtual (Windows PowerShell):
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-3. Instale dependências:
+2. Instale as dependências:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-4. Crie o `.env` a partir do exemplo:
+3. Crie o `.env` a partir do exemplo:
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-5. Ajuste apenas variáveis locais do app no `.env` se necessário.
+4. Ajuste as variáveis locais do app no `.env` se necessário.
 
-6. Gere chaves VAPID para Web Push:
+5. Gere chaves VAPID para Web Push:
 
 ```bash
 python tools/generate_vapid_keys.py
@@ -198,15 +230,18 @@ VAPID_PRIVATE_KEY=...
 VAPID_SUBJECT=mailto:voce@exemplo.com
 ```
 
-7. Execute:
+6. Execute:
 
 ```bash
 python run.py
 ```
 
-8. Acesse no navegador:
+7. Acesse no navegador:
 
 http://127.0.0.1:5000
+
+Telas: `/` (post-its), `/events` (cadastro e lista), `/calendar`, `/planner`,
+`/appearance`, `/hydration`.
 
 ## Observações importantes
 

@@ -1,0 +1,79 @@
+/* Tela de calendario. */
+
+.calendar-panel {
+    min-height: 720px;
+}
+
+.calendar-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.calendar-topbar label {
+    font-weight: 700;
+    color: var(--ink-soft);
+    font-size: 0.9rem;
+}
+
+.calendar-topbar input[type="month"] {
+    border: 1px solid var(--stroke);
+    border-radius: 12px;
+    padding: 8px 10px;
+    font: inherit;
+    color: var(--ink);
+    background: var(--input-bg);
+}
+
+.calendar-topbar input[type="text"] {
+    border: 1px solid var(--stroke);
+    border-radius: 12px;
+    padding: 8px 10px;
+    font: inherit;
+    color: var(--ink);
+    background: var(--input-bg);
+    min-width: 190px;
+}
+
+.event-preview {
+    border: 1px dashed var(--stroke);
+    border-radius: 14px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    background: color-mix(in srgb, var(--surface) 84%, transparent);
+}
+
+.event-preview-tag {
+    margin: 0;
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.74rem;
+    font-weight: 800;
+}
+
+.event-preview-title {
+    margin: 8px 0 4px;
+    font-size: 1.1rem;
+    font-weight: 800;
+}
+
+.event-preview-time,
+.event-preview-desc {
+    margin: 2px 0;
+    color: var(--ink-soft);
+}
+@media (max-width: 760px) {
+
+    .calendar-panel {
+        min-height: 560px;
+    }
+
+    .calendar-topbar {
+        justify-content: space-between;
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
