@@ -1,0 +1,24 @@
+{# Ampulheta.
+
+   Um macro em vez de markup copiado porque ela aparece em dois lugares (a tela
+   do pomodoro e o widget da barra lateral) em tamanhos diferentes. O tamanho vem
+   por classe, não por parâmetro de estilo: quem manda nas medidas é o CSS.
+
+   Feita com <span> e clip-path em vez de SVG de propósito — SVG com clipPath
+   precisa de `id` único por instância, e duas ampulhetas na mesma página
+   colidiriam. Aqui as duas instâncias são idênticas e independentes.
+
+   Todos os elementos são decorativos: o tempo é anunciado pelo texto ao lado. #}
+{% macro hourglass(size) %}
+<span class="hourglass hourglass-{{ size }}" aria-hidden="true">
+    <span class="hg-spin">
+        <span class="hg-cap"></span>
+        <span class="hg-bulb hg-bulb-top"><span class="hg-sand hg-sand-a"></span></span>
+        <span class="hg-bulb hg-bulb-bottom"><span class="hg-sand hg-sand-b"></span></span>
+        <span class="hg-cap"></span>
+    </span>
+    {# O filete de areia fica FORA do grupo que gira: areia cai sempre para
+       baixo, inclusive depois da ampulheta virar de cabeça para baixo. #}
+    <span class="hg-stream"><span class="hg-grain"></span></span>
+</span>
+{% endmacro %}

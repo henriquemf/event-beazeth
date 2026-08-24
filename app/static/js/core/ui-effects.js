@@ -1,69 +1,9 @@
+/* Efeitos de interface: som de clique/navegação e a liberação das transições
+   depois do primeiro quadro.
+
+   A síntese de áudio saiu daqui para core/audio.js quando o pomodoro passou a
+   precisar do mesmo AudioContext. */
 (function () {
-    function createAudioContext() {
-        const AudioCtx = window.AudioContext || window.webkitAudioContext;
-        if (!AudioCtx) {
-            return null;
-        }
-
-        if (!window.__enAudioCtx) {
-            window.__enAudioCtx = new AudioCtx();
-        }
-        return window.__enAudioCtx;
-    }
-
-    function playSoftTone(type) {
-        const ctx = createAudioContext();
-        if (!ctx) {
-            return;
-        }
-
-        if (ctx.state === "suspended") {
-            ctx.resume().catch(function () {});
-        }
-
-        const now = ctx.currentTime;
-        const master = ctx.createGain();
-        const filter = ctx.createBiquadFilter();
-
-        filter.type = "lowpass";
-        filter.frequency.value = type === "nav" ? 1300 : 1700;
-        filter.Q.value = 0.8;
-
-        master.gain.setValueAtTime(0.0001, now);
-        master.gain.exponentialRampToValueAtTime(type === "nav" ? 0.013 : 0.011, now + 0.008);
-        master.gain.exponentialRampToValueAtTime(0.0001, now + 0.16);
-
-        filter.connect(master);
-        master.connect(ctx.destination);
-
-        const tones = type === "nav"
-            ? [
-                { f: 520, t: 0 },
-                { f: 390, t: 0.045 },
-            ]
-            : [
-                { f: 640, t: 0 },
-                { f: 520, t: 0.028 },
-            ];
-
-        tones.forEach(function (tone) {
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = "triangle";
-            osc.frequency.setValueAtTime(tone.f, now + tone.t);
-            osc.frequency.exponentialRampToValueAtTime(tone.f * 0.96, now + tone.t + 0.045);
-
-            gain.gain.setValueAtTime(0.0001, now + tone.t);
-            gain.gain.exponentialRampToValueAtTime(0.8, now + tone.t + 0.004);
-            gain.gain.exponentialRampToValueAtTime(0.0001, now + tone.t + 0.07);
-
-            osc.connect(gain);
-            gain.connect(filter);
-            osc.start(now + tone.t);
-            osc.stop(now + tone.t + 0.08);
-        });
-    }
-
     function isPrimaryLeftClick(event) {
         return event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
     }
@@ -101,7 +41,7 @@
         document.addEventListener("click", function (event) {
             const clickable = event.target.closest("button, .btn-primary, .btn-danger, .theme-preview, .font-preview, .fc-button");
             if (clickable) {
-                playSoftTone("click");
+                EN.audio.blip("click");
             }
 
             const anchor = event.target.closest("a.menu-link");
@@ -112,7 +52,7 @@
             // Navegação segue nativa (sem preventDefault + setTimeout): o atraso
             // de 80ms por clique era o que dava a sensação de travado. A transição
             // visual fica por conta de @view-transition no CSS.
-            playSoftTone("nav");
+            EN.audio.blip("nav");
             document.body.classList.add("page-leaving");
         });
     }

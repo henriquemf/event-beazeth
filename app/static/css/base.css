@@ -272,8 +272,6 @@ body.page-leaving {
     background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 60%, transparent), transparent);
 }
 
-}
-
 .hero-card,
 .panel-card {
     border-radius: 24px;

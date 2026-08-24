@@ -1,0 +1,90 @@
+/* Modal de evento.
+
+   Sai de components.css porque só duas telas usam (calendário e planner): no
+   pacote global ele viajava junto em todas as outras cinco sem nunca aparecer.
+
+   Cada uma dessas telas carrega este arquivo no próprio head_extra, ou seja
+   DEPOIS de themes.css. Por isso a regra responsiva do cartão veio junto: lá em
+   themes.css ela perderia a queda de braço com a regra base daqui, que passou a
+   ser a última a falar sobre o mesmo seletor. */
+
+.event-modal {
+    position: fixed;
+    inset: 0;
+    display: none;
+    z-index: 60;
+}
+
+.event-modal.show {
+    display: block;
+}
+
+.event-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(18, 10, 26, 0.5);
+    backdrop-filter: blur(4px);
+}
+
+.event-modal-card {
+    position: relative;
+    width: min(640px, 92vw);
+    margin: 6vh auto;
+    border: 1px solid var(--stroke);
+    border-radius: 22px;
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    box-shadow: 0 20px 40px -24px var(--shadow);
+    padding: 18px;
+    animation: modalPop 0.24s ease;
+}
+
+@keyframes modalPop {
+    from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.event-modal-close {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    border: 1px solid var(--stroke);
+    background: color-mix(in srgb, var(--surface) 80%, transparent);
+    color: var(--ink);
+    border-radius: 999px;
+    width: 34px;
+    height: 34px;
+    font-size: 1.2rem;
+    cursor: pointer;
+}
+
+.event-modal-card h3 {
+    margin: 0 0 10px;
+}
+
+.event-modal-form {
+    gap: 10px;
+}
+
+.event-modal-actions,
+.event-delete-form {
+    margin-top: 10px;
+}
+
+.event-delete-form .btn-danger {
+    border-radius: 12px;
+    padding: 10px 14px;
+}
+
+@media (max-width: 760px) {
+    .event-modal-card {
+        margin-top: 4vh;
+        padding: 14px;
+        border-radius: 16px;
+    }
+}

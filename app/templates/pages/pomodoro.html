@@ -1,0 +1,77 @@
+{% extends 'layouts/base.html' %}
+{% from 'partials/hourglass.html' import hourglass %}
+
+{% block title %}Pomodoro | Event Notifier{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ static_url('css/pages/pomodoro.css') }}" />
+{% endblock %}
+
+{% block content %}
+<section class="hero-card pomo-hero">
+    <div class="pomo-hero-text">
+        <h2>Pomodoro</h2>
+        <p>Escolha um tempo, deixe a ampulheta girar e foque. A contagem continua na barra lateral enquanto você anda pelo site.</p>
+    </div>
+    <span class="pomo-hero-apple" aria-hidden="true">🍎</span>
+</section>
+
+<div class="pomo-layout">
+    {# `data-pomo-status` e `data-pomo-phase` são o único estado visual da tela: o JS troca
+       os dois atributos e todo o resto (cores, pulso, brilho) é regra de CSS. #}
+    <section class="panel-card pomo-stage" id="pomo-stage" data-pomo-status="idle" data-pomo-phase="normal">
+        <div class="pomo-dial">
+            <span class="pomo-dial-ring" aria-hidden="true"></span>
+            {{ hourglass('lg') }}
+        </div>
+
+        {# aria-live: quem usa leitor de tela ouve o estado mudar sem precisar
+           varrer a página. O relógio em si não é live — seria um segundo falado
+           por segundo. #}
+        <p class="pomo-clock" id="pomo-clock">25:00</p>
+        <p class="pomo-state" id="pomo-state" aria-live="polite">Pronto para começar</p>
+
+        <div class="pomo-controls">
+            <button id="pomo-primary" class="btn-primary pomo-primary" type="button">Começar</button>
+            <button id="pomo-reset" class="btn-secondary pomo-reset" type="button" hidden>Zerar</button>
+        </div>
+    </section>
+
+    <section class="panel-card">
+        <h3>Escolher tempo</h3>
+
+        <div class="pomo-presets" id="pomo-presets" role="group" aria-label="Tempos prontos">
+            {% for preset in presets %}
+            <button class="pomo-preset" type="button" data-minutes="{{ preset.minutes }}" aria-pressed="false">
+                <strong>{{ preset.minutes }}</strong>
+                <span>min</span>
+                <small>{{ preset.label }}</small>
+            </button>
+            {% endfor %}
+        </div>
+
+        <div class="pomo-custom">
+            <label class="pomo-custom-head" for="pomo-minutes">
+                Tempo personalizado
+                <span class="pomo-custom-value"><output id="pomo-minutes-out" for="pomo-minutes">25</output> min</span>
+            </label>
+
+            {# Slider e campo numérico editam o mesmo valor: o slider é bom para
+               varrer, o campo é bom para cravar um número exato. #}
+            <div class="pomo-custom-controls">
+                <input id="pomo-minutes" type="range" min="{{ min_minutes }}" max="120" step="1" value="25" />
+                <input id="pomo-minutes-field" class="pomo-minutes-field" type="number"
+                       min="{{ min_minutes }}" max="{{ max_minutes }}" step="1" value="25"
+                       aria-label="Minutos do pomodoro" />
+            </div>
+            <small class="field-help">De {{ min_minutes }} a {{ max_minutes }} minutos. O slider vai até 120; acima disso, use o campo.</small>
+        </div>
+
+        <p class="pomo-locked" id="pomo-locked" hidden>Zere o timer para trocar o tempo.</p>
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script defer src="{{ static_url('js/pages/pomodoro/main.js') }}"></script>
+{% endblock %}

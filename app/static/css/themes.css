@@ -270,6 +270,12 @@ html[data-dark="true"] {
     color: #fff;
 }
 
+/* O vidro da ampulheta é branco translúcido; no fundo escuro ele vira um borrão
+   claro. Só o vidro muda — o tom da areia continua vindo da fase. */
+[data-dark="true"] .hourglass {
+    --hg-glass: color-mix(in srgb, var(--pomo-tint, var(--accent)) 26%, rgba(255, 255, 255, 0.08));
+}
+
 [data-dark="true"] .tag-evento {
     background: rgba(126, 200, 255, 0.22);
     color: #d0ecff;
@@ -306,12 +312,6 @@ html[data-dark="true"] {
     .sidebar {
         border-radius: 16px;
         padding: 14px;
-    }
-
-    .event-modal-card {
-        margin-top: 4vh;
-        padding: 14px;
-        border-radius: 16px;
     }
 }
 

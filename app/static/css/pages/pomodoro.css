@@ -1,0 +1,329 @@
+/* Tela do pomodoro.
+
+   A ampulheta e o widget da barra lateral NÃO estão aqui: são compartilhados
+   com todas as telas e moram em components.css. Aqui fica só o que existe nesta
+   página — mostrador, tempos prontos e o campo personalizado. */
+
+/* ------------------------------------------------------------------ hero */
+
+.pomo-hero {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.pomo-hero-text {
+    min-width: 0;
+}
+
+.pomo-hero-apple {
+    flex: 0 0 auto;
+    font-size: 2.7rem;
+    line-height: 1;
+    animation: pomoApple 3.6s ease-in-out infinite;
+}
+
+@keyframes pomoApple {
+    0%,
+    100% {
+        transform: translateY(0) rotate(-4deg);
+    }
+    50% {
+        transform: translateY(-7px) rotate(5deg);
+    }
+}
+
+/* ---------------------------------------------------------------- layout */
+
+.pomo-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    align-items: start;
+    gap: 14px;
+}
+
+/* ------------------------------------------------------------- mostrador */
+
+.pomo-stage {
+    display: grid;
+    justify-items: center;
+    gap: 10px;
+    text-align: center;
+}
+
+.pomo-dial {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: min(238px, 60vw);
+    aspect-ratio: 1;
+}
+
+/* Anel de progresso em conic-gradient recortado por máscara — sem SVG e sem
+   elemento extra por cima. O ângulo vem de --pomo-progress, atualizado 4x por
+   segundo: num timer de 25 min cada passo move 0,06°, então não há degrau
+   visível e também não há repintura a 60fps. */
+.pomo-dial-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: conic-gradient(
+        var(--pomo-tint) calc(var(--pomo-progress, 0) * 360deg),
+        color-mix(in srgb, var(--pomo-tint) 15%, transparent) 0
+    );
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 9px), #000 calc(100% - 8px));
+    mask: radial-gradient(farthest-side, transparent calc(100% - 9px), #000 calc(100% - 8px));
+}
+
+/* Halo suave atrás da ampulheta, para o miolo do anel não ficar oco. */
+.pomo-dial::before {
+    content: "";
+    position: absolute;
+    inset: 16%;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--pomo-tint) 20%, transparent), transparent 68%);
+    transition: background 0.3s ease;
+}
+
+.pomo-clock {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(2.4rem, 1.5rem + 3.6vw, 3.4rem);
+    line-height: 1.1;
+    /* Sem largura tabular os dígitos trocam de largura e o relógio treme. */
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    transition: color 0.3s ease;
+}
+
+.pomo-stage[data-pomo-phase="warning"] .pomo-clock,
+.pomo-stage[data-pomo-phase="done"] .pomo-clock {
+    color: var(--pomo-tint);
+}
+
+/* Só na reta final: o relógio respira junto com o halo do widget. */
+.pomo-stage[data-pomo-phase="warning"] .pomo-clock {
+    animation: pomoBreath 2.1s ease-in-out infinite;
+}
+
+@keyframes pomoBreath {
+    0%,
+    100% {
+        transform: scale(1);
+    }
+    55% {
+        transform: scale(1.045);
+    }
+}
+
+.pomo-state {
+    margin: 0;
+    min-height: 1.4em;
+    font-weight: 700;
+    color: var(--ink-soft);
+}
+
+.pomo-controls {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 4px;
+}
+
+.pomo-primary {
+    min-width: 156px;
+    padding: 12px 22px;
+    font-size: 1rem;
+}
+
+/* Mesmo respiro vertical do principal: o padding padrão de .btn-secondary é
+   menor e os dois lado a lado ficavam desalinhados. */
+.pomo-reset {
+    padding: 12px 20px;
+    font-size: 1rem;
+}
+
+/* --------------------------------------------------------- tempos prontos */
+
+.pomo-presets {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(94px, 1fr));
+    gap: 10px;
+}
+
+.pomo-preset {
+    display: grid;
+    justify-items: center;
+    gap: 1px;
+    padding: 12px 8px;
+    border: 1px solid var(--stroke);
+    border-radius: 16px;
+    background: var(--input-bg);
+    color: var(--ink);
+    cursor: pointer;
+    transition:
+        transform 0.16s cubic-bezier(0.34, 1.45, 0.64, 1),
+        border-color 0.18s ease,
+        background 0.18s ease,
+        box-shadow 0.2s ease;
+}
+
+.pomo-preset strong {
+    font-family: var(--font-display);
+    font-size: 1.55rem;
+    line-height: 1;
+}
+
+.pomo-preset span {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+}
+
+.pomo-preset small {
+    margin-top: 4px;
+    font-size: 0.76rem;
+    color: var(--ink-soft);
+}
+
+.pomo-preset:hover:not(:disabled) {
+    transform: translateY(-3px);
+    border-color: color-mix(in srgb, var(--accent) 48%, var(--stroke));
+    background: color-mix(in srgb, var(--accent) 7%, var(--input-bg));
+}
+
+.pomo-preset[aria-pressed="true"] {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 14%, var(--input-bg));
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.pomo-preset:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
+/* Enquanto o timer corre, trocar o tempo apagaria a contagem sem aviso. */
+.pomo-preset:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+/* ---------------------------------------------------- tempo personalizado */
+
+.pomo-custom {
+    display: grid;
+    gap: 9px;
+    margin-top: 14px;
+    padding: 12px;
+    border: 1px dashed var(--stroke);
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--surface) 84%, transparent);
+}
+
+.pomo-custom-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--ink-soft);
+}
+
+.pomo-custom-value {
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    color: var(--ink);
+}
+
+.pomo-custom-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 88px;
+    align-items: center;
+    gap: 10px;
+}
+
+/* O campo numérico está fora de .event-form, então não herda o estilo de campo
+   de lá; repetido aqui em vez de generalizar aquele seletor, que mudaria os
+   formulários de todas as outras telas. */
+.pomo-minutes-field {
+    border: 1px solid var(--stroke);
+    border-radius: 12px;
+    padding: 9px 10px;
+    font: inherit;
+    font-weight: 700;
+    text-align: center;
+    color: var(--ink);
+    background: var(--input-bg);
+    transition: border-color 0.18s ease, box-shadow 0.2s ease, background 0.18s ease;
+}
+
+.pomo-minutes-field:hover:not(:focus):not(:disabled) {
+    border-color: color-mix(in srgb, var(--accent) 42%, var(--stroke));
+    background: color-mix(in srgb, var(--accent) 5%, var(--input-bg));
+}
+
+.pomo-minutes-field:focus {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.pomo-custom-controls input:disabled,
+.pomo-minutes-field:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.pomo-locked {
+    margin: 10px 0 0;
+    padding: 9px 11px;
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--stroke));
+    border-radius: 12px;
+    font-size: 0.86rem;
+    font-weight: 700;
+    color: var(--ink-soft);
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+    animation: pomoLockedIn 0.28s ease backwards;
+}
+
+@keyframes pomoLockedIn {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* ---------------------------------------------------------- responsividade */
+
+@media (max-width: 1024px) {
+    .pomo-layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 560px) {
+    .pomo-hero {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .pomo-custom-controls {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .pomo-primary {
+        width: 100%;
+    }
+}

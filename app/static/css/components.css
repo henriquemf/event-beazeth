@@ -1,80 +1,11 @@
-/* Componentes compartilhados: modal, caixas da barra lateral, botao de
-   notificacoes e o interruptor de dark mode.
+/* Componentes presentes em TODAS as telas: caixas da barra lateral, botão de
+   notificações, interruptor de dark mode, ampulheta e widget do pomodoro.
 
-   Carregar depois de base.css. */
+   O critério para morar aqui é esse — estar em toda página. Componente de duas
+   ou três telas vai para css/components/<nome>.css e é carregado só por elas
+   (foi o caso do modal de evento).
 
-.event-modal {
-    position: fixed;
-    inset: 0;
-    display: none;
-    z-index: 60;
-}
-
-.event-modal.show {
-    display: block;
-}
-
-.event-modal-backdrop {
-    position: absolute;
-    inset: 0;
-    background: rgba(18, 10, 26, 0.5);
-    backdrop-filter: blur(4px);
-}
-
-.event-modal-card {
-    position: relative;
-    width: min(640px, 92vw);
-    margin: 6vh auto;
-    border: 1px solid var(--stroke);
-    border-radius: 22px;
-    background: color-mix(in srgb, var(--surface) 92%, transparent);
-    box-shadow: 0 20px 40px -24px var(--shadow);
-    padding: 18px;
-    animation: modalPop 0.24s ease;
-}
-
-@keyframes modalPop {
-    from {
-        opacity: 0;
-        transform: translateY(12px) scale(0.96);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
-}
-
-.event-modal-close {
-    position: absolute;
-    top: 10px;
-    right: 12px;
-    border: 1px solid var(--stroke);
-    background: color-mix(in srgb, var(--surface) 80%, transparent);
-    color: var(--ink);
-    border-radius: 999px;
-    width: 34px;
-    height: 34px;
-    font-size: 1.2rem;
-    cursor: pointer;
-}
-
-.event-modal-card h3 {
-    margin: 0 0 10px;
-}
-
-.event-modal-form {
-    gap: 10px;
-}
-
-.event-modal-actions,
-.event-delete-form {
-    margin-top: 10px;
-}
-
-.event-delete-form .btn-danger {
-    border-radius: 12px;
-    padding: 10px 14px;
-}
+   Carregar depois de base.css e antes de themes.css. */
 
 .mode-box {
     border: 1px dashed rgba(173, 113, 167, 0.42);
@@ -299,4 +230,408 @@
 .en-preload *::before,
 .en-preload *::after {
     transition: none !important;
+}
+
+/* ------------------------------------------------------------- ampulheta */
+
+/* Componente compartilhado: aparece na tela do pomodoro (grande) e no widget da
+   barra lateral (pequena). Mora aqui, e não em pages/pomodoro.css, porque a
+   sidebar é do layout base — o widget existe em todas as telas.
+
+   Tudo o que anima são `transform` e `opacity`, resolvidos no compositor:
+   nenhuma animação abaixo provoca layout, então as duas ampulhetas girando ao
+   mesmo tempo saem de graça. Também não há JS por quadro — o giro é só CSS.
+
+   Geometria do grupo que gira: tampa (6%), bulbo (44%), bulbo (44%), tampa
+   (6%). O gargalo cai exatamente em 50% da altura, que é o centro de rotação. */
+
+.hourglass {
+    --hg-cycle: 8s;
+    --hg-glass: color-mix(in srgb, var(--accent) 14%, rgba(255, 255, 255, 0.5));
+    --hg-edge: color-mix(in srgb, var(--accent-dark) 65%, transparent);
+    --hg-grain: color-mix(in srgb, var(--accent) 88%, #fff);
+    --hg-fill: linear-gradient(180deg, color-mix(in srgb, var(--accent) 72%, #fff), var(--accent-dark));
+    position: relative;
+    flex: 0 0 auto;
+    width: var(--hg-w);
+    height: var(--hg-h);
+}
+
+/* O tamanho vive só nos modificadores: um padrão implícito na classe base
+   deixava `.hourglass-sm` existindo no HTML sem regra nenhuma no CSS. */
+.hourglass-sm {
+    --hg-w: 30px;
+    --hg-h: 44px;
+}
+
+.hourglass-lg {
+    --hg-w: 94px;
+    --hg-h: 134px;
+}
+
+.hg-spin {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    animation: hgFlip var(--hg-cycle) linear infinite;
+}
+
+.hg-cap {
+    flex: 0 0 auto;
+    width: 100%;
+    height: 6%;
+    border-radius: 999px;
+    background: linear-gradient(180deg, var(--hg-edge), color-mix(in srgb, var(--hg-edge) 55%, transparent));
+}
+
+/* O clip-path deixa 12% de largura no meio: sem isso as duas pontas se
+   encontram num ponto de espessura zero e a ampulheta vira uma gravata. */
+.hg-bulb {
+    position: relative;
+    flex: 0 0 auto;
+    width: 100%;
+    height: 44%;
+    overflow: hidden;
+    background: var(--hg-glass);
+}
+
+.hg-bulb-top {
+    clip-path: polygon(0 0, 100% 0, 56% 100%, 44% 100%);
+}
+
+.hg-bulb-bottom {
+    clip-path: polygon(44% 0, 56% 0, 100% 100%, 0 100%);
+}
+
+/* A areia é uma faixa de altura fixa esticada por scaleY. Animar `height` seria
+   layout a cada quadro; scaleY roda no compositor. */
+.hg-sand {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 100%;
+    background: var(--hg-fill);
+    animation-duration: var(--hg-cycle);
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+}
+
+/* Nenhum dos dois bulbos troca de âncora no meio do ciclo: girar 180° já leva o
+   topo do elemento para baixo na tela, que é exatamente onde a areia precisa se
+   acumular depois da virada. */
+.hg-sand-a {
+    top: 0;
+    transform-origin: top;
+    animation-name: hgSandA;
+}
+
+.hg-sand-b {
+    bottom: 0;
+    transform-origin: bottom;
+    animation-name: hgSandB;
+}
+
+/* Fica fora de .hg-spin: areia cai para baixo mesmo com a ampulheta de cabeça
+   para baixo. Como o gargalo é o centro de rotação, um filete vertical a partir
+   do meio cai dentro do bulbo de baixo nas duas orientações. */
+.hg-stream {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: max(2px, calc(var(--hg-w) * 0.05));
+    height: 32%;
+    overflow: hidden;
+    transform: translateX(-50%);
+    animation: hgStream var(--hg-cycle) linear infinite;
+}
+
+.hg-grain {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent, var(--hg-grain) 35%, var(--hg-grain) 65%, transparent);
+    animation: hgGrain 0.55s linear infinite;
+}
+
+@keyframes hgFlip {
+    0% {
+        transform: rotate(0deg);
+    }
+    /* A curva só é declarada nos quadros que iniciam uma virada; os outros
+       trechos são de espera e não se movem. */
+    40% {
+        transform: rotate(0deg);
+        animation-timing-function: cubic-bezier(0.72, 0.02, 0.28, 1);
+    }
+    50% {
+        transform: rotate(180deg);
+    }
+    90% {
+        transform: rotate(180deg);
+        animation-timing-function: cubic-bezier(0.72, 0.02, 0.28, 1);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes hgSandA {
+    0% {
+        transform: scaleY(1);
+    }
+    40%,
+    50% {
+        transform: scaleY(0);
+    }
+    90%,
+    100% {
+        transform: scaleY(1);
+    }
+}
+
+@keyframes hgSandB {
+    0% {
+        transform: scaleY(0);
+    }
+    40%,
+    50% {
+        transform: scaleY(1);
+    }
+    90%,
+    100% {
+        transform: scaleY(0);
+    }
+}
+
+@keyframes hgGrain {
+    from {
+        transform: translateY(-100%);
+    }
+    to {
+        transform: translateY(100%);
+    }
+}
+
+/* Some durante as viradas. Começa e termina em 0 para o laço não dar um salto
+   de opacidade ao reiniciar. */
+@keyframes hgStream {
+    0% {
+        opacity: 0;
+    }
+    5%,
+    37% {
+        opacity: 1;
+    }
+    41%,
+    50% {
+        opacity: 0;
+    }
+    55%,
+    87% {
+        opacity: 1;
+    }
+    91%,
+    100% {
+        opacity: 0;
+    }
+}
+
+/* Fase do timer. `data-pomo-phase` em vez de um `data-phase` genérico para o
+   seletor não pegar carona em nenhum outro componente.
+
+   O tom padrão vem daqui e não de `.pomo-widget`/`.pomo-stage`: as três regras
+   têm a mesma especificidade, e a de pages/pomodoro.css é lida depois — um
+   padrão declarado lá venceria a fase e o alerta nunca mudaria de cor. */
+[data-pomo-phase] {
+    --pomo-tint: var(--accent);
+}
+
+[data-pomo-phase="warning"] {
+    --pomo-tint: #ef8f2b;
+}
+
+[data-pomo-phase="done"] {
+    --pomo-tint: #3fb98a;
+}
+
+[data-pomo-phase="warning"] .hourglass,
+[data-pomo-phase="done"] .hourglass {
+    --hg-glass: color-mix(in srgb, var(--pomo-tint) 14%, rgba(255, 255, 255, 0.5));
+    --hg-edge: color-mix(in srgb, var(--pomo-tint) 75%, transparent);
+    --hg-grain: color-mix(in srgb, var(--pomo-tint) 85%, #fff);
+    --hg-fill: linear-gradient(180deg, color-mix(in srgb, var(--pomo-tint) 65%, #fff), var(--pomo-tint));
+}
+
+/* Sem tempo correndo, a ampulheta congela onde está. */
+[data-pomo-status="paused"] .hg-spin,
+[data-pomo-status="paused"] .hg-sand,
+[data-pomo-status="paused"] .hg-stream,
+[data-pomo-status="paused"] .hg-grain,
+[data-pomo-status="done"] .hg-spin,
+[data-pomo-status="done"] .hg-sand,
+[data-pomo-status="done"] .hg-stream,
+[data-pomo-status="done"] .hg-grain {
+    animation-play-state: paused;
+}
+
+/* ------------------------------------------------------ widget do pomodoro */
+
+.pomo-widget {
+    /* Nasce escondido e quem revela é o atributo que o bootstrap inline grava
+       antes da primeira pintura — mostrar por JS depois do primeiro quadro
+       empurraria a sidebar inteira a cada navegação. */
+    display: none;
+    position: relative;
+    gap: 9px;
+    padding: 11px 12px;
+    border: 1px solid color-mix(in srgb, var(--pomo-tint) 42%, var(--stroke));
+    border-radius: 18px;
+    background:
+        linear-gradient(140deg,
+            color-mix(in srgb, var(--pomo-tint) 16%, transparent),
+            color-mix(in srgb, var(--blue-soft) 12%, transparent));
+    animation: pomoWidgetIn 0.42s cubic-bezier(0.22, 1.25, 0.42, 1) backwards;
+}
+
+html[data-pomo="on"] .pomo-widget {
+    display: grid;
+}
+
+@keyframes pomoWidgetIn {
+    from {
+        opacity: 0;
+        transform: translate3d(0, -8px, 0) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* O halo da reta final vive num pseudo-elemento. Se fosse `animation` no
+   próprio widget, trocar de fase reescreveria a propriedade inteira e a
+   animação de entrada tocaria de novo no meio da contagem. */
+.pomo-widget::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    pointer-events: none;
+}
+
+.pomo-widget[data-pomo-phase="warning"]::after,
+.pomo-widget[data-pomo-phase="done"]::after {
+    animation: pomoHalo 2.1s ease-in-out infinite;
+}
+
+@keyframes pomoHalo {
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 color-mix(in srgb, var(--pomo-tint) 45%, transparent);
+    }
+    55% {
+        box-shadow: 0 0 0 7px transparent;
+    }
+}
+
+.pomo-widget-main {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: var(--ink);
+    border-radius: 12px;
+    transition: transform 0.18s cubic-bezier(0.34, 1.45, 0.64, 1);
+}
+
+.pomo-widget-main:hover {
+    transform: translateX(2px);
+}
+
+.pomo-widget-main:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--pomo-tint) 45%, transparent);
+}
+
+.pomo-widget-info {
+    display: grid;
+    gap: 1px;
+    min-width: 0;
+}
+
+.pomo-widget-time {
+    display: block;
+    /* Reserva a linha antes do JS escrever: o widget nasce sem texto para não
+       piscar um valor de espera, e sem isto a caixa cresceria depois. */
+    min-height: 1.3em;
+    font-family: var(--font-display);
+    font-size: 1.32rem;
+    line-height: 1.3;
+    /* Sem largura tabular os dígitos mudam de largura e o relógio treme. */
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+}
+
+.pomo-widget-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--ink-soft);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pomo-widget-track {
+    height: 5px;
+    border-radius: 999px;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--pomo-tint) 18%, var(--stroke));
+}
+
+/* scaleX em vez de width: a barra anda no compositor, sem layout. A transição
+   costura os degraus de 250ms do contador. */
+.pomo-widget-fill {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--pomo-tint), color-mix(in srgb, var(--pomo-tint) 55%, #fff));
+    transform-origin: left;
+    transform: scaleX(var(--pomo-progress, 0));
+    transition: transform 0.3s linear;
+}
+
+.pomo-widget-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.pomo-widget-btn {
+    flex: 1 1 0;
+    border: 1px solid color-mix(in srgb, var(--pomo-tint) 32%, var(--stroke));
+    border-radius: 11px;
+    padding: 6px 8px;
+    font-family: var(--font-display);
+    font-size: 0.82rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--ink);
+    background: color-mix(in srgb, var(--input-bg) 72%, transparent);
+    cursor: pointer;
+    transition:
+        background 0.18s ease,
+        border-color 0.18s ease,
+        transform 0.16s cubic-bezier(0.34, 1.45, 0.64, 1);
+}
+
+.pomo-widget-btn:hover {
+    transform: translateY(-1px);
+    background: color-mix(in srgb, var(--pomo-tint) 22%, var(--input-bg));
+    border-color: color-mix(in srgb, var(--pomo-tint) 55%, var(--stroke));
+}
+
+.pomo-widget-btn:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--pomo-tint) 45%, transparent);
 }

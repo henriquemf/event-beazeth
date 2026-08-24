@@ -1,0 +1,26 @@
+{# Widget do pomodoro na barra lateral.
+
+   Fica sempre no HTML, em todas as telas, e quem decide se aparece é o CSS pelo
+   atributo <html data-pomo="on">, definido antes da primeira pintura pelo
+   bootstrap inline. Renderizar condicionalmente no servidor não daria: o timer
+   vive no localStorage, que o servidor não enxerga — e revelar por JS depois da
+   pintura empurraria o resto da sidebar para baixo a cada navegação. #}
+{% from 'partials/hourglass.html' import hourglass %}
+<div class="pomo-widget" id="pomo-widget" data-pomo-status="running" data-pomo-phase="normal">
+    <a class="pomo-widget-main" href="{{ url_for('pomodoro.index') }}">
+        {{ hourglass('sm') }}
+        <span class="pomo-widget-info">
+            {# Começa vazio de propósito: um texto de espera piscaria antes do JS
+               preencher. O CSS reserva a altura para não haver salto. #}
+            <strong class="pomo-widget-time"></strong>
+            <small class="pomo-widget-label">Pomodoro</small>
+        </span>
+    </a>
+
+    <span class="pomo-widget-track"><span class="pomo-widget-fill"></span></span>
+
+    <div class="pomo-widget-actions">
+        <button class="pomo-widget-btn" type="button" data-pomo-action="toggle" aria-label="Pausar pomodoro">Pausar</button>
+        <button class="pomo-widget-btn" type="button" data-pomo-action="stop" aria-label="Encerrar pomodoro">Parar</button>
+    </div>
+</div>

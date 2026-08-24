@@ -11,6 +11,7 @@ from app.blueprints import (
     hydration,
     notes,
     planner,
+    pomodoro,
     push,
     system,
 )
@@ -24,6 +25,7 @@ BLUEPRINTS = (
     events.bp,
     calendar.bp,
     planner.bp,
+    pomodoro.bp,
     notes.bp,
     appearance.bp,
     hydration.bp,

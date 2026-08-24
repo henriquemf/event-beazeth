@@ -25,6 +25,11 @@
             root.dataset.font = font;
             root.dataset.dark = localStorage.getItem("en_dark") === "true" ? "true" : "false";
 
+            /* Revela o widget do pomodoro antes da primeira pintura. Só a
+               presença da chave importa aqui; core/pomodoro.js valida o
+               conteúdo logo em seguida e corrige se estiver inválido. */
+            root.dataset.pomo = localStorage.getItem("en_pomodoro") ? "on" : "off";
+
             /* "sugar" já vem no CSS bloqueante; as demais só baixam se escolhidas. */
             if (FONT_FAMILIES[font]) {
                 var link = document.createElement("link");
