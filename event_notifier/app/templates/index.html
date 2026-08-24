@@ -12,6 +12,36 @@
     <p>Cadastre eventos e cursos com tags coloridas e receba alertas direto nas notificações do Windows.</p>
 </section>
 
+<section class="panel-card notes-panel">
+    <h3>Post-its do dia</h3>
+    <p class="notes-hint">
+        Anote os lembretes soltos do dia. Arraste pela <strong>barra do topo</strong>,
+        clique no texto para editar, use o <strong>canto inferior direito</strong> para
+        redimensionar e o <kbd>&#127912;</kbd> para trocar a cor. <kbd>Esc</kbd> sai da edi&#231;&#227;o.
+    </p>
+
+    <div class="notes-toolbar">
+        <div id="notes-filters" class="notes-filters" role="group" aria-label="Filtrar post-its por categoria"></div>
+        <div class="notes-toolbar-right">
+            <span id="notes-count" class="notes-count"></span>
+            <button id="notes-tidy" class="btn-secondary" type="button">Organizar</button>
+            <button id="notes-add" class="btn-primary" type="button">Novo post-it</button>
+        </div>
+    </div>
+
+    <p id="notes-status" class="notes-status" hidden></p>
+
+    <div class="notes-scroll">
+        <div id="notes-board" class="notes-board">
+            <div id="notes-empty" class="notes-empty" hidden>
+                <span aria-hidden="true">&#128209;</span>
+                <strong>Nenhum post-it por aqui</strong>
+                <small>Toque em &#8220;Novo post-it&#8221; para escrever seu primeiro lembrete.</small>
+            </div>
+        </div>
+    </div>
+</section>
+
 <section class="panel-card">
     <h3>Novo registro</h3>
     <form method="post" class="event-form">
@@ -93,6 +123,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script defer src="{{ static_url('notes-board.js') }}"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
 <script>

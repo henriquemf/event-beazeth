@@ -1937,3 +1937,552 @@ html[data-dark="true"] {
         flex-direction: column;
     }
 }
+
+/* ===================================================================== */
+/* Post-its da home                                                      */
+/*                                                                       */
+/* Padrões reimplementados nativamente (o projeto não usa React/Tailwind, */
+/* então Origin UI / Skiper UI / Cult UI entraram como referência visual):*/
+/*   Cult UI "texture card"     -> camadas de papel do cartão            */
+/*   Cult UI "expandable"       -> relevo do cartão em edição            */
+/*   Cult UI "dock"             -> barra de ações do cartão              */
+/*   Origin UI swatch/segmented -> chips de filtro e troca de cor        */
+/*   Skiper UI spring motion    -> easing elástico ao criar/soltar       */
+/* ===================================================================== */
+
+.notes-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 14px;
+}
+
+.notes-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 4px;
+    border: 1px solid var(--stroke);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--input-bg) 55%, transparent);
+}
+
+/* Origin UI: grupo segmentado. */
+.notes-chip {
+    border: 0;
+    border-radius: 999px;
+    padding: 7px 13px;
+    font-family: var(--font-main);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--ink-soft);
+    background: transparent;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color 0.15s ease, background 0.15s ease, transform 0.12s ease;
+}
+
+.notes-chip:hover {
+    color: var(--ink);
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.notes-chip[aria-pressed="true"] {
+    color: #fff;
+    background: linear-gradient(110deg, var(--accent), #ff96c2);
+    box-shadow: 0 6px 16px -10px rgba(228, 90, 152, 0.8);
+}
+
+.notes-toolbar-right {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.notes-count {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--ink-soft);
+}
+
+.notes-status {
+    margin: 12px 0 0;
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    background: var(--error-bg);
+    border: 1px solid var(--error-bd);
+}
+
+.notes-hint {
+    margin: 12px 0 0;
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+}
+
+.notes-hint kbd {
+    font-family: inherit;
+    font-size: 0.78rem;
+    padding: 1px 6px;
+    border-radius: 6px;
+    border: 1px solid var(--stroke);
+    background: color-mix(in srgb, var(--input-bg) 80%, transparent);
+}
+
+/* Mesmo padrão do .planner-scroll: em tela estreita o quadro rola no eixo X. */
+.notes-scroll {
+    margin-top: 12px;
+    overflow: auto;
+    max-height: min(72vh, 720px);
+    border: 1px dashed var(--stroke);
+    border-radius: 18px;
+    background:
+        radial-gradient(circle at 1px 1px,
+            color-mix(in srgb, var(--stroke) 85%, transparent) 1px,
+            transparent 0) 0 0 / 22px 22px;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--accent) 45%, transparent) transparent;
+}
+
+.notes-scroll::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.notes-scroll::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.notes-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.notes-board {
+    --board-w: 100%;
+    --board-h: 320px;
+    position: relative;
+    width: max(100%, var(--board-w));
+    height: var(--board-h);
+    min-height: 320px;
+}
+
+.notes-empty {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    gap: 6px;
+    text-align: center;
+    padding: 20px;
+    color: var(--ink-soft);
+    pointer-events: none;
+}
+
+.notes-empty strong {
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    color: var(--ink);
+}
+
+.notes-empty span {
+    font-size: 2rem;
+    line-height: 1;
+}
+
+/* ------------------------------------------------------------- o post-it */
+
+.note {
+    --note-tint: #ffd76b;
+    --n-x: 16;
+    --n-y: 16;
+    --n-w: 224;
+    --n-h: 208;
+    --n-z: 1;
+
+    position: absolute;
+    top: 0;
+    left: 0;
+    /* Geometria vem de custom properties: arrastar só recalcula estilo e o
+       transform roda no compositor, sem layout por frame. */
+    width: calc(var(--n-w) * 1px);
+    height: calc(var(--n-h) * 1px);
+    transform: translate3d(calc(var(--n-x) * 1px), calc(var(--n-y) * 1px), 0);
+    z-index: var(--n-z);
+
+    display: flex;
+    flex-direction: column;
+    border-radius: 4px 14px 4px 4px;
+    /* Cult UI "texture card": camadas de papel + sombra curta de cola. */
+    background:
+        linear-gradient(163deg,
+            color-mix(in srgb, var(--note-tint) 78%, #fff) 0%,
+            color-mix(in srgb, var(--note-tint) 92%, #fff) 62%,
+            color-mix(in srgb, var(--note-tint) 100%, #fff) 100%);
+    border: 1px solid color-mix(in srgb, var(--note-tint) 72%, #000 6%);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.55),
+        0 1px 2px rgba(84, 44, 76, 0.16),
+        0 10px 22px -14px rgba(84, 44, 76, 0.55);
+    color: #40203f;
+    contain: layout paint style;
+    cursor: grab;
+    transition:
+        box-shadow 0.18s ease,
+        transform 0.2s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+.note:hover {
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.6),
+        0 2px 4px rgba(84, 44, 76, 0.18),
+        0 16px 30px -16px rgba(84, 44, 76, 0.6);
+}
+
+.note:focus-visible {
+    outline: 2px solid var(--accent-dark);
+    outline-offset: 2px;
+}
+
+/* Skiper UI: entrada com mola curta. */
+.note.is-new {
+    animation: notePop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+}
+
+@keyframes notePop {
+    from {
+        opacity: 0;
+        transform: translate3d(calc(var(--n-x) * 1px), calc(var(--n-y) * 1px + 8px), 0) scale(0.9) rotate(-2deg);
+    }
+    to {
+        opacity: 1;
+        transform: translate3d(calc(var(--n-x) * 1px), calc(var(--n-y) * 1px), 0) scale(1);
+    }
+}
+
+/* Saída: o cartão "descola" do quadro. */
+.note.is-leaving {
+    pointer-events: none;
+    animation: noteLeave 0.24s cubic-bezier(0.36, 0, 0.66, -0.3) forwards;
+}
+
+@keyframes noteLeave {
+    to {
+        opacity: 0;
+        transform: translate3d(calc(var(--n-x) * 1px), calc(var(--n-y) * 1px + 14px), 0) scale(0.86) rotate(4deg);
+    }
+}
+
+/* Durante o arraste a transição sai do caminho: cada frame já vem do rAF. */
+.note.is-dragging,
+.note.is-resizing {
+    transition: none;
+    animation: none;
+    cursor: grabbing;
+    will-change: transform;
+    z-index: 99999;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.6),
+        0 22px 44px -18px rgba(84, 44, 76, 0.7);
+}
+
+.note.is-dragging {
+    /* Inclinação leve de papel levantado (Skiper UI). */
+    rotate: -1.4deg;
+}
+
+.note.is-resizing {
+    cursor: nwse-resize;
+}
+
+/* Reposicionamento do botão "Organizar" é animado; o arraste não. */
+.note.is-tidying {
+    transition: transform 0.32s cubic-bezier(0.34, 1.3, 0.64, 1);
+}
+
+/* Cult UI "expandable": relevo enquanto edita. */
+.note.is-editing {
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.6),
+        0 0 0 2px color-mix(in srgb, var(--note-tint) 60%, var(--accent-dark)),
+        0 20px 40px -18px rgba(84, 44, 76, 0.65);
+}
+
+/* Cult UI "dock": ações só aparecem quando o cartão está em foco/hover. */
+.note-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 6px 2px 8px;
+    flex: 0 0 auto;
+    touch-action: none;
+}
+
+.note-grip {
+    flex: 1;
+    height: 10px;
+    border-radius: 999px;
+    background: repeating-linear-gradient(
+        90deg,
+        color-mix(in srgb, #40203f 22%, transparent) 0 3px,
+        transparent 3px 7px
+    );
+    opacity: 0.45;
+}
+
+.note-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    opacity: 0;
+    transform: translateY(-2px);
+    transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.note:hover .note-actions,
+.note:focus-within .note-actions {
+    opacity: 1;
+    transform: none;
+}
+
+.note-btn {
+    border: 0;
+    border-radius: 8px;
+    padding: 2px 6px;
+    font-family: var(--font-main);
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.5;
+    color: #40203f;
+    background: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    transition: background 0.14s ease, transform 0.12s ease;
+}
+
+.note-btn:hover {
+    background: rgba(255, 255, 255, 0.85);
+    transform: translateY(-1px);
+}
+
+.note-btn-danger {
+    font-size: 1rem;
+    line-height: 1.1;
+    padding: 0 7px;
+}
+
+.note-btn-danger:hover {
+    background: rgba(201, 67, 131, 0.9);
+    color: #fff;
+}
+
+.note-bucket {
+    max-width: 108px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Edição inline: o textarea é o próprio corpo do post-it. */
+.note-text {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    margin: 0;
+    padding: 2px 12px 12px;
+    border: 0;
+    outline: none;
+    resize: none;
+    background: transparent;
+    font-family: var(--font-main);
+    font-size: 0.92rem;
+    font-weight: 600;
+    line-height: 1.45;
+    color: inherit;
+    cursor: text;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, #40203f 30%, transparent) transparent;
+}
+
+.note-text::placeholder {
+    color: color-mix(in srgb, #40203f 42%, transparent);
+    font-weight: 500;
+}
+
+/* Origin UI: popover de swatches, dentro dos limites do cartão. */
+.note-swatches {
+    position: absolute;
+    top: 30px;
+    left: 8px;
+    right: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 10px 24px -14px rgba(84, 44, 76, 0.8);
+    /* Animação própria: notePop carrega o translate do cartão e deslocaria
+       o popover para fora do lugar. */
+    animation: swatchPop 0.16s cubic-bezier(0.34, 1.4, 0.64, 1) backwards;
+}
+
+@keyframes swatchPop {
+    from {
+        opacity: 0;
+        transform: translateY(-6px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.note-swatch {
+    width: 22px;
+    height: 22px;
+    border-radius: 7px;
+    border: 2px solid transparent;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: transform 0.14s ease, border-color 0.14s ease;
+}
+
+.note-swatch:hover {
+    transform: translateY(-2px) scale(1.08);
+}
+
+.note-swatch[aria-pressed="true"] {
+    border-color: #40203f;
+    transform: scale(1.08);
+}
+
+.note-resize {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 20px;
+    height: 20px;
+    cursor: nwse-resize;
+    touch-action: none;
+    background: linear-gradient(
+        135deg,
+        transparent 0 52%,
+        color-mix(in srgb, #40203f 28%, transparent) 52% 60%,
+        transparent 60% 70%,
+        color-mix(in srgb, #40203f 28%, transparent) 70% 78%,
+        transparent 78%
+    );
+    opacity: 0;
+    transition: opacity 0.16s ease;
+}
+
+.note:hover .note-resize,
+.note:focus-within .note-resize {
+    opacity: 0.8;
+}
+
+/* Paleta: as mesmas famílias de cor do planner, em versão papel. */
+.note.color-sun { --note-tint: #ffd76b; }
+.note.color-rose { --note-tint: #ff9ec4; }
+.note.color-mint { --note-tint: #7fe0c0; }
+.note.color-blue { --note-tint: #8fcdff; }
+.note.color-peach { --note-tint: #ffb08a; }
+.note.color-lavender { --note-tint: #c0a8fb; }
+
+.note-swatch.color-sun { background: #ffd76b; }
+.note-swatch.color-rose { background: #ff9ec4; }
+.note-swatch.color-mint { background: #7fe0c0; }
+.note-swatch.color-blue { background: #8fcdff; }
+.note-swatch.color-peach { background: #ffb08a; }
+.note-swatch.color-lavender { background: #c0a8fb; }
+
+[data-dark="true"] .note {
+    background:
+        linear-gradient(163deg,
+            color-mix(in srgb, var(--note-tint) 30%, rgba(34, 20, 44, 0.96)) 0%,
+            color-mix(in srgb, var(--note-tint) 22%, rgba(30, 18, 40, 0.96)) 100%);
+    border-color: color-mix(in srgb, var(--note-tint) 45%, transparent);
+    color: #fdf1ff;
+}
+
+[data-dark="true"] .note-grip {
+    background: repeating-linear-gradient(
+        90deg,
+        rgba(253, 241, 255, 0.5) 0 3px,
+        transparent 3px 7px
+    );
+}
+
+[data-dark="true"] .note-btn {
+    color: #fdf1ff;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+[data-dark="true"] .note-btn:hover {
+    background: rgba(255, 255, 255, 0.24);
+}
+
+[data-dark="true"] .note-text::placeholder {
+    color: rgba(253, 241, 255, 0.45);
+}
+
+[data-dark="true"] .note-swatches {
+    background: rgba(38, 22, 48, 0.96);
+}
+
+[data-dark="true"] .note-resize {
+    background: linear-gradient(
+        135deg,
+        transparent 0 52%,
+        rgba(253, 241, 255, 0.42) 52% 60%,
+        transparent 60% 70%,
+        rgba(253, 241, 255, 0.42) 70% 78%,
+        transparent 78%
+    );
+}
+
+@media (max-width: 760px) {
+    .notes-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .notes-filters {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        scrollbar-width: none;
+    }
+
+    .notes-filters::-webkit-scrollbar {
+        display: none;
+    }
+
+    .notes-toolbar-right {
+        justify-content: space-between;
+    }
+
+    .notes-scroll {
+        max-height: 68vh;
+    }
+
+    /* No toque as ações ficam sempre visíveis: não existe hover. */
+    .note-actions,
+    .note-resize {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* O bloco global de prefers-reduced-motion usa `* { animation: none }` com
+   !important, então a entrada/saída animada já é neutralizada lá. Aqui só
+   garantimos que o cartão não fique inclinado durante o arraste. */
+@media (prefers-reduced-motion: reduce) {
+    .note.is-dragging {
+        rotate: none;
+    }
+}

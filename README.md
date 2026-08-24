@@ -12,6 +12,7 @@ Recursos de interface:
 - Sidebar com menu de navegação
 - Aba de calendário grande para visualizar eventos e cursos
 - Aba **Weekly Planner**: grade semanal de 24 horas com blocos arrastáveis
+- Quadro de **post-its** na home: lembretes do dia, arrastáveis, redimensionáveis e coloridos
 - Aba de aparência com preview visual
 - 10 temas e 10 fontes selecionáveis
 - Seleção de tema e fonte por cards de preview (sem dropdown)
@@ -50,6 +51,48 @@ Endpoints:
 
 Blocos de rotina são gravados com `day_of_week = -1` e renderizados em todas as colunas visíveis.
 
+## Post-its da home
+
+Quadro de lembretes livres em `/`, logo abaixo do cabeçalho:
+
+- **Novo post-it** cria a nota já em modo de edição, num espaço livre do quadro
+- Edição inline: o corpo do cartão é o próprio campo de texto, sem modal
+- Arraste pela barra do topo e redimensione pelo canto inferior direito
+- O botão 🎨 abre a paleta com as seis cores do projeto
+- Cada post-it tem uma categoria (Hoje, Amanhã, Semana, Ideias); o botão da categoria alterna entre elas
+- Os chips do topo filtram por categoria, e o filtro escolhido fica no `localStorage`
+- **Organizar** realinha os post-its visíveis numa grade
+- `Esc` sai da edição
+
+No desktop o cartão arrasta de qualquer ponto que não seja o texto ou um botão.
+No toque só a barra do topo e o canto de redimensionar arrastam, para o resto da
+área continuar rolando a página.
+
+A persistência é no SQLite, no mesmo banco do resto do app. O `localStorage`
+guarda apenas uma cópia de leitura, usada para o quadro continuar visível quando
+o servidor não responde.
+
+Endpoints:
+
+| Método | Rota | Descrição |
+| --- | --- | --- |
+| `GET` | `/api/notes` | Lista todos os post-its |
+| `POST` | `/api/notes` | Cria um post-it |
+| `PATCH` | `/api/notes/<id>` | Atualiza só os campos enviados |
+| `DELETE` | `/api/notes/<id>` | Remove um post-it |
+
+O `PATCH` é parcial de propósito: o arraste salva geometria e o editor salva
+texto, os dois com debounce. Um `PUT` completo faria um sobrescrever o campo do
+outro quando as duas gravações se cruzassem.
+
+Sobre as bibliotecas de componentes pedidas: Origin UI, Skiper UI e Cult UI são
+registries React + Tailwind + shadcn, e este projeto é Flask + Jinja + JS puro,
+sem npm e sem build. Instalá-las exigiria trazer React, Tailwind e um bundler
+para um projeto que hoje não tem nenhum dos três. Os padrões aproveitados delas
+(cartão com textura de papel, cartão que ganha relevo em edição, dock de ações,
+grupo de swatches, molas de entrada e saída) foram reimplementados sobre os
+tokens de tema que já existem no `style.css`.
+
 ## Performance
 
 Medido com Playwright + throttle de CPU 4x, 35 blocos no planner, mediana de 5 execuções:
@@ -80,6 +123,7 @@ As três causas, isoladas por teste A/B:
 - `pointermove` do arraste agrupado em `requestAnimationFrame`, com o rect do canvas em cache (evita reflow síncrono por evento)
 - `contain: layout paint style` nas colunas do planner
 - Animações restritas a `transform`/`opacity` (rodam no compositor), respeitando `prefers-reduced-motion`
+- Post-its com geometria em custom properties e `transform`: arrastar não passa por layout, e as gravações são agrupadas por debounce (uma requisição por pausa, não por tecla ou pixel)
 
 ## Estrutura
 
@@ -97,6 +141,7 @@ event_notifier/
       manifest.webmanifest
       style.css
       planner-page.js
+      notes-board.js
     templates/
       index.html
       planner.html

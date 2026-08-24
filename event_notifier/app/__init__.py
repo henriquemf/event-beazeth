@@ -9,16 +9,20 @@ from app.config import Config
 from app.db import (
     delete_event,
     delete_planner_block,
+    delete_sticky_note,
     get_hydration_settings,
     init_db,
     insert_event,
     insert_planner_block,
+    insert_sticky_note,
     list_planner_blocks,
+    list_sticky_notes,
     list_push_subscriptions,
     list_events,
     delete_push_subscription,
     update_event,
     update_planner_block,
+    update_sticky_note,
     upsert_push_subscription,
     upsert_hydration_settings,
 )
@@ -208,6 +212,38 @@ def create_app():
     def planner_blocks_delete(block_id: int):
         if not delete_planner_block(app.config["DB_PATH"], block_id):
             return jsonify({"ok": False, "message": "Bloco não encontrado."}), 404
+        return jsonify({"ok": True})
+
+    # ---------------------------------------------------------- post-its
+
+    # Campos que o cliente pode enviar; qualquer outra chave e ignorada.
+    NOTE_INPUT_KEYS = ("content", "bucket", "color", "x", "y", "width", "height", "z", "pinned")
+
+    def _note_input(payload):
+        return {key: payload[key] for key in NOTE_INPUT_KEYS if key in payload}
+
+    @app.get("/api/notes")
+    def notes_list():
+        return jsonify({"ok": True, "notes": list_sticky_notes(app.config["DB_PATH"])})
+
+    @app.post("/api/notes")
+    def notes_create():
+        payload = request.get_json(silent=True) or {}
+        note = insert_sticky_note(app.config["DB_PATH"], _note_input(payload))
+        return jsonify({"ok": True, "note": note}), 201
+
+    @app.patch("/api/notes/<int:note_id>")
+    def notes_update(note_id: int):
+        payload = request.get_json(silent=True) or {}
+        note = update_sticky_note(app.config["DB_PATH"], note_id, _note_input(payload))
+        if note is None:
+            return jsonify({"ok": False, "message": "Post-it nao encontrado."}), 404
+        return jsonify({"ok": True, "note": note})
+
+    @app.delete("/api/notes/<int:note_id>")
+    def notes_delete(note_id: int):
+        if not delete_sticky_note(app.config["DB_PATH"], note_id):
+            return jsonify({"ok": False, "message": "Post-it nao encontrado."}), 404
         return jsonify({"ok": True})
 
     @app.get("/api/events")
