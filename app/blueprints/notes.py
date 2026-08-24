@@ -13,7 +13,7 @@ from app.db import (
 bp = Blueprint("notes", __name__)
 
 # Campos que o cliente pode enviar; qualquer outra chave é ignorada.
-INPUT_KEYS = ("content", "bucket", "color", "x", "y", "width", "height", "z", "pinned")
+INPUT_KEYS = ("content", "bucket", "color", "x", "y", "width", "height", "z")
 
 NOT_FOUND = "Post-it nao encontrado."
 

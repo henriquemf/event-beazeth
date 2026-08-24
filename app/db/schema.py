@@ -12,7 +12,6 @@ def init_db(db_path: str) -> None:
                 title TEXT NOT NULL,
                 description TEXT,
                 event_datetime TEXT NOT NULL,
-                is_course INTEGER NOT NULL DEFAULT 0,
                 tag_type TEXT NOT NULL DEFAULT 'evento',
                 created_at TEXT NOT NULL
             )
@@ -34,37 +33,11 @@ def init_db(db_path: str) -> None:
                 """
             )
 
-        # Migração para remover colunas legadas de integrações externas.
-        legacy_columns = {"email_to", "whatsapp_to"}
-        if any(col in columns for col in legacy_columns):
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS events_new (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    title TEXT NOT NULL,
-                    description TEXT,
-                    event_datetime TEXT NOT NULL,
-                    is_course INTEGER NOT NULL DEFAULT 0,
-                    tag_type TEXT NOT NULL DEFAULT 'evento',
-                    created_at TEXT NOT NULL
-                )
-                """
-            )
-            conn.execute(
-                """
-                INSERT INTO events_new (id, title, description, event_datetime, is_course, tag_type, created_at)
-                SELECT id,
-                       title,
-                       description,
-                       event_datetime,
-                       is_course,
-                       COALESCE(tag_type, CASE WHEN is_course = 1 THEN 'curso' ELSE 'evento' END),
-                       created_at
-                FROM events
-                """
-            )
-            conn.execute("DROP TABLE events")
-            conn.execute("ALTER TABLE events_new RENAME TO events")
+        # Colunas legadas. `is_course` era espelho de `tag_type` (escrita em todo
+        # insert, nunca lida) e as de integração externa saíram há tempos.
+        for legacy in ("is_course", "email_to", "whatsapp_to"):
+            if legacy in columns:
+                conn.execute(f"ALTER TABLE events DROP COLUMN {legacy}")
 
         conn.execute(
             """
@@ -170,7 +143,6 @@ def init_db(db_path: str) -> None:
                 height INTEGER NOT NULL DEFAULT 208,
                 color TEXT NOT NULL DEFAULT 'sun',
                 z_index INTEGER NOT NULL DEFAULT 1,
-                pinned INTEGER NOT NULL DEFAULT 0,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             )
@@ -178,6 +150,14 @@ def init_db(db_path: str) -> None:
         )
 
         # Índices: consultas ordenam/filtram por essas colunas em todas as telas.
+        # `pinned` nunca chegou a ter interface: nada lia o valor.
+        note_columns = {
+            row["name"]
+            for row in conn.execute("PRAGMA table_info(sticky_notes)").fetchall()
+        }
+        if "pinned" in note_columns:
+            conn.execute("ALTER TABLE sticky_notes DROP COLUMN pinned")
+
         conn.execute("CREATE INDEX IF NOT EXISTS idx_events_datetime ON events(event_datetime)")
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_dispatches_lookup "

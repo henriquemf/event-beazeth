@@ -90,12 +90,6 @@
         localStorage.setItem(STORAGE_KEYS.dark, String(normalizedDark));
         applyPreferences(normalizedTheme, normalizedFont, normalizedDark);
 
-        if (options && options.themeSelect) {
-            options.themeSelect.value = normalizedTheme;
-        }
-        if (options && options.fontSelect) {
-            options.fontSelect.value = normalizedFont;
-        }
         if (options && options.darkToggle) {
             options.darkToggle.checked = normalizedDark;
         }
@@ -106,46 +100,51 @@
     applyPreferences(initial.theme, initial.font, initial.dark);
 
     function initControls() {
-        const themeSelect = document.getElementById("theme-select");
-        const fontSelect = document.getElementById("font-select");
         const darkToggle = document.getElementById("dark-toggle");
-        const options = { themeSelect, fontSelect, darkToggle };
+        const options = { darkToggle };
 
         saveAndApply(initial.theme, initial.font, initial.dark, options);
 
-        if (themeSelect && fontSelect) {
-            themeSelect.addEventListener("change", function () {
-                saveAndApply(themeSelect.value, fontSelect.value, darkToggle ? darkToggle.checked : initial.dark, options);
-            });
+        /* Estado atual lido do <body>, que o bootstrap de tema já preencheu
+           antes da primeira pintura. */
+        function current(key, fallback) {
+            return document.body.dataset[key] || fallback;
+        }
 
-            fontSelect.addEventListener("change", function () {
-                saveAndApply(themeSelect.value, fontSelect.value, darkToggle ? darkToggle.checked : initial.dark, options);
-            });
+        function isDark() {
+            return darkToggle ? darkToggle.checked : document.body.dataset.dark === "true";
         }
 
         if (darkToggle) {
             darkToggle.addEventListener("change", function () {
-                const currentTheme = themeSelect ? themeSelect.value : document.body.dataset.theme || initial.theme;
-                const currentFont = fontSelect ? fontSelect.value : document.body.dataset.font || initial.font;
-                saveAndApply(currentTheme, currentFont, darkToggle.checked, options);
+                saveAndApply(
+                    current("theme", initial.theme),
+                    current("font", initial.font),
+                    darkToggle.checked,
+                    options
+                );
             });
         }
 
         document.querySelectorAll(".theme-preview").forEach(function (button) {
             button.addEventListener("click", function () {
-                const theme = button.dataset.theme || defaults.theme;
-                const currentFont = fontSelect ? fontSelect.value : document.body.dataset.font || initial.font;
-                const currentDark = darkToggle ? darkToggle.checked : (document.body.dataset.dark === "true");
-                saveAndApply(theme, currentFont, currentDark, options);
+                saveAndApply(
+                    button.dataset.theme || defaults.theme,
+                    current("font", initial.font),
+                    isDark(),
+                    options
+                );
             });
         });
 
         document.querySelectorAll(".font-preview").forEach(function (button) {
             button.addEventListener("click", function () {
-                const font = button.dataset.font || defaults.font;
-                const currentTheme = themeSelect ? themeSelect.value : document.body.dataset.theme || initial.theme;
-                const currentDark = darkToggle ? darkToggle.checked : (document.body.dataset.dark === "true");
-                saveAndApply(currentTheme, font, currentDark, options);
+                saveAndApply(
+                    current("theme", initial.theme),
+                    button.dataset.font || defaults.font,
+                    isDark(),
+                    options
+                );
             });
         });
     }

@@ -58,13 +58,12 @@ EN.notes = EN.notes || {};
         }, 1);
     };
 
-    notes.setStatus = function (ctx, message, tone) {
+    notes.setStatus = function (ctx, message) {
         const el = ctx.els.status;
         if (!el) {
             return;
         }
         el.hidden = !message;
         el.textContent = message || "";
-        el.dataset.tone = tone || "info";
     };
 })(EN.notes);

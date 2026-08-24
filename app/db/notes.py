@@ -20,19 +20,6 @@ NOTE_BOUNDS = {
 }
 
 
-NOTE_FIELDS = (
-    "content",
-    "bucket",
-    "pos_x",
-    "pos_y",
-    "width",
-    "height",
-    "color",
-    "z_index",
-    "pinned",
-)
-
-
 def _normalize_note_color(color: str) -> str:
     color = (color or "").strip().lower()
     return color if color in NOTE_COLORS else "sun"
@@ -63,14 +50,13 @@ def _row_to_note_dict(row) -> dict:
         "height": row["height"],
         "color": row["color"],
         "z": row["z_index"],
-        "pinned": bool(row["pinned"]),
         "updatedAt": row["updated_at"],
     }
 
 
 _NOTE_SELECT = """
     SELECT id, content, bucket, pos_x, pos_y, width, height,
-           color, z_index, pinned, updated_at
+           color, z_index, updated_at
     FROM sticky_notes
 """
 
@@ -92,15 +78,14 @@ def insert_sticky_note(db_path: str, fields: dict) -> dict:
         "height": _clamp_note_int("height", fields.get("height"), 208),
         "color": _normalize_note_color(fields.get("color")),
         "z_index": _clamp_note_int("z_index", fields.get("z"), 1),
-        "pinned": int(bool(fields.get("pinned"))),
     }
 
     with get_connection(db_path) as conn:
         cursor = conn.execute(
             """
             INSERT INTO sticky_notes
-            (content, bucket, pos_x, pos_y, width, height, color, z_index, pinned, created_at, updated_at)
-            VALUES (:content, :bucket, :pos_x, :pos_y, :width, :height, :color, :z_index, :pinned, :created_at, :updated_at)
+            (content, bucket, pos_x, pos_y, width, height, color, z_index, created_at, updated_at)
+            VALUES (:content, :bucket, :pos_x, :pos_y, :width, :height, :color, :z_index, :created_at, :updated_at)
             """,
             dict(data, created_at=now, updated_at=now),
         )
@@ -126,8 +111,6 @@ def update_sticky_note(db_path: str, note_id: int, fields: dict):
             updates["bucket"] = _normalize_note_bucket(fields.get("bucket"))
         if "color" in fields:
             updates["color"] = _normalize_note_color(fields.get("color"))
-        if "pinned" in fields:
-            updates["pinned"] = int(bool(fields.get("pinned")))
         for key, source in (("pos_x", "x"), ("pos_y", "y"), ("width", "width"),
                             ("height", "height"), ("z_index", "z")):
             if source in fields:

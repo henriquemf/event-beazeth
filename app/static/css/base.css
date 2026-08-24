@@ -272,15 +272,6 @@ body.page-leaving {
     background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 60%, transparent), transparent);
 }
 
-@keyframes pageSlideIn {
-    from {
-        opacity: 0.85;
-        transform: translateY(6px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
 }
 
 .hero-card,

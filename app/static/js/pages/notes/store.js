@@ -82,7 +82,7 @@ EN.notes = EN.notes || {};
                 }
             }).catch(function () {
                 ctx.offline = true;
-                notes.setStatus(ctx, OFFLINE_WRITE, "error");
+                notes.setStatus(ctx, OFFLINE_WRITE);
             });
         },
 
@@ -118,7 +118,7 @@ EN.notes = EN.notes || {};
             } catch (err) {
                 ctx.offline = true;
                 ctx.items = readCache();
-                notes.setStatus(ctx, OFFLINE_READ, "error");
+                notes.setStatus(ctx, OFFLINE_READ);
             }
         },
     };

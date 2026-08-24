@@ -14,14 +14,13 @@ def insert_event(
     with get_connection(db_path) as conn:
         conn.execute(
             """
-            INSERT INTO events (title, description, event_datetime, is_course, tag_type, created_at)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO events (title, description, event_datetime, tag_type, created_at)
+            VALUES (?, ?, ?, ?, ?)
             """,
             (
                 title.strip(),
                 description.strip(),
                 event_datetime,
-                int(normalized_tag == "curso"),
                 normalized_tag,
                 utc_now_iso(),
             ),
@@ -49,7 +48,6 @@ def update_event(
             SET title = ?,
                 description = ?,
                 event_datetime = ?,
-                is_course = ?,
                 tag_type = ?
             WHERE id = ?
             """,
@@ -57,7 +55,6 @@ def update_event(
                 title.strip(),
                 description.strip(),
                 event_datetime,
-                int(normalized_tag == "curso"),
                 normalized_tag,
                 event_id,
             ),
@@ -69,8 +66,7 @@ def list_events(db_path: str):
     with get_connection(db_path) as conn:
         rows = conn.execute(
             """
-            SELECT id, title, description, event_datetime, is_course,
-                   COALESCE(tag_type, CASE WHEN is_course = 1 THEN 'curso' ELSE 'evento' END) AS tag_type
+            SELECT id, title, description, event_datetime, tag_type
             FROM events
             ORDER BY event_datetime ASC
             """
@@ -82,8 +78,7 @@ def list_due_event_candidates(db_path: str, window_start: str, window_end: str):
     with get_connection(db_path) as conn:
         rows = conn.execute(
             """
-            SELECT id, title, description, event_datetime, is_course,
-                   COALESCE(tag_type, CASE WHEN is_course = 1 THEN 'curso' ELSE 'evento' END) AS tag_type
+            SELECT id, title, description, event_datetime, tag_type
             FROM events
             WHERE event_datetime BETWEEN ? AND ?
             """

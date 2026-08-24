@@ -67,7 +67,7 @@ EN.notes = EN.notes || {};
                     el.querySelector(".note-text").focus();
                 }
             } catch (err) {
-                notes.setStatus(ctx, "Não foi possível criar o post-it. Recarregue a página.", "error");
+                notes.setStatus(ctx, "Não foi possível criar o post-it. Recarregue a página.");
             }
         },
 
@@ -105,7 +105,7 @@ EN.notes = EN.notes || {};
             }
 
             notes.store.destroy(ctx, id).catch(function () {
-                notes.setStatus(ctx, "O post-it foi removido aqui, mas o servidor não respondeu.", "error");
+                notes.setStatus(ctx, "O post-it foi removido aqui, mas o servidor não respondeu.");
             });
         },
     };
