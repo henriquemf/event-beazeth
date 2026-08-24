@@ -174,7 +174,8 @@ body.page-leaving {
     margin: 0;
     font-family: var(--font-display);
     font-size: 1.35rem;
-    line-height: 1;
+    /* 1 cortava o topo das fontes de script (Great Vibes, Berkshire Swash). */
+    line-height: 1.2;
 }
 
 .brand small {
@@ -302,10 +303,27 @@ body.page-leaving {
     }
 }
 
+/* Os 10 temas trocam --font-display por famílias de métricas muito diferentes
+   (Great Vibes e Berkshire Swash têm ascendentes enormes, Cherry Bomb One é
+   quadrada). Sem line-height e margem explícitos, o espaçamento do título mudava
+   a cada tema e as letras altas encostavam na borda do cartão. */
 .hero-card h2,
 .panel-card h3 {
     margin: 0;
     font-family: var(--font-display);
+    line-height: 1.3;
+}
+
+.hero-card h2 {
+    font-size: clamp(1.35rem, 1.15rem + 0.8vw, 1.7rem);
+    margin-bottom: 6px;
+}
+
+/* Antes o h3 tinha margin: 0 e o conteúdo seguinte (grade, formulário, tabela)
+   não tinha margem superior: título e conteúdo ficavam colados. */
+.panel-card h3 {
+    font-size: 1.15rem;
+    margin-bottom: 16px;
 }
 
 .hero-card p {
@@ -356,17 +374,48 @@ body.page-leaving {
     font: inherit;
     color: var(--ink);
     background: var(--input-bg);
+    transition:
+        border-color 0.18s ease,
+        box-shadow 0.2s ease,
+        background 0.18s ease;
+}
+
+.event-form input:hover:not(:focus),
+.event-form textarea:hover:not(:focus),
+.event-form select:hover:not(:focus) {
+    border-color: color-mix(in srgb, var(--accent) 42%, var(--stroke));
+    background: color-mix(in srgb, var(--accent) 5%, var(--input-bg));
+}
+
+.event-form textarea {
+    resize: vertical;
+    min-height: 76px;
 }
 
 .event-form select {
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
-    background-image: linear-gradient(45deg, transparent 50%, var(--ink-soft) 50%), linear-gradient(135deg, var(--ink-soft) 50%, transparent 50%);
-    background-position: calc(100% - 18px) calc(50% - 2px), calc(100% - 12px) calc(50% - 2px);
-    background-size: 6px 6px, 6px 6px;
+    /* Seta desenhada com gradientes em vez de SVG: um data URI não consegue ler
+       as variáveis de tema, e a seta precisa mudar de cor junto com o tema. */
+    background-image:
+        linear-gradient(45deg, transparent 50%, var(--ink-soft) 50%),
+        linear-gradient(135deg, var(--ink-soft) 50%, transparent 50%);
+    background-position: calc(100% - 19px) calc(50% - 2px), calc(100% - 13px) calc(50% - 2px);
+    background-size: 7px 7px, 7px 7px;
     background-repeat: no-repeat;
-    padding-right: 34px;
+    padding-right: 38px;
+    cursor: pointer;
+    transition:
+        border-color 0.18s ease,
+        box-shadow 0.2s ease,
+        background-color 0.18s ease,
+        background-position 0.18s ease;
+}
+
+/* background-position é animável: a seta desce 2px ao focar. */
+.event-form select:focus {
+    background-position: calc(100% - 19px) calc(50% + 1px), calc(100% - 13px) calc(50% + 1px);
 }
 
 .event-form input[type="datetime-local"]::-webkit-calendar-picker-indicator,
@@ -377,8 +426,76 @@ body.page-leaving {
 .event-form input:focus,
 .event-form textarea:focus,
 .event-form select:focus {
-    outline: 2px solid rgba(255, 120, 178, 0.22);
-    border-color: rgba(228, 90, 152, 0.35);
+    /* Anel por box-shadow acompanha o border-radius; o outline transparente
+       mantém um indicador visível no modo de alto contraste do Windows. */
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+/* ------------------------------------------------------------------ slider */
+
+/* O range ficava com a aparência crua do navegador (o zoom do planner era o
+   único lugar visível disso). */
+input[type="range"] {
+    appearance: none;
+    -webkit-appearance: none;
+    height: 22px;
+    background: transparent;
+    cursor: pointer;
+    accent-color: var(--accent);
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+    height: 6px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--accent) 26%, var(--stroke));
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    margin-top: -5px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid #fff;
+    box-shadow: 0 2px 8px -2px var(--shadow);
+    transition: transform 0.14s cubic-bezier(0.34, 1.45, 0.64, 1), box-shadow 0.18s ease;
+}
+
+input[type="range"]:hover::-webkit-slider-thumb {
+    transform: scale(1.15);
+}
+
+input[type="range"]:active::-webkit-slider-thumb {
+    transform: scale(0.95);
+}
+
+input[type="range"]:focus-visible::-webkit-slider-thumb {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+input[type="range"]::-moz-range-track {
+    height: 6px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--accent) 26%, var(--stroke));
+}
+
+input[type="range"]::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid #fff;
+    box-shadow: 0 2px 8px -2px var(--shadow);
+    transition: transform 0.14s cubic-bezier(0.34, 1.45, 0.64, 1);
+}
+
+input[type="range"]:hover::-moz-range-thumb {
+    transform: scale(1.15);
 }
 
 .inline-group {
@@ -394,16 +511,34 @@ body.page-leaving {
     line-height: 1.35;
 }
 
+/* .btn-secondary ficava de fora desta regra e caía no estilo padrão do
+   navegador: sem raio, sem padding e com outra fonte. Era por isso que botões
+   secundários (ex.: "Organizar") destoavam do resto. A borda transparente
+   mantém todos com a mesma altura, tenham borda visível ou não. */
 .btn-primary,
+.btn-secondary,
 .btn-danger {
-    border: 0;
+    border: 1px solid transparent;
     border-radius: 999px;
     padding: 10px 18px;
     width: fit-content;
     font-weight: 700;
     font-family: var(--font-display);
+    font-size: 0.95rem;
+    line-height: 1.2;
     cursor: pointer;
-    transition: transform 0.12s ease, filter 0.2s ease, box-shadow 0.2s ease;
+    transition:
+        transform 0.16s cubic-bezier(0.34, 1.45, 0.64, 1),
+        background 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.btn-primary:focus-visible,
+.btn-secondary:focus-visible,
+.btn-danger:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
 .btn-primary {
@@ -430,12 +565,13 @@ body.page-leaving {
 .btn-secondary {
     color: var(--ink);
     background: color-mix(in srgb, var(--input-bg) 70%, transparent);
-    border: 1px solid var(--stroke);
+    border-color: var(--stroke);
 }
 
 .btn-secondary:hover {
     transform: translateY(-1px);
     background: color-mix(in srgb, var(--accent) 20%, var(--input-bg));
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--stroke));
 }
 
 button:active,

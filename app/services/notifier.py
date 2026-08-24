@@ -1,12 +1,22 @@
 import platform
 
-from plyer import notification
 from pywebpush import WebPushException, webpush
 
 
 def send_desktop_notification(title: str, message: str, exact_title: bool = False):
+    """Notificação nativa do Windows. Em qualquer outro sistema é no-op.
+
+    O plyer é importado aqui dentro, e não no topo, porque só serve a este
+    caminho: no deploy (container Linux) a função retorna antes de usá-lo, então
+    o pacote vira dependência opcional em vez de obrigatória para subir o app.
+    """
     if platform.system().lower() != "windows":
         return False, "Notificação desktop não suportada neste ambiente (use Web Push)."
+
+    try:
+        from plyer import notification
+    except ImportError:
+        return False, "plyer não instalado (opcional; só para notificação desktop local)."
 
     try:
         final_title = title if exact_title else f"Event Notifier ✨ | {title}"

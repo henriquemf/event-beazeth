@@ -1,7 +1,10 @@
 Flask==3.1.0
 APScheduler==3.10.4
 python-dotenv==1.0.1
-plyer==2.1.0
 pywebpush==2.0.3
 cryptography==42.0.8
 gunicorn==22.0.0
+
+# Opcional: só para notificação desktop nativa rodando local no Windows.
+# O deploy (container Linux) usa Web Push e não precisa deste pacote.
+plyer==2.1.0 ; sys_platform == "win32"

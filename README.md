@@ -98,6 +98,18 @@ para um projeto que hoje não tem nenhum dos três. Os padrões aproveitados del
 grupo de swatches, molas de entrada e saída) foram reimplementados sobre os
 tokens de tema que já existem no CSS.
 
+## Bibliotecas
+
+| Biblioteca | Situação | Decisão |
+| --- | --- | --- |
+| **flatpickr** | Upstream congelado (4.6.13, sem release há anos), mas estável, sem dependências e ~50 KB | Mantida e **fixada em `@4.6.13`**. Estava sem versão na URL do CDN, ou seja, o jsDelivr entregava sempre a última: um release quebrado derrubaria o seletor de data em produção sem aviso. As alternativas atuais são todas React. |
+| **FullCalendar** | Ativa (6.1.21) | Atualizada de 6.1.17 → 6.1.21. O `<link>` para `index.global.min.css` foi **removido**: o FullCalendar 6 não publica arquivo de CSS (o bundle JS injeta os estilos), então aquele link respondia 404 em toda visita à tela. |
+| **plyer** | Só usada por `send_desktop_notification`, que só funciona no Windows | Import movido para dentro da função e marcada como opcional (`; sys_platform == "win32"`). No container Linux ela era instalada e importada sem nunca poder ser usada. |
+| Flask, APScheduler, python-dotenv, pywebpush, gunicorn | Adequadas ao porte do projeto | Mantidas |
+| **cryptography 42.0.8** | De meados de 2024, arrastada pelo pywebpush | Vale atualizar num passo próprio, com teste do Web Push junto — é a dependência mais sensível a correções de segurança. |
+
+Nenhuma biblioteca nova foi adicionada.
+
 ## Performance
 
 Medido com Playwright + throttle de CPU 4x, 35 blocos no planner, mediana de 5 execuções:
