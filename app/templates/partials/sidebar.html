@@ -15,14 +15,20 @@
         <p><span class="tag tag-curso">Curso</span> Lembrete no Dia + 15 e 7 Dias</p>
     </div>
 
-    <div class="mode-box">
-        <h3>Modo</h3>
-        <label class="dark-toggle fancy" for="dark-toggle">
-            <input id="dark-toggle" type="checkbox" />
-            <span class="track"><span class="dot"></span></span>
-            <span class="text">Dark mode</span>
-        </label>
-    </div>
+    {# Um controle só, sem caixa em volta: lua/sol trocam conforme o estado. #}
+    <label class="dark-switch" for="dark-toggle" title="Alternar dark mode">
+        <input id="dark-toggle" type="checkbox" />
+        <span class="dark-switch-icon" aria-hidden="true">
+            <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
+            </svg>
+            <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="4.2" />
+                <path d="M12 2.6v2.2M12 19.2v2.2M4.3 4.3l1.6 1.6M18.1 18.1l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.3 19.7l1.6-1.6M18.1 5.9l1.6-1.6" />
+            </svg>
+        </span>
+        <span class="dark-switch-label">Dark mode</span>
+    </label>
 
     <div class="mode-box push-box">
         <h3>Notificações</h3>

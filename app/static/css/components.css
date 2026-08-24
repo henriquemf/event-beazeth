@@ -195,16 +195,101 @@
     transform: translateX(24px);
 }
 
-/* O checkbox do dark mode nasce desmarcado no HTML e só é marcado pelo JS, que
-   roda depois da primeira pintura — o resultado era o botão "ligando" sozinho a
-   cada troca de página. O estado visual passa a vir do atributo em <html>, que é
-   definido antes de pintar. O :checked acima continua valendo para o clique. */
-[data-dark="true"] #dark-toggle + .track {
-    background: linear-gradient(120deg, rgba(130, 86, 222, 0.6), rgba(230, 113, 183, 0.6));
+/* --------------------------------------------------- interruptor dark mode */
+
+/* Um controle compacto, sem caixa em volta: ícone + rótulo numa pílula. */
+.dark-switch {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border: 1px solid var(--stroke);
+    border-radius: 999px;
+    cursor: pointer;
+    user-select: none;
+    font-weight: 700;
+    color: var(--ink);
+    background: color-mix(in srgb, var(--input-bg) 60%, transparent);
+    transition: background 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
 }
 
-[data-dark="true"] #dark-toggle + .track .dot {
-    transform: translateX(24px);
+.dark-switch:hover {
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--stroke));
+    background: color-mix(in srgb, var(--accent) 12%, var(--input-bg));
+}
+
+.dark-switch-label {
+    font-size: 0.92rem;
+    line-height: 1.2;
+}
+
+.dark-switch input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.dark-switch input:focus-visible + .dark-switch-icon {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+/* Os dois ícones ficam empilhados no mesmo ponto e alternam por opacidade e
+   rotação — nada de layout muda, então a troca roda no compositor. */
+.dark-switch-icon {
+    position: relative;
+    flex: 0 0 auto;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(130deg, rgba(255, 120, 178, 0.3), rgba(126, 200, 255, 0.28));
+    transition: background 0.24s ease, box-shadow 0.2s ease;
+}
+
+.dark-switch-icon svg {
+    position: absolute;
+    width: 17px;
+    height: 17px;
+    transition: opacity 0.26s ease, transform 0.32s cubic-bezier(0.34, 1.45, 0.64, 1);
+}
+
+/* Claro é o padrão: sol visível, lua guardada. */
+.dark-switch-icon .icon-sun {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+}
+
+.dark-switch-icon .icon-moon {
+    opacity: 0;
+    transform: rotate(-70deg) scale(0.5);
+}
+
+/* O checkbox nasce desmarcado no HTML e só é marcado pelo JS, que roda depois da
+   primeira pintura — o ícone "virava" sozinho a cada troca de página. O estado
+   visual vem do atributo em <html>, definido antes de pintar. O :checked abaixo
+   cobre o clique imediato. */
+[data-dark="true"] .dark-switch-icon .icon-sun,
+.dark-switch input:checked + .dark-switch-icon .icon-sun {
+    opacity: 0;
+    transform: rotate(70deg) scale(0.5);
+}
+
+[data-dark="true"] .dark-switch-icon .icon-moon,
+.dark-switch input:checked + .dark-switch-icon .icon-moon {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+}
+
+[data-dark="true"] .dark-switch-icon,
+.dark-switch input:checked + .dark-switch-icon {
+    background: linear-gradient(130deg, rgba(130, 86, 222, 0.75), rgba(230, 113, 183, 0.7));
+    box-shadow: 0 0 14px -4px rgba(160, 110, 235, 0.8);
+}
+
+[data-dark="true"] .dark-switch {
+    border-color: color-mix(in srgb, var(--accent) 40%, var(--stroke));
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
 }
 
 /* Mesma classe de problema para toggles restaurados de localStorage (ex: fins de

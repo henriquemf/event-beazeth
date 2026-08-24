@@ -3,94 +3,119 @@
 {% block title %}Cadastro | Event Notifier{% endblock %}
 
 {% block head_extra %}
+<link rel="stylesheet" href="{{ static_url('css/pages/events.css') }}" />
 <link rel="stylesheet" href="{{ static_url('css/vendor/flatpickr.css') }}" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css" />
 {% endblock %}
 
 {% block content %}
-<section class="hero-card">
-    <h2>Crie seus lembretes fofinhos</h2>
-    <p>Cadastre eventos e cursos com tags coloridas e receba alertas direto nas notificações do Windows.</p>
+<section class="hero-card events-hero">
+    <div class="events-hero-text">
+        <h2>Crie seus lembretes fofinhos</h2>
+        <p>Cadastre eventos e cursos com tags coloridas e receba alertas direto nas notificações do Windows.</p>
+    </div>
+    <span class="events-hero-badge">
+        <strong>{{ events|length }}</strong>
+        <small>{{ 'agendado' if events|length == 1 else 'agendados' }}</small>
+    </span>
 </section>
 
-<section class="panel-card">
-    <h3>Novo registro</h3>
-    <form method="post" class="event-form">
-        <label>
-            Título do evento
-            <input type="text" name="title" placeholder="Ex: Workshop de maquiagem" required />
-        </label>
+<div class="events-layout">
+    <section class="panel-card">
+        <h3>Novo registro</h3>
+        <form method="post" class="event-form">
+            <label>
+                Título do evento
+                <input type="text" name="title" placeholder="Ex: Workshop de maquiagem" required />
+            </label>
 
-        <label>
-            Descrição
-            <textarea name="description" rows="3" placeholder="Detalhes do evento..."></textarea>
-        </label>
+            <label>
+                Descrição
+                <textarea name="description" rows="3" placeholder="Detalhes do evento..."></textarea>
+            </label>
 
-        <label>
-            Data e hora
-            <input id="event-datetime" type="text" name="event_datetime" placeholder="Selecione data e hora" required />
-        </label>
+            <div class="event-when">
+                <label>
+                    Data e hora
+                    <input id="event-datetime" type="text" name="event_datetime" placeholder="Selecione data e hora" required />
+                </label>
 
-        <label class="dark-toggle fancy" for="include-time">
-            <input id="include-time" type="checkbox" name="include_time" />
-            <span class="track"><span class="dot"></span></span>
-            <span class="text">Incluir horário (opcional)</span>
-        </label>
+                <label class="dark-toggle fancy" for="include-time">
+                    <input id="include-time" type="checkbox" name="include_time" />
+                    <span class="track"><span class="dot"></span></span>
+                    <span class="text">Incluir horário</span>
+                </label>
+            </div>
 
-        <label>
-            Tag
-            <select name="tag_type" required>
-                <option value="evento">Evento</option>
-                <option value="curso">Curso</option>
-            </select>
-        </label>
+            {# Dois cartões no lugar do <select>: mostram a regra de lembrete de
+               cada tag, que antes só existia na legenda da barra lateral. #}
+            <fieldset class="tag-picker">
+                <legend>Tag</legend>
 
-        <button type="submit" class="btn-primary">Salvar evento</button>
-    </form>
-</section>
+                <label class="tag-option">
+                    <input type="radio" name="tag_type" value="evento" checked />
+                    <span class="tag-option-card">
+                        <span class="tag tag-evento">Evento</span>
+                        <small>Um aviso, na hora marcada</small>
+                    </span>
+                </label>
 
-<section class="panel-card">
-    <h3>Próximos eventos</h3>
-    {% if events %}
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Título</th>
-                        <th>Data</th>
-                        <th>Tag</th>
-                        <th>Ação</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for event in events %}
-                        <tr>
-                            <td>
-                                <strong>{{ event['title'] }}</strong>
-                                <small>{{ event['description'] or '-' }}</small>
-                            </td>
-                            <td>{{ event['event_datetime'].replace('T', ' ') }}</td>
-                            <td>
+                <label class="tag-option">
+                    <input type="radio" name="tag_type" value="curso" />
+                    <span class="tag-option-card">
+                        <span class="tag tag-curso">Curso</span>
+                        <small>Na hora, e 15 e 7 dias antes</small>
+                    </span>
+                </label>
+            </fieldset>
+
+            <button type="submit" class="btn-primary event-submit">Salvar evento</button>
+        </form>
+    </section>
+
+    <section class="panel-card">
+        <h3>Próximos eventos</h3>
+        {% if events %}
+            <ul class="event-list">
+                {% for event in events %}
+                    <li class="event-item is-{{ event['tag_type'] }}">
+                        <span class="event-date" aria-hidden="true">
+                            <strong>{{ event['day'] }}</strong>
+                            <small>{{ event['month'] }}</small>
+                        </span>
+
+                        <span class="event-body">
+                            <strong class="event-title">{{ event['title'] }}</strong>
+                            <span class="event-meta">
                                 {% if event['tag_type'] == 'curso' %}
                                     <span class="tag tag-curso">Curso</span>
                                 {% else %}
                                     <span class="tag tag-evento">Evento</span>
                                 {% endif %}
-                            </td>
-                            <td>
-                                <form method="post" action="{{ url_for('events.remove_event', event_id=event['id']) }}" onsubmit="return confirm('Deseja excluir este evento?');">
-                                    <button class="btn-danger" type="submit">Excluir</button>
-                                </form>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    {% else %}
-        <p class="empty">Nenhum evento cadastrado ainda.</p>
-    {% endif %}
-</section>
+                                <span class="event-when-text">
+                                    {{ event['year'] }}{% if event['time'] %} · {{ event['time'] }}{% endif %}
+                                </span>
+                            </span>
+                            {% if event['description'] %}
+                                <small class="event-desc">{{ event['description'] }}</small>
+                            {% endif %}
+                        </span>
+
+                        <form method="post" action="{{ url_for('events.remove_event', event_id=event['id']) }}" onsubmit="return confirm('Deseja excluir este evento?');">
+                            <button class="btn-danger event-remove" type="submit" aria-label="Excluir {{ event['title'] }}">Excluir</button>
+                        </form>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="events-empty">
+                <span aria-hidden="true">🗓️</span>
+                <strong>Nenhum evento cadastrado ainda</strong>
+                <small>Preencha o formulário ao lado para criar o primeiro.</small>
+            </p>
+        {% endif %}
+    </section>
+</div>
 {% endblock %}
 
 {% block scripts %}

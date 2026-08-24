@@ -1,14 +1,9 @@
 /* Fundacao compartilhada: tokens, reset, layout, barra lateral, cartoes,
-   formularios, botoes, tabelas e tags.
+   formularios, botoes e tags.
 
    Carregue SEMPRE nesta ordem: base.css -> components.css -> themes.css.
    Os tres sao faixas contiguas do mesmo arquivo original, entao trocar a
    ordem muda a cascata. */
-
-/* Base compartilhada por todas as telas.
-
-   Tokens, reset, layout, barra lateral, cartoes, formularios, botoes,
-   tabelas, modal, temas, fontes, dark mode e responsivo. */
 
 :root {
     --surface-solid: linear-gradient(var(--surface), var(--surface)), var(--bg-mid);
@@ -222,9 +217,20 @@ body.page-leaving {
     font-family: var(--font-display);
 }
 
+/* Duas colunas: o pill numa, a descrição na outra. Como <p> simples, o texto
+   longo do "Curso" voltava para baixo do pill e desalinhava a caixa. */
 .legend-box p {
-    margin: 6px 0;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: 8px;
+    margin: 8px 0 0;
     color: var(--ink-soft);
+    line-height: 1.35;
+}
+
+.legend-box p .tag {
+    white-space: nowrap;
 }
 
 .main-content {
@@ -581,33 +587,6 @@ button:active,
 .font-preview:active,
 .fc .fc-button:active {
     transform: translateY(0) scale(0.98);
-}
-
-.table-wrap {
-    overflow-x: auto;
-}
-
-table {
-    width: 100%;
-    border-collapse: collapse;
-    min-width: 760px;
-}
-
-th,
-td {
-    padding: 11px 9px;
-    border-bottom: 1px solid var(--stroke);
-    text-align: left;
-    vertical-align: top;
-}
-
-th {
-    font-family: var(--font-display);
-    font-size: 1.03rem;
-}
-
-td small {
-    color: var(--ink-soft);
 }
 
 .tag {

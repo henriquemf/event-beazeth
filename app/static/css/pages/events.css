@@ -1,0 +1,294 @@
+/* Tela de cadastro e lista de eventos. */
+
+/* ------------------------------------------------------------------ hero */
+
+.events-hero {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.events-hero-text {
+    min-width: 0;
+}
+
+/* Contador do lado do título, para a tela não abrir só com formulário. */
+.events-hero-badge {
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    gap: 2px;
+    min-width: 78px;
+    padding: 12px 16px;
+    border-radius: 18px;
+    border: 1px solid color-mix(in srgb, var(--accent) 32%, var(--stroke));
+    background: linear-gradient(140deg,
+        color-mix(in srgb, var(--accent) 20%, transparent),
+        color-mix(in srgb, var(--blue-soft) 16%, transparent));
+}
+
+.events-hero-badge strong {
+    font-family: var(--font-display);
+    font-size: 1.7rem;
+    line-height: 1.1;
+    color: var(--ink);
+}
+
+.events-hero-badge small {
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+}
+
+/* --------------------------------------------------------------- layout */
+
+/* Formulário e lista lado a lado: a tela inteira era uma coluna só de campos. */
+.events-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    align-items: start;
+    gap: 14px;
+}
+
+/* ---------------------------------------------------------- formulário */
+
+.event-when {
+    display: grid;
+    gap: 10px;
+}
+
+.event-when .dark-toggle.fancy {
+    justify-self: start;
+}
+
+.event-submit {
+    width: 100%;
+    margin-top: 4px;
+    padding: 12px 18px;
+    font-size: 1rem;
+}
+
+/* Dois cartões no lugar do <select> nativo: além de feio, o dropdown do sistema
+   ignora o tema e não tinha onde explicar a regra de cada tag. */
+.tag-picker {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.tag-picker legend {
+    padding: 0;
+    margin-bottom: 6px;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--ink-soft);
+}
+
+.tag-option {
+    cursor: pointer;
+}
+
+.tag-option input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.tag-option-card {
+    display: grid;
+    gap: 6px;
+    height: 100%;
+    padding: 12px;
+    border: 1px solid var(--stroke);
+    border-radius: 14px;
+    background: var(--input-bg);
+    transition:
+        border-color 0.18s ease,
+        background 0.18s ease,
+        box-shadow 0.2s ease,
+        transform 0.16s cubic-bezier(0.34, 1.45, 0.64, 1);
+}
+
+.tag-option-card .tag {
+    justify-self: start;
+}
+
+.tag-option-card small {
+    color: var(--ink-soft);
+    font-size: 0.8rem;
+    line-height: 1.35;
+}
+
+.tag-option:hover .tag-option-card {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--stroke));
+}
+
+.tag-option input:checked + .tag-option-card {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, var(--input-bg));
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.tag-option input:focus-visible + .tag-option-card {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
+/* --------------------------------------------------------------- lista */
+
+.event-list {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+/* Cartão no lugar da linha de tabela: a tabela tinha min-width de 760px e
+   rolava na horizontal em qualquer tela média. */
+.event-item {
+    --item-tint: var(--blue-soft);
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid var(--stroke);
+    border-left: 4px solid var(--item-tint);
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--item-tint) 8%, var(--input-bg));
+    transition: transform 0.16s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+/* As duas classes chegam por `is-{{ event.tag_type }}` no template. */
+.event-item.is-evento {
+    --item-tint: var(--blue-soft);
+}
+
+.event-item.is-curso {
+    --item-tint: var(--pink-soft);
+}
+
+.event-item:hover {
+    transform: translateX(2px);
+    box-shadow: 0 10px 26px -18px var(--shadow);
+}
+
+.event-date {
+    display: grid;
+    place-items: center;
+    min-width: 52px;
+    padding: 6px 8px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--item-tint) 26%, transparent);
+}
+
+.event-date strong {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    line-height: 1.1;
+    color: var(--ink);
+}
+
+.event-date small {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--ink-soft);
+}
+
+.event-body {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+
+.event-title {
+    font-size: 1rem;
+    line-height: 1.3;
+    color: var(--ink);
+    overflow-wrap: anywhere;
+}
+
+.event-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.event-when-text {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--ink-soft);
+}
+
+.event-desc {
+    color: var(--ink-soft);
+    font-size: 0.84rem;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.event-remove {
+    padding: 8px 14px;
+    font-size: 0.85rem;
+}
+
+/* ---------------------------------------------------------- lista vazia */
+
+.events-empty {
+    display: grid;
+    justify-items: center;
+    gap: 4px;
+    margin: 0;
+    padding: 28px 16px;
+    text-align: center;
+    border: 1px dashed var(--stroke);
+    border-radius: 16px;
+    color: var(--ink-soft);
+}
+
+.events-empty span {
+    font-size: 2rem;
+    line-height: 1;
+}
+
+.events-empty strong {
+    font-family: var(--font-display);
+    color: var(--ink);
+}
+
+[data-dark="true"] .event-item {
+    background: color-mix(in srgb, var(--item-tint) 14%, rgba(30, 18, 40, 0.75));
+}
+
+@media (max-width: 1024px) {
+    .events-layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 560px) {
+    .event-item {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    /* O botão desce para a segunda linha em vez de espremer o título. */
+    .event-item form {
+        grid-column: 1 / -1;
+        justify-self: end;
+    }
+
+    .events-hero {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}

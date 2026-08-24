@@ -28,14 +28,49 @@
     color: var(--ink);
     font-weight: 700;
     box-shadow: 0 7px 18px -12px var(--shadow);
-    transition: transform 0.14s ease, filter 0.2s ease, background 0.2s ease;
+    transition: background 0.2s ease, color 0.2s ease;
 }
 
-.fc .fc-button:hover,
+/* Mês/Semana/Dia vêm num .fc-button-group, que deve ler como uma pílula só:
+   o raio fica nas pontas do grupo, não em cada botão. */
+.fc .fc-button-group {
+    border-radius: 999px;
+    box-shadow: 0 7px 18px -12px var(--shadow);
+}
+
+.fc .fc-button-group > .fc-button {
+    border-radius: 0;
+    box-shadow: none;
+    /* Sem isto as bordas vizinhas somam e o grupo fica com 2px no meio. */
+    margin-left: -1px;
+}
+
+.fc .fc-button-group > .fc-button:first-child {
+    border-radius: 999px 0 0 999px;
+    margin-left: 0;
+}
+
+.fc .fc-button-group > .fc-button:last-child {
+    border-radius: 0 999px 999px 0;
+}
+
+.fc .fc-button:hover {
+    background: linear-gradient(120deg, rgba(255, 120, 178, 0.45), rgba(126, 200, 255, 0.38));
+}
+
+/* O botão ativo NÃO pode deslocar: com translateY ele saía da linha do grupo
+   e parecia maior que os vizinhos. O destaque vem só da cor. */
 .fc .fc-button.fc-button-active {
-    background: linear-gradient(120deg, rgba(255, 120, 178, 0.6), rgba(126, 200, 255, 0.5));
+    background: linear-gradient(120deg, var(--accent), #ff96c2);
     color: #fff;
-    transform: translateY(-1px);
+    transform: none;
+    z-index: 1;
+}
+
+.fc .fc-button:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent);
+    z-index: 2;
 }
 
 .fc .fc-button-primary:disabled {

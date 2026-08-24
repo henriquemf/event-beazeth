@@ -17,6 +17,36 @@ from app.db import delete_event, insert_event, list_events, update_event
 
 bp = Blueprint("events", __name__)
 
+MONTHS_SHORT = ("JAN", "FEV", "MAR", "ABR", "MAI", "JUN",
+                "JUL", "AGO", "SET", "OUT", "NOV", "DEZ")
+
+
+def as_card(row):
+    """Prepara a linha para o cartão da lista.
+
+    A data é quebrada aqui em vez de no template: Jinja teria que fatiar a
+    string ISO na mão e ainda mapear o número do mês para o nome.
+    """
+    raw = row["event_datetime"]
+    has_time = "T" in raw
+
+    try:
+        moment = datetime.fromisoformat(raw if has_time else f"{raw}T09:00")
+    except ValueError:
+        moment = None
+
+    return {
+        "id": row["id"],
+        "title": row["title"],
+        "description": row["description"],
+        "tag_type": row["tag_type"],
+        "event_datetime": raw,
+        "day": f"{moment.day:02d}" if moment else "--",
+        "month": MONTHS_SHORT[moment.month - 1] if moment else "",
+        "year": moment.year if moment else "",
+        "time": moment.strftime("%H:%M") if moment and has_time else "",
+    }
+
 
 def parse_event_datetime(value: str):
     """Converte o campo do formulário em datetime.
@@ -76,7 +106,8 @@ def index():
         flash("Evento cadastrado com sucesso.", "success")
         return redirect(url_for("events.index"))
 
-    events = list_events(current_app.config["DB_PATH"])
+    rows = list_events(current_app.config["DB_PATH"])
+    events = [as_card(row) for row in rows]
     return render_template("pages/events.html", events=events, active_page="events")
 
 
