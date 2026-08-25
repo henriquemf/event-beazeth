@@ -96,5 +96,25 @@ def get_connection():
         yield conn
 
 
+def pool_churn() -> dict:
+    """Quantas conexões o pool já abriu e quantas perdeu, desde a subida.
+
+    Serve para separar duas lentidões que se parecem por fora. Se `opened` fica
+    perto de `POOL_MAX_SIZE` e `lost` fica em zero, o pool está estável e o que
+    demora é a distância até o banco. Se as duas sobem sem parar, as conexões
+    estão morrendo e cada consulta paga um handshake TLS novo (e, num banco que
+    suspende por ociosidade, também o tempo de a instância acordar) — problema
+    diferente, solução diferente.
+    """
+    if _pool is None:
+        return {}
+    stats = _pool.get_stats()
+    return {
+        "opened": stats.get("connections_num", 0),
+        "lost": stats.get("connections_lost", 0),
+        "size": stats.get("pool_size", 0),
+    }
+
+
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).replace(tzinfo=None).isoformat(timespec="seconds")
