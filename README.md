@@ -217,6 +217,38 @@ As três causas, isoladas por teste A/B:
 2. **`repeating-linear-gradient` das linhas da grade** — mudar o zoom repintava a grade inteira (24h x 7 colunas). Trocado por um tile pequeno com `background-size`, que o browser rasteriza uma vez e replica.
 3. **Atraso artificial de 80 ms em cada navegação** — o clique no menu dava `preventDefault` e esperava um `setTimeout` antes de trocar de página. Removido; a transição visual agora é `@view-transition` nativa, que não custa nada e não atrasa.
 
+### Latência até o banco
+
+Com o banco gerenciado fora do datacenter do app, o que manda no tempo de tela
+não é CPU nem consulta pesada — é **quantas vezes** a requisição fala com o
+banco. Cada ida custa um RTT inteiro, e elas acontecem em série.
+
+Contagem de idas ao banco por requisição, medida instrumentando o pool:
+
+| Requisição | Antes | Depois |
+| --- | --- | --- |
+| Um arquivo estático | 2 | **0** |
+| `/calendar` | 8 | 8 |
+| `/hydration` | 7 | 7 |
+| `/` , `/planner`, `/pomodoro` | 2 | 2 |
+| **Abrir `/calendar` num navegador frio** | **36** | **12** |
+
+O ganho todo veio de uma linha: o guarda de sessão carregava a conta antes de
+checar se a rota precisava dela, então cada CSS e cada JS disparava um
+`SELECT` — doze arquivos, vinte e quatro idas ao banco para servir folha de
+estilo.
+
+**A distância é o resto da conta.** Render e Neon em regiões diferentes colocam
+~180 ms em cada uma dessas idas; na mesma região, ~1 ms. É a diferença entre
+2,2 s e 12 ms de rede para abrir o calendário — mais do que qualquer coisa que
+dê para fazer no código. Ver "Escolhendo a região" abaixo.
+
+Uma coisa que **não** funciona: pular a validação de conexão do pool para
+economizar a ida de rede. Foi tentado e medido. O pool guarda mais de uma
+conexão (a thread do agendador é a segunda consumidora) e uma delas pode morrer
+por queda de rede enquanto as outras seguem em uso — a conexão morta é entregue
+sem validação e vira erro 500. Trocar 180 ms por um 500 é um mau negócio.
+
 ## Otimizações aplicadas
 
 - Fontes: só as duas famílias do tema padrão bloqueiam a renderização; as outras 18 (usadas apenas nos previews) carregam de forma assíncrona
@@ -224,6 +256,8 @@ As três causas, isoladas por teste A/B:
 - Service worker com cache-first para `/static/` (seguro, pois as URLs são versionadas)
 - Scripts com `defer` e tema aplicado antes da primeira pintura (sem flash de tema errado)
 - Pool de conexões do Postgres aberto na subida, com verificação de conexão viva: o banco gerenciado suspende a instância ociosa e derruba o socket
+- O guarda de sessão sai antes de consultar o banco quando a resposta não depende de quem pede (estáticos, `/healthz`, service worker, favicon): são doze arquivos por página, e cada um custava duas idas ao banco só para descobrir um usuário que o CSS não usa
+- Gunicorn com threads: o worker síncrono atendia uma requisição por vez, e a dúzia de estáticos que o navegador pede em paralelo ficava em fila atrás de quem esperava o banco
 - Índices em `events(event_datetime)`, `reminder_dispatches` e `planner_blocks(day_of_week, start_minute)`
 - `preconnect`/`dns-prefetch` para os CDNs usados
 - Geometria dos blocos do planner derivada de CSS custom properties: o zoom vira recálculo de estilo, sem reconstruir DOM
@@ -495,6 +529,30 @@ que `db/connection.py` desliga o `prepare_threshold`. A conexão direta também
 funciona.
 
 Não há passo de migração: as tabelas nascem na primeira subida.
+
+### Escolhendo a região
+
+**Antes de criar qualquer coisa, decida a região — e use a mesma nos dois.**
+É a decisão de performance mais cara de reverter e a que mais rende: cada
+requisição fala com o banco de 1 a 4 vezes, em série, e cada uma dessas idas
+custa o RTT entre o app e o banco. Mesma região é ~1 ms; continentes diferentes
+são ~180 ms, e a diferença aparece em toda troca de tela.
+
+O Render não tem região no Brasil. A combinação que dá o melhor resultado para
+quem acessa daqui:
+
+| | Região | Por quê |
+| --- | --- | --- |
+| Render | **Virginia** (US East) | a mais próxima do Brasil na plataforma |
+| Neon | **AWS US East (Ohio ou Virginia)** | mesma costa que o app |
+
+Note que o instinto de pôr o Neon em `sa-east-1` (São Paulo) sai **pior**: o
+banco fica perto de você, mas longe do app — e quem conversa com o banco várias
+vezes por página é o app, não o navegador. O navegador fala com o Render uma vez.
+
+Nenhum dos dois serviços deixa mudar a região depois de criado; é refazer o
+projeto. Enquanto o Neon ainda não tem dado dentro, refazer custa nada — depois
+custa uma migração.
 
 ### Configurando o Render
 

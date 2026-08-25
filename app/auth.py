@@ -13,14 +13,19 @@ from app.db import get_user
 
 SESSION_KEY = "user_id"
 
-# O que responde sem sessão. Tudo o mais exige login.
-PUBLIC_ENDPOINTS = frozenset({
-    "auth.login",
-    "auth.signup",
+# Respostas que não mudam conforme quem pede: nem chegam a carregar a conta.
+# A separação aqui é de CUSTO, não de permissão — ver o guarda abaixo.
+USERLESS_ENDPOINTS = frozenset({
     "static",
     "system.healthz",
     "system.service_worker",
     "system.favicon",
+})
+
+# O que responde sem sessão. Tudo o mais exige login.
+PUBLIC_ENDPOINTS = USERLESS_ENDPOINTS | frozenset({
+    "auth.login",
+    "auth.signup",
 })
 
 
@@ -45,6 +50,14 @@ def register_auth_guard(app) -> None:
     @app.before_request
     def load_user():
         g.user = None
+
+        # Sai antes de tocar no banco. Um CSS não muda conforme quem o pede,
+        # mas o guarda roda em TODA requisição — e são doze estáticos por
+        # página. Com o banco gerenciado fora do datacenter do app, carregar a
+        # conta aqui custava duas idas de rede por arquivo: mais tempo gasto
+        # servindo estático do que montando a própria tela.
+        if request.endpoint in USERLESS_ENDPOINTS:
+            return None
 
         user_id = session.get(SESSION_KEY)
         if user_id is not None:

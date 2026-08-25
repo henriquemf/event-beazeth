@@ -21,10 +21,22 @@ from psycopg_pool import ConnectionPool
 _pool: ConnectionPool | None = None
 
 # Teto baixo porque o plano gratuito dos bancos gerenciados limita conexões
-# simultâneas, e o app roda com um worker do gunicorn mais a thread do
-# agendador — duas consumidoras, não duzentas.
+# simultâneas. O gunicorn roda um worker com algumas threads, mais a thread do
+# agendador — folga suficiente para elas não ficarem na fila do pool, e longe
+# do limite do banco.
 POOL_MIN_SIZE = 1
-POOL_MAX_SIZE = 5
+POOL_MAX_SIZE = 8
+
+# NÃO troque `check` por uma validação preguiçosa ("só valida o que está parado
+# há mais de N segundos"). A ideia é tentadora — a validação é uma ida de rede
+# inteira em cima de cada consulta, e o banco fica noutro datacenter — mas foi
+# medida e reprovada: o pool guarda mais de uma conexão (o agendador é a segunda
+# consumidora), e uma delas pode morrer por queda de rede enquanto as outras
+# seguem em uso. Nesse caso a janela ainda está aberta, a conexão morta é
+# entregue sem validação, e o usuário leva um erro 500 no lugar de 180ms a mais.
+#
+# O caminho certo para economizar essas idas não é pular a checagem: é encurtar
+# a distância. Ver a nota sobre região no README.
 
 
 def init_pool(database_url: str) -> None:
@@ -56,7 +68,8 @@ def init_pool(database_url: str) -> None:
         },
         # Bancos gerenciados no plano gratuito suspendem a instância ociosa e
         # derrubam o socket. Sem esta checagem, a primeira requisição depois de
-        # um período parado receberia uma conexão morta do pool.
+        # um período parado receberia uma conexão morta do pool. Ver a nota
+        # sobre validação preguiçosa no topo do arquivo antes de mexer aqui.
         check=ConnectionPool.check_connection,
         open=True,
     )

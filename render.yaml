@@ -7,6 +7,13 @@ services:
     name: events-beazeth
     runtime: docker
     plan: free
+    # region: virginia
+    #
+    # Deixado comentado de propósito: o Render não move um serviço já criado, e
+    # descomentar isto num serviço que nasceu noutra região faz o sync do
+    # blueprint falhar. Vale ao criar o serviço do zero — e aí o Neon tem que
+    # nascer na mesma costa. Ver "Escolhendo a região" no README: com app e
+    # banco separados, cada tela paga ~180 ms por ida ao banco em vez de ~1 ms.
     healthCheckPath: /healthz
     envVars:
       # `sync: false` = o Render pede o valor no painel e não o guarda no git.
