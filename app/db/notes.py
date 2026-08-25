@@ -104,6 +104,14 @@ def update_sticky_note(user_id: int, note_id: int, fields: dict):
 
     O arraste envia geometria e o editor envia texto; como os dois salvam com
     debounce, um PUT completo faria um sobrescrever o campo do outro.
+
+    SELECT e UPDATE aqui NÃO ficam numa transação, e isso é deliberado: o pool
+    roda em autocommit, e envolver os dois custaria um `BEGIN` e um `COMMIT` —
+    duas idas de rede a mais — sem comprar segurança nenhuma. O UPDATE já filtra
+    por `user_id`, e cada patch grava só as chaves que ele mesmo trouxe, então
+    dois patches simultâneos não se sobrescrevem. O SELECT serve para dizer se o
+    post-it existe e para dar o valor atual como piso do clamp quando o payload
+    manda algo inválido — nada que uma leitura um instante mais velha estrague.
     """
     with get_connection() as conn:
         row = conn.execute(

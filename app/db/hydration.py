@@ -80,7 +80,12 @@ def seconds_until(last_sent_at, interval_minutes) -> int | None:
 
 def get_hydration_settings(user_id: int):
     """A linha é criada junto com a conta, em `create_user`. O upsert aqui é
-    rede de segurança para conta que exista de antes desta tabela."""
+    rede de segurança para conta que exista de antes desta tabela.
+
+    Sem transação de propósito: o `ON CONFLICT DO NOTHING` já torna o INSERT
+    seguro contra corrida, e a linha nunca é apagada — então o SELECT logo
+    depois sempre acha o que precisa, com ou sem transação em volta.
+    """
     with get_connection() as conn:
         conn.execute(
             "INSERT INTO hydration_settings (user_id) VALUES (%s) ON CONFLICT DO NOTHING",

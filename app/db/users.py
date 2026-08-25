@@ -72,39 +72,42 @@ def create_user(email: str, password: str, display_name: str):
     """
     now = utc_now_iso()
     with get_connection() as conn:
-        row = conn.execute(
-            """
-            INSERT INTO users (email, password_hash, display_name, created_at)
-            VALUES (%s, %s, %s, %s)
-            ON CONFLICT (email) DO NOTHING
-            RETURNING id
-            """,
-            (
-                normalize_email(email),
-                generate_password_hash(password),
-                display_name.strip()[:MAX_NAME_LENGTH],
-                now,
-            ),
-        ).fetchone()
-
-        if row is None:
-            return None
-
-        user_id = row["id"]
-
-        for slug, label, color, rule in DEFAULT_TAGS:
-            conn.execute(
+        # Transação explícita: o pool roda em autocommit, então cada instrução
+        # gravaria sozinha e uma falha no meio deixaria uma conta pela metade.
+        with conn.transaction():
+            row = conn.execute(
                 """
-                INSERT INTO event_tags (user_id, slug, label, color, reminder_rule, created_at)
-                VALUES (%s, %s, %s, %s, %s, %s)
+                INSERT INTO users (email, password_hash, display_name, created_at)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (email) DO NOTHING
+                RETURNING id
                 """,
-                (user_id, slug, label, color, rule, now),
-            )
+                (
+                    normalize_email(email),
+                    generate_password_hash(password),
+                    display_name.strip()[:MAX_NAME_LENGTH],
+                    now,
+                ),
+            ).fetchone()
 
-        conn.execute(
-            "INSERT INTO hydration_settings (user_id) VALUES (%s)",
-            (user_id,),
-        )
+            if row is None:
+                return None
+
+            user_id = row["id"]
+
+            for slug, label, color, rule in DEFAULT_TAGS:
+                conn.execute(
+                    """
+                    INSERT INTO event_tags (user_id, slug, label, color, reminder_rule, created_at)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    """,
+                    (user_id, slug, label, color, rule, now),
+                )
+
+            conn.execute(
+                "INSERT INTO hydration_settings (user_id) VALUES (%s)",
+                (user_id,),
+            )
 
     return user_id
 

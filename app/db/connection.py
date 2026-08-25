@@ -65,6 +65,21 @@ def init_pool(database_url: str) -> None:
             # é a latência até o banco gerenciado, não o parse. Em troca,
             # qualquer connection string dos dois serviços funciona.
             "prepare_threshold": None,
+            # Sem transação implícita.
+            #
+            # Fora do autocommit, o psycopg abre uma transação sozinho antes da
+            # primeira consulta e a fecha ao devolver a conexão ao pool. Medido
+            # no log do Postgres, UMA consulta virava quatro conversas com o
+            # servidor: o ping de validação, o `BEGIN`, a consulta e o `COMMIT`.
+            # Com o banco gerenciado a ~170 ms de distância, a página mais
+            # simples do app custava 672 ms — e três quartos disso era cerimônia
+            # em volta de um único SELECT.
+            #
+            # Quase toda operação daqui é uma instrução só, que não ganha nada
+            # com transação: ela já é atômica sozinha. As poucas que dependem de
+            # rodar juntas abrem a transação explicitamente, com
+            # `with conn.transaction():` — procure por elas antes de mexer aqui.
+            "autocommit": True,
         },
         # Bancos gerenciados no plano gratuito suspendem a instância ociosa e
         # derrubam o socket. Sem esta checagem, a primeira requisição depois de

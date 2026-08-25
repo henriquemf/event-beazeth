@@ -223,25 +223,40 @@ Com o banco gerenciado fora do datacenter do app, o que manda no tempo de tela
 não é CPU nem consulta pesada — é **quantas vezes** a requisição fala com o
 banco. Cada ida custa um RTT inteiro, e elas acontecem em série.
 
-Contagem de idas ao banco por requisição, medida instrumentando o pool:
+Conte pelo **log do servidor** (`log_statement = 'all'`), nunca pelas chamadas
+de `execute` do lado do cliente: `BEGIN` e `COMMIT` não passam por `execute` e
+não aparecem na contagem do cliente, que por isso sai pela metade do real.
 
 | Requisição | Antes | Depois |
 | --- | --- | --- |
-| Um arquivo estático | 2 | **0** |
-| `/calendar` | 8 | 8 |
-| `/hydration` | 7 | 7 |
-| `/` , `/planner`, `/pomodoro` | 2 | 2 |
-| **Abrir `/calendar` num navegador frio** | **36** | **12** |
+| Um arquivo estático | 4 | **0** |
+| `/pomodoro` | 4 | **2** |
+| `/todo` | 8 | **4** |
+| `/calendar` | 16 | **8** |
+| `POST /api/notes` (criar post-it) | 8 | **4** |
+| `GET /api/events` | 8 | **4** |
 
-O ganho todo veio de uma linha: o guarda de sessão carregava a conta antes de
-checar se a rota precisava dela, então cada CSS e cada JS disparava um
-`SELECT` — doze arquivos, vinte e quatro idas ao banco para servir folha de
-estilo.
+Duas causas, cada uma valendo metade:
 
-**A distância é o resto da conta.** Render e Neon em regiões diferentes colocam
-~180 ms em cada uma dessas idas; na mesma região, ~1 ms. É a diferença entre
-2,2 s e 12 ms de rede para abrir o calendário — mais do que qualquer coisa que
-dê para fazer no código. Ver "Escolhendo a região" abaixo.
+1. **O guarda de sessão carregava a conta antes de checar se a rota precisava
+   dela**, então cada CSS e cada JS disparava um `SELECT` — doze arquivos por
+   página, quarenta e oito conversas com o banco para servir folha de estilo.
+2. **Transação implícita em toda consulta.** Fora do autocommit, o psycopg
+   manda `BEGIN` antes e `COMMIT` depois, cada um uma ida de rede inteira. Com
+   o ping de validação do pool, uma página com um único `SELECT` conversava
+   quatro vezes com o servidor — três quartos disso cerimônia. O pool passou a
+   rodar em `autocommit=True`, e as poucas operações que precisam de
+   atomicidade abrem `with conn.transaction():` na mão (`create_user`,
+   `delete_tag`).
+
+**A distância é o resto da conta.** Render em Oregon e Neon em São Paulo dão
+~168 ms por ida, medidos pelo `/healthz`; na mesma região, ~1 ms. Abrir o
+calendário são 8 idas: 1,3 s contra 8 ms. Nenhuma otimização de código chega
+perto disso. Ver "Escolhendo a região" abaixo.
+
+O `/healthz` devolve `poolMs` e `queryMs` justamente para essa medição não
+depender de palpite — como ler os dois está no docstring de
+`app/blueprints/system.py`.
 
 Uma coisa que **não** funciona: pular a validação de conexão do pool para
 economizar a ida de rede. Foi tentado e medido. O pool guarda mais de uma
@@ -258,6 +273,8 @@ sem validação e vira erro 500. Trocar 180 ms por um 500 é um mau negócio.
 - Pool de conexões do Postgres aberto na subida, com verificação de conexão viva: o banco gerenciado suspende a instância ociosa e derruba o socket
 - O guarda de sessão sai antes de consultar o banco quando a resposta não depende de quem pede (estáticos, `/healthz`, service worker, favicon): são doze arquivos por página, e cada um custava duas idas ao banco só para descobrir um usuário que o CSS não usa
 - Gunicorn com threads: o worker síncrono atendia uma requisição por vez, e a dúzia de estáticos que o navegador pede em paralelo ficava em fila atrás de quem esperava o banco
+- Pool em `autocommit`: sem transação implícita, uma consulta é uma ida de rede em vez de três (`BEGIN`, consulta, `COMMIT`). Quem precisa de atomicidade pede com `with conn.transaction():`
+- `insert_todo_item` conta, calcula a posição e insere numa instrução só (`HAVING COUNT(*) < ...`): uma ida a menos numa escrita em que a tela fica esperando o id, e sem a corrida entre duas abas
 - Índices em `events(event_datetime)`, `reminder_dispatches` e `planner_blocks(day_of_week, start_minute)`
 - `preconnect`/`dns-prefetch` para os CDNs usados
 - Geometria dos blocos do planner derivada de CSS custom properties: o zoom vira recálculo de estilo, sem reconstruir DOM

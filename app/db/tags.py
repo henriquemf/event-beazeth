@@ -101,12 +101,15 @@ def delete_tag(user_id: int, slug: str) -> int:
     perder o compromisso ao trocar de etiqueta seria destruir o que importa.
     """
     with get_connection() as conn:
-        moved = conn.execute(
-            "UPDATE events SET tag_type = %s WHERE user_id = %s AND tag_type = %s",
-            (FALLBACK_TAG, user_id, slug),
-        ).rowcount
-        conn.execute(
-            "DELETE FROM event_tags WHERE user_id = %s AND slug = %s",
-            (user_id, slug),
-        )
+        # Transação explícita: o pool roda em autocommit, e reapontar os eventos
+        # sem conseguir apagar a tag (ou o contrário) deixaria o dado torto.
+        with conn.transaction():
+            moved = conn.execute(
+                "UPDATE events SET tag_type = %s WHERE user_id = %s AND tag_type = %s",
+                (FALLBACK_TAG, user_id, slug),
+            ).rowcount
+            conn.execute(
+                "DELETE FROM event_tags WHERE user_id = %s AND slug = %s",
+                (user_id, slug),
+            )
     return moved

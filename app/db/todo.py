@@ -74,30 +74,32 @@ def insert_todo_item(user_id: int, day: date, content: str) -> dict | None:
         return None
 
     with get_connection() as conn:
-        total = conn.execute(
-            "SELECT COUNT(*) AS total FROM todo_items WHERE user_id = %s AND day = %s",
-            (user_id, day.isoformat()),
-        ).fetchone()["total"]
-        if total >= MAX_ITEMS_PER_DAY:
-            return None
-
-        # `COALESCE(MAX(...), 0) + 1` numa consulta só: buscar o máximo e depois
-        # inserir daria duas idas ao banco e uma corrida entre duas abas.
+        # Contar, achar a posição e inserir numa instrução só.
+        #
+        # `COALESCE(MAX(position), 0) + 1` põe o item no fim da fila, e o
+        # `HAVING` recusa quando o dia já encheu: o agregado não produz linha,
+        # o INSERT não insere nada e o `RETURNING` volta vazio. Contar antes,
+        # em consulta separada, custava outra ida ao banco — e esta é uma das
+        # poucas escritas em que o usuário fica esperando, porque a tela precisa
+        # do id que o servidor gera. De quebra sai a corrida entre duas abas
+        # inserindo o item 60 ao mesmo tempo.
         row = conn.execute(
             """
             INSERT INTO todo_items (user_id, day, content, done, position, created_at)
             SELECT %(user_id)s, %(day)s, %(content)s, FALSE,
                    COALESCE(MAX(position), 0) + 1, %(created_at)s
             FROM todo_items WHERE user_id = %(user_id)s AND day = %(day)s
+            HAVING COUNT(*) < %(max_items)s
             RETURNING """ + _ITEM_COLUMNS,
             {
                 "user_id": user_id,
                 "day": day.isoformat(),
                 "content": text,
                 "created_at": utc_now_iso(),
+                "max_items": MAX_ITEMS_PER_DAY,
             },
         ).fetchone()
-    return _row_to_item(row)
+    return _row_to_item(row) if row is not None else None
 
 
 def update_todo_item(user_id: int, item_id: int, fields: dict) -> dict | None:
