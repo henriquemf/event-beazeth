@@ -11,6 +11,7 @@ from app.db import (
     update_hydration_last_sent,
 )
 from app.services.notifier import (
+    DEAD_SUBSCRIPTION_STATUSES,
     send_desktop_notification,
     send_web_push,
 )
@@ -187,12 +188,12 @@ def process_due_reminders(app):
                                 "auth": sub["auth"],
                             },
                         }
-                        ok, msg = send_web_push(app.config, subscription_info, push_payload)
+                        ok, _, status = send_web_push(app.config, subscription_info, push_payload)
                         if ok:
                             successes += 1
                         else:
                             failures += 1
-                            if "(410" in msg or "(404" in msg:
+                            if status in DEAD_SUBSCRIPTION_STATUSES:
                                 delete_push_subscription(user_id, sub["endpoint"])
 
                     if successes > 0:
@@ -291,8 +292,8 @@ def process_hydration_reminder(app):
                         "auth": sub["auth"],
                     },
                 }
-                ok, msg = send_web_push(app.config, subscription_info, payload)
-                if not ok and ("(410" in msg or "(404" in msg):
+                ok, _, status = send_web_push(app.config, subscription_info, payload)
+                if not ok and status in DEAD_SUBSCRIPTION_STATUSES:
                     delete_push_subscription(user_id, sub["endpoint"])
 
         update_hydration_last_sent(user_id, now.isoformat(timespec="seconds"))

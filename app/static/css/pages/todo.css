@@ -1,0 +1,539 @@
+/* Tela de to-do da semana.
+
+   Referência: a página de agenda de papel — número do dia grande à esquerda,
+   linha tracejada separando os dias, caixinhas de marcar à direita. O que muda
+   em relação ao papel é que aqui tudo sai dos tokens do tema, então a mesma
+   página funciona nos 10 temas e no dark mode. */
+
+/* ------------------------------------------------------------------ topo */
+
+.todo-hero {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+}
+
+.todo-hero-text {
+    min-width: 0;
+}
+
+.todo-year {
+    color: var(--ink-soft);
+    font-size: 0.72em;
+}
+
+.todo-week {
+    margin: var(--space-1) 0 0;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+}
+
+/* -------------------------------------------------------- troca de semana */
+
+.todo-nav {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+}
+
+.todo-nav-btn,
+.todo-nav-now {
+    display: grid;
+    place-items: center;
+    min-width: 38px;
+    height: 38px;
+    padding: 0 var(--space-2);
+    border: 1px solid var(--stroke);
+    border-radius: 999px;
+    text-decoration: none;
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--ink);
+    background: color-mix(in srgb, var(--input-bg) 70%, transparent);
+    transition:
+        transform 0.16s cubic-bezier(0.34, 1.45, 0.64, 1),
+        background 0.18s ease,
+        border-color 0.18s ease;
+}
+
+.todo-nav-btn {
+    font-size: 1.4rem;
+    line-height: 1;
+}
+
+.todo-nav-btn:hover,
+.todo-nav-now:hover {
+    transform: translateY(-1px);
+    background: color-mix(in srgb, var(--accent) 18%, var(--input-bg));
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--stroke));
+}
+
+.todo-nav-btn:focus-visible,
+.todo-nav-now:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+/* Já estamos na semana de hoje: o atalho não leva a lugar nenhum, e mostrar
+   isso evita o clique que não faz nada. */
+.todo-nav-now.is-current {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 20%, var(--input-bg));
+}
+
+/* ---------------------------------------------------------------- placar */
+
+.todo-score {
+    display: grid;
+    grid-template-columns: auto minmax(72px, 1fr);
+    grid-template-areas:
+        "valor barra"
+        "valor rotulo";
+    align-items: center;
+    gap: 2px var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--stroke));
+    border-radius: 18px;
+    background: linear-gradient(140deg,
+        color-mix(in srgb, var(--accent) 14%, transparent),
+        color-mix(in srgb, var(--blue-soft) 10%, transparent));
+}
+
+.todo-score-text {
+    grid-area: valor;
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    line-height: 1;
+    color: var(--ink);
+}
+
+.todo-score-text small {
+    font-size: 0.55em;
+    color: var(--ink-soft);
+}
+
+.todo-score-bar {
+    grid-area: barra;
+    height: 5px;
+    border-radius: 999px;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--accent) 20%, var(--stroke));
+}
+
+/* scaleX e não width: a barra anda no compositor, sem passar por layout. */
+.todo-score-fill {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 50%, #fff));
+    transform-origin: left;
+    transform: scaleX(var(--todo-progress, 0));
+    transition: transform 0.32s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.todo-score-label {
+    grid-area: rotulo;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+}
+
+/* ------------------------------------------------------------ os 7 dias */
+
+/* Container de consulta: daqui para dentro as quebras olham a largura do
+   CARTÃO, não a da janela. É o que mantém a proporção certa tanto no monitor
+   largo quanto no celular, sem media query. */
+.todo-panel {
+    container-type: inline-size;
+    padding-top: var(--space-3);
+}
+
+.todo-week-list {
+    display: grid;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+/* Linha tracejada entre os dias, como no caderno. `:last-child` sem borda para
+   não fechar a lista com um traço solto. */
+.todo-day {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr);
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-1);
+    border-bottom: 1px dashed color-mix(in srgb, var(--stroke) 80%, transparent);
+    border-radius: 12px;
+    transition: background 0.2s ease;
+}
+
+.todo-day:last-child {
+    border-bottom: 0;
+}
+
+.todo-day.is-weekend {
+    background: color-mix(in srgb, var(--accent) 4%, transparent);
+}
+
+.todo-day.is-today {
+    background: color-mix(in srgb, var(--accent) 9%, transparent);
+}
+
+/* ----------------------------------------------------------- data do dia */
+
+.todo-date {
+    position: relative;
+    display: grid;
+    justify-items: center;
+    align-content: start;
+    gap: 1px;
+}
+
+.todo-date strong {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    font-family: var(--font-display);
+    font-size: 1.35rem;
+    line-height: 1;
+    color: var(--ink);
+    border: 2px solid transparent;
+    border-radius: 50%;
+}
+
+/* Hoje ganha o círculo à mão que se faz no papel. */
+.todo-day.is-today .todo-date strong {
+    border-color: var(--accent);
+    color: var(--accent-dark);
+}
+
+.todo-date small {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+}
+
+/* A estrela do dia inteiro concluído. Nasce escondida e cresce com mola.
+
+   O dourado é fixo e não sai de um token de tema de propósito: estrela é
+   estrela em qualquer tema, do mesmo jeito que o âmbar de alerta e o verde de
+   concluído dos widgets não acompanham a cor escolhida. */
+.todo-star {
+    position: absolute;
+    top: -6px;
+    right: -4px;
+    font-size: 1.05rem;
+    line-height: 1;
+    color: #e8c15a;
+    opacity: 0;
+    transform: scale(0.3) rotate(-40deg);
+    transition:
+        opacity 0.2s ease,
+        transform 0.34s cubic-bezier(0.34, 1.6, 0.64, 1);
+}
+
+.todo-day.is-complete .todo-star {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+}
+
+/* ---------------------------------------------------------------- itens */
+
+.todo-body {
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+    align-content: start;
+}
+
+.todo-list {
+    display: grid;
+    gap: 2px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.todo-item {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-2);
+    border-radius: 10px;
+    transition: background 0.16s ease;
+}
+
+.todo-item:hover {
+    background: color-mix(in srgb, var(--accent) 7%, transparent);
+}
+
+.todo-item.is-new {
+    animation: todoItemIn 0.3s cubic-bezier(0.22, 1.2, 0.42, 1) backwards;
+}
+
+@keyframes todoItemIn {
+    from {
+        opacity: 0;
+        transform: translate3d(-8px, 0, 0);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* Enquanto a exclusão vai ao servidor. Se falhar, a classe sai e o item volta. */
+.todo-item.is-leaving {
+    opacity: 0.35;
+    transform: translate3d(6px, 0, 0);
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    pointer-events: none;
+}
+
+/* -------------------------------------------------------------- caixinha */
+
+.todo-check {
+    display: grid;
+    place-items: center;
+    padding: 6px 0 6px 6px;
+    cursor: pointer;
+}
+
+.todo-check input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.todo-box {
+    position: relative;
+    width: 17px;
+    height: 17px;
+    border: 2px solid color-mix(in srgb, var(--ink-soft) 55%, transparent);
+    border-radius: 5px;
+    background: var(--input-bg);
+    transition:
+        background 0.18s ease,
+        border-color 0.18s ease,
+        transform 0.16s cubic-bezier(0.34, 1.5, 0.64, 1);
+}
+
+.todo-check:hover .todo-box {
+    border-color: var(--accent);
+    transform: scale(1.08);
+}
+
+.todo-check input:focus-visible + .todo-box {
+    outline: 2px solid transparent;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+/* O tique é desenhado com duas bordas de um retângulo girado — nada de SVG,
+   então ele acompanha a cor do tema sozinho. */
+.todo-box::after {
+    content: "";
+    position: absolute;
+    left: 4px;
+    top: 0;
+    width: 5px;
+    height: 10px;
+    border: solid #fff;
+    border-width: 0 2.5px 2.5px 0;
+    transform-origin: center;
+    transform: rotate(45deg) scale(0);
+    transition: transform 0.22s cubic-bezier(0.34, 1.6, 0.64, 1);
+}
+
+.todo-check input:checked + .todo-box {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+.todo-check input:checked + .todo-box::after {
+    transform: rotate(45deg) scale(1);
+}
+
+/* ---------------------------------------------------------------- texto */
+
+/* Campo sem cara de campo: só ganha moldura quando o cursor chega perto. Um
+   input com borda por item deixaria a lista parecendo um formulário. */
+.todo-text {
+    min-width: 0;
+    padding: 6px 8px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    font: inherit;
+    font-size: 0.95rem;
+    line-height: 1.35;
+    color: var(--ink);
+    background: transparent;
+    transition: border-color 0.18s ease, background 0.18s ease, color 0.2s ease;
+}
+
+.todo-item:hover .todo-text {
+    border-color: color-mix(in srgb, var(--stroke) 70%, transparent);
+}
+
+.todo-text:focus {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    border-color: var(--accent);
+    background: var(--input-bg);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.todo-item.is-done .todo-text {
+    color: var(--ink-soft);
+    text-decoration: line-through;
+    text-decoration-color: color-mix(in srgb, var(--ink-soft) 60%, transparent);
+    text-decoration-thickness: 1.5px;
+}
+
+/* --------------------------------------------------------------- apagar */
+
+/* Fica invisível até o item receber o mouse ou o foco do teclado. O `:focus`
+   dentro do item é o que mantém o botão alcançável sem mouse. */
+.todo-remove {
+    padding: 2px 8px;
+    border: 0;
+    border-radius: 8px;
+    font-size: 1.15rem;
+    line-height: 1.2;
+    color: var(--ink-soft);
+    background: transparent;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.16s ease, color 0.16s ease, transform 0.16s ease;
+}
+
+.todo-item:hover .todo-remove,
+.todo-item:focus-within .todo-remove {
+    opacity: 1;
+}
+
+.todo-remove:hover {
+    color: var(--danger);
+    transform: scale(1.15);
+}
+
+.todo-remove:focus-visible {
+    opacity: 1;
+    outline: 2px solid transparent;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 40%, transparent);
+}
+
+/* ------------------------------------------------------- campo de adicionar */
+
+.todo-new {
+    width: 100%;
+    margin-left: 29px;
+    padding: 6px 8px;
+    border: 1px dashed transparent;
+    border-radius: 8px;
+    font: inherit;
+    font-size: 0.92rem;
+    color: var(--ink);
+    background: transparent;
+    transition: border-color 0.18s ease, background 0.18s ease, opacity 0.18s ease;
+    opacity: 0.55;
+}
+
+.todo-day:hover .todo-new,
+.todo-new:focus {
+    opacity: 1;
+}
+
+.todo-new::placeholder {
+    color: var(--ink-soft);
+}
+
+.todo-new:hover:not(:focus) {
+    border-color: color-mix(in srgb, var(--accent) 40%, var(--stroke));
+}
+
+.todo-new:focus {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    border-style: solid;
+    border-color: var(--accent);
+    background: var(--input-bg);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+/* O dia vazio sempre mostra o campo: sem nenhuma tarefa, um campo invisível
+   deixaria a linha parecendo quebrada. */
+.todo-day.is-empty .todo-new {
+    opacity: 1;
+    border-color: color-mix(in srgb, var(--stroke) 65%, transparent);
+}
+
+/* --------------------------------------------------------------- recado */
+
+.todo-status {
+    margin: var(--space-3) 0 0;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--error-bd);
+    border-radius: 12px;
+    font-size: 0.86rem;
+    font-weight: 700;
+    color: var(--ink);
+    background: var(--error-bg);
+}
+
+/* -------------------------------------------------------------- dark mode */
+
+[data-dark="true"] .todo-box {
+    border-color: color-mix(in srgb, var(--ink-soft) 70%, transparent);
+}
+
+[data-dark="true"] .todo-day.is-weekend {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+[data-dark="true"] .todo-day.is-today {
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+/* --------------------------------------------------------- telas estreitas */
+
+/* Abaixo de 420px de CARTÃO (não de janela) a data sobe para cima da lista:
+   com 56px reservados à esquerda, sobrava menos da metade da linha para o
+   texto da tarefa. */
+@container (max-width: 420px) {
+    .todo-day {
+        grid-template-columns: minmax(0, 1fr);
+        gap: var(--space-1);
+    }
+
+    .todo-date {
+        grid-auto-flow: column;
+        justify-content: start;
+        align-items: center;
+        gap: var(--space-2);
+    }
+
+    .todo-date strong {
+        width: 32px;
+        height: 32px;
+        font-size: 1.15rem;
+    }
+
+    .todo-star {
+        position: static;
+        transform-origin: left center;
+    }
+
+    .todo-new {
+        margin-left: 0;
+    }
+}

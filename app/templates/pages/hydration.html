@@ -1,4 +1,5 @@
 {% extends 'layouts/base.html' %}
+{% from 'partials/glass.html' import glass %}
 
 {% block title %}Beber água | Event Notifier{% endblock %}
 
@@ -7,49 +8,108 @@
 {% endblock %}
 
 {% block content %}
-<section class="hero-card">
-    <h2>Lembrete de Beber Água</h2>
-    <p>Ative lembretes desktop durante seu período do dia para manter uma rotina saudável.</p>
+<section class="hero-card water-hero">
+    <div class="water-hero-text">
+        <h2>Beber água</h2>
+        <p>Marque cada copo e veja o seu encher. Depois de ligar o lembrete, ele te acompanha na barra lateral.</p>
+    </div>
+    <span class="water-hero-drop" aria-hidden="true">💧</span>
 </section>
 
-<section class="panel-card">
-    <h3>Configuração</h3>
-    <form method="post" class="event-form hydration-form">
-        <label class="dark-toggle fancy" for="hydration-enabled">
-            <input id="hydration-enabled" type="checkbox" name="enabled" {% if settings and settings['enabled'] %}checked{% endif %} />
-            <span class="track"><span class="dot"></span></span>
-            <span class="text">Ativar lembrete de água</span>
-        </label>
+<div class="water-layout">
+    {# `data-water-boot` também aqui: com o lembrete desligado não existe widget
+       na barra lateral, e esta tela precisa saber o estado do mesmo jeito. #}
+    <section class="panel-card water-stage" id="water-stage"
+             data-water-boot
+             data-glasses="{{ glasses }}"
+             data-goal="{{ settings['daily_goal'] }}"
+             data-glass-ml="{{ settings['glass_ml'] }}"
+             {% if next_in is not none %}data-next-in="{{ next_in }}"{% endif %}>
 
-        <div class="hydration-block">
-            <h4>Intervalo do lembrete</h4>
-            <label>
-                A cada quantos minutos?
-                <input type="number" name="interval_minutes" min="1" step="1" value="{{ settings['interval_minutes'] if settings else 60 }}" required />
-            </label>
-            <small class="field-help">Exemplo: 37 minutos. Você escolhe qualquer valor.</small>
+        <div class="water-figure">
+            {{ glass('lg') }}
         </div>
 
-        <div class="hydration-block">
-            <h4>Período do dia</h4>
-            <div class="inline-group">
-                <label>
-                    Início
-                    <input type="time" name="start_time" step="60" value="{{ settings['start_time'] if settings else '08:00' }}" required />
-                </label>
+        <p class="water-count" id="water-count"></p>
+        <p class="water-volume" id="water-volume"></p>
+        <p class="water-note" id="water-note" aria-live="polite"></p>
 
-                <label>
-                    Fim
-                    <input type="time" name="end_time" step="60" value="{{ settings['end_time'] if settings else '22:00' }}" required />
-                </label>
+        <div class="water-actions">
+            <button class="btn-primary water-drink" type="button" data-water-action="drink">
+                Bebi um copo
+            </button>
+            <button class="btn-secondary water-undo" type="button" data-water-action="undo">
+                Desfazer
+            </button>
+        </div>
+    </section>
+
+    <section class="panel-card">
+        <h3>Configuração</h3>
+        <form method="post" class="event-form hydration-form">
+            <div class="hydration-block">
+                <h4>Meta do dia</h4>
+                <div class="inline-group">
+                    <label>
+                        Copos por dia
+                        <input type="number" name="daily_goal"
+                               min="{{ limits.min_goal }}" max="{{ limits.max_goal }}" step="1"
+                               value="{{ settings['daily_goal'] }}" required />
+                    </label>
+                    <label>
+                        Tamanho do copo (ml)
+                        <input type="number" name="glass_ml"
+                               min="{{ limits.min_ml }}" max="{{ limits.max_ml }}" step="10"
+                               value="{{ settings['glass_ml'] }}" required />
+                    </label>
+                </div>
+                <small class="field-help">
+                    Dá <strong id="water-goal-volume">{{ (settings['daily_goal'] * settings['glass_ml'] / 1000)|round(2) }}</strong> L por dia.
+                </small>
             </div>
-            <small class="field-help">Pode cruzar meia-noite: ex. início 22:30 e fim 06:00.</small>
-        </div>
 
-        <div class="hydration-actions">
-            <button type="submit" name="action" value="save" class="btn-primary">Salvar lembrete</button>
-            <button type="submit" name="action" value="test" class="btn-secondary">Testar notificação agora</button>
-        </div>
-    </form>
-</section>
+            <label class="dark-toggle fancy" for="hydration-enabled">
+                <input id="hydration-enabled" type="checkbox" name="enabled" {% if settings and settings['enabled'] %}checked{% endif %} />
+                <span class="track"><span class="dot"></span></span>
+                <span class="text">Ativar lembrete de água</span>
+            </label>
+
+            <div class="hydration-block">
+                <h4>Intervalo do lembrete</h4>
+                <label>
+                    A cada quantos minutos?
+                    <input type="number" name="interval_minutes"
+                           min="{{ limits.min_interval }}" max="{{ limits.max_interval }}" step="1"
+                           value="{{ settings['interval_minutes'] if settings else 60 }}" required />
+                </label>
+                <small class="field-help">Exemplo: 37 minutos. Você escolhe qualquer valor.</small>
+            </div>
+
+            <div class="hydration-block">
+                <h4>Período do dia</h4>
+                <div class="inline-group">
+                    <label>
+                        Início
+                        <input type="time" name="start_time" step="60" value="{{ settings['start_time'] if settings else '08:00' }}" required />
+                    </label>
+
+                    <label>
+                        Fim
+                        <input type="time" name="end_time" step="60" value="{{ settings['end_time'] if settings else '22:00' }}" required />
+                    </label>
+                </div>
+                <small class="field-help">Pode cruzar meia-noite: ex. início 22:30 e fim 06:00.</small>
+            </div>
+
+            <div class="hydration-actions">
+                <button type="submit" name="action" value="save" class="btn-primary">Salvar lembrete</button>
+                <button type="submit" name="action" value="test" class="btn-secondary">Testar notificação agora</button>
+            </div>
+        </form>
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script defer src="{{ static_url('js/pages/hydration/main.js') }}"></script>
 {% endblock %}

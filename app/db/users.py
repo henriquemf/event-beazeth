@@ -9,6 +9,7 @@ algoritmo depois não invalida os hashes antigos.
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.db.connection import get_connection, utc_now_iso
+from app.db.hydration import today_iso
 from app.db.tags import DEFAULT_TAGS
 
 
@@ -32,10 +33,33 @@ def get_user_by_email(email: str):
 
 
 def get_user(user_id: int):
+    """A conta e o que a barra lateral precisa em TODA pagina, numa consulta so.
+
+    O widget de agua vive na sidebar, ou seja, aparece em todas as telas. Buscar
+    o consumo do dia num SELECT proprio dobraria as idas ao banco de cada
+    carregamento -- e o banco e gerenciado, fora do datacenter do app, onde cada
+    ida custa latencia de rede, nao de disco. Os LEFT JOIN aqui viajam de carona
+    na consulta que ja acontecia.
+
+    Sao LEFT e nao INNER de proposito: conta sem linha de configuracao (ou sem
+    nada bebido hoje) continua entrando, com os padroes do COALESCE.
+    """
     with get_connection() as conn:
         return conn.execute(
-            "SELECT id, email, display_name FROM users WHERE id = %s",
-            (user_id,),
+            """
+            SELECT u.id, u.email, u.display_name,
+                   COALESCE(h.enabled, FALSE)       AS water_enabled,
+                   COALESCE(h.daily_goal, 8)        AS water_goal,
+                   COALESCE(h.glass_ml, 250)        AS water_glass_ml,
+                   COALESCE(h.interval_minutes, 60) AS water_interval,
+                   h.last_sent_at                   AS water_last_sent,
+                   COALESCE(i.glasses, 0)           AS water_glasses
+            FROM users u
+            LEFT JOIN hydration_settings h ON h.user_id = u.id
+            LEFT JOIN hydration_intake i ON i.user_id = u.id AND i.day = %s
+            WHERE u.id = %s
+            """,
+            (today_iso(), user_id),
         ).fetchone()
 
 

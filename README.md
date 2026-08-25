@@ -19,6 +19,7 @@ Recursos de interface:
 - O dia sob o mouse acende e o dia clicado fica marcado enquanto o popup está aberto
 - “Próximos eventos” lista os 5 mais próximos; lado a lado com o mês em telas largas, embaixo dele nas demais
 - Aba **Weekly Planner**: grade semanal de 24 horas com blocos arrastáveis
+- Aba **To-do** ✅: lista da semana no formato de agenda de papel, com navegação por semana
 - Aba **Pomodoro** 🍎: temporizador com ampulheta que chacoalha de vez em quando e segue contando na barra lateral enquanto você navega
 - **Home** é o quadro de **post-its**: papel livre, arrastável, redimensionável e colorido
 - Cadastro e edição de evento em popup do calendário, com “Próximos eventos” na coluna ao lado
@@ -26,8 +27,9 @@ Recursos de interface:
 - 10 temas e 10 fontes selecionáveis
 - Seleção de tema e fonte por cards de preview (sem dropdown)
 - Dark mode no menu lateral, aplicado em toda a interface (inclusive fundo e calendário)
-- Nova aba de lembrete de beber água com intervalo e janela de horário
+- Aba **Beber água** 💧: copo que enche com a meta do dia, gole animado ao registrar, e widget na barra lateral
 - Microanimações suaves de interface e sons de clique baixos
+- Som próprio quando a notificação chega com a aba aberta, distinto do sino do pomodoro
 - Data com horário opcional no cadastro de evento
 - PWA (manifest + service worker com cache de estáticos)
 - Inscrição de notificações web direto no menu lateral
@@ -139,6 +141,53 @@ recarregar ou dormir a máquina não desalinha a contagem; e um timer rodando é
 aparelho — sincronizar pelo servidor faria o celular herdar o pomodoro do
 notebook.
 
+## To-do da semana
+
+Lista semanal em `/todo`, no formato de agenda de papel: número do dia grande à
+esquerda, linha tracejada separando os dias, caixinhas à direita.
+
+- Segunda a domingo, com o dia de hoje circulado
+- Marcar, escrever, apagar — tudo sem sair da página
+- Estrela no dia com tudo concluído; placar da semana no topo
+- Trocar de semana é **navegação de verdade** (`/todo?semana=2026-08-17`): cada
+  semana tem URL própria, o voltar do navegador funciona e a tela chega pintada
+  do servidor em vez de montada por fetch depois da pintura
+
+Duas decisões que valem registro:
+
+**O item pertence a um DIA, não a uma semana.** A semana é só o recorte que a
+tela mostra. Assim navegar entre semanas é uma consulta por intervalo, e mover um
+item de dia é um `UPDATE` de uma coluna só.
+
+**Os contadores são recontados do DOM, não incrementados.** Depois de cada
+mudança a tela varre os itens e refaz estrela e placar. Um contador que se
+corrige sozinho não acumula erro ao longo da sessão — e a interface é otimista,
+então erros de rede desfazem passos no meio do caminho.
+
+## Beber água
+
+Em `/hydration`, com o mesmo desenho do pomodoro: um copo que enche, e um widget
+que acompanha na barra lateral.
+
+- Meta do dia em copos, com o tamanho do copo em ml (o total em litros aparece
+  enquanto você digita)
+- **Bebi um copo** faz a gota cair, o copo balançar e a água subir
+- Beber empurra o próximo lembrete um intervalo inteiro para frente: quem acabou
+  de beber não quer ser cobrada logo em seguida
+- Assim que o lembrete é ligado, o widget aparece no menu da esquerda — com o
+  copo, o total do dia e a contagem para o próximo aviso
+- O lembrete em si continua igual: intervalo em minutos e janela do dia, que pode
+  cruzar a meia-noite
+
+**O consumo é guardado como total do dia**, e não como um registro por copo. A
+pergunta que a tela faz é sempre "quantos hoje?", e assim ela vira uma leitura de
+chave primária em vez de um `COUNT` sobre uma história que só cresce.
+
+**A contagem para o próximo lembrete viaja em segundos, não em horário.** O
+servidor no deploy roda em UTC e o navegador está em outro fuso: um horário sem
+fuso mandado ao cliente seria lido como hora local e a conta erraria por horas.
+Uma duração não tem esse problema.
+
 ## Bibliotecas
 
 | Biblioteca | Situação | Decisão |
@@ -186,6 +235,9 @@ As três causas, isoladas por teste A/B:
 - Proporções da tela do pomodoro por `clamp()`, `cqi` (container query) e `auto-fit`: o mostrador se dimensiona pela largura do cartão, não da janela, e sobrou um único media query (para mudança de layout, não de tamanho)
 - Um único `AudioContext` para toda a interface (`core/audio.js`): dois contextos no mesmo documento significariam dois desbloqueios independentes, e o som do fim do timer não sairia em metade das visitas
 - Modal de evento fora do CSS global: cinco das sete telas deixaram de baixá-lo
+- O widget da água viaja de carona na consulta do usuário (LEFT JOIN em `get_user`), que já acontece a cada requisição: um SELECT próprio dobraria as idas ao banco de cada página, e o banco é gerenciado — cada ida custa latência de rede
+- Nível do copo por `--water-level` escrita na raiz do documento: um `setProperty` só faz todos os copos da página subirem juntos, e o motor não precisa saber quantos existem
+- Contadores do to-do recontados do DOM em vez de incrementados, e barras de progresso por `scaleX` em vez de `width`
 
 ## Estrutura
 
@@ -208,6 +260,7 @@ app/
     calendar.py          /calendar    + /api/events
     planner.py           /planner     + /api/planner/blocks
     pomodoro.py          /pomodoro    (tempos prontos; o timer é do cliente)
+    todo.py              /todo        + /api/todo
     notes.py             /api/notes
     appearance.py        /appearance
     hydration.py         /hydration
@@ -217,6 +270,7 @@ app/
     schema.py            CREATE TABLE e índices
     users.py             contas, hash de senha e criação do espaço
     events.py  tags.py  reminders.py  hydration.py  push.py  planner.py  notes.py
+    todo.py              itens da lista semanal
   services/
     notifier.py          envio desktop e web push
     scheduler_service.py varredura de lembretes
@@ -224,22 +278,28 @@ app/
     css/
       base.css           tokens (cor, fonte e escala --space-1..5), reset, layout,
                          sidebar, cartões, forms, botões
-      components.css     o que existe em TODA tela: caixas da sidebar, toggle de
-                         dark mode, ampulheta e widget do pomodoro
+      components.css     casca comum a TODA tela: caixas da sidebar, botão de
+                         notificações, toggle de dark mode
+      widgets/           um arquivo por widget da sidebar (global, porque a
+                         sidebar é do layout base)
+        pomodoro.css     ampulheta + widget do pomodoro
+        water.css        copo + widget da água
       components/        componente de 2-3 telas, carregado só por elas
         modal.css        modal de evento (calendário e planner)
       themes.css         10 temas, 10 fontes, dark mode, responsivo
       pages/             notes, planner, calendar, appearance, hydration,
-                         pomodoro, auth
+                         pomodoro, todo, auth
       vendor/            tema do flatpickr e do FullCalendar
     js/
       core/              shared (namespace + utils), theme, audio, ui-effects,
-                         push, pomodoro
+                         push, pomodoro, hydration
       pages/
         notes/           constants, context, store, card, board, interactions, main
         planner/         constants, time, context, grid, blocks, store, drag, editor, main
         calendar/        event-modal, tags-modal, main
         pomodoro/        main.js
+        todo/            main.js
+        hydration/       main.js
     sw.js  manifest.webmanifest  icon.svg
   templates/
     layouts/base.html    casca da página

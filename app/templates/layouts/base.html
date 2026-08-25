@@ -23,6 +23,8 @@
        Cada página soma o CSS da própria tela em head_extra. #}
     <link rel="stylesheet" href="{{ static_url('css/base.css') }}" />
     <link rel="stylesheet" href="{{ static_url('css/components.css') }}" />
+    <link rel="stylesheet" href="{{ static_url('css/widgets/pomodoro.css') }}" />
+    <link rel="stylesheet" href="{{ static_url('css/widgets/water.css') }}" />
     <link rel="stylesheet" href="{{ static_url('css/themes.css') }}" />
     {% include 'partials/theme-bootstrap.html' %}
     {% block head_extra %}{% endblock %}
@@ -50,6 +52,7 @@
     <script defer src="{{ static_url('js/core/ui-effects.js') }}"></script>
     <script defer src="{{ static_url('js/core/push.js') }}"></script>
     <script defer src="{{ static_url('js/core/pomodoro.js') }}"></script>
+    <script defer src="{{ static_url('js/core/hydration.js') }}"></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

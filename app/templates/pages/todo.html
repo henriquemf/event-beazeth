@@ -1,0 +1,79 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %}To-do | Event Notifier{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ static_url('css/pages/todo.css') }}" />
+{% endblock %}
+
+{% block content %}
+<section class="hero-card todo-hero">
+    <div class="todo-hero-text">
+        <h2>{{ header.month }} <span class="todo-year">{{ header.year }}</span></h2>
+        <p class="todo-week">Semana {{ header.week_number }} · {{ header.range }}</p>
+    </div>
+
+    {# Navegação por link, não por botão com JS: cada semana tem URL própria, o
+       voltar do navegador funciona e a tela chega pintada do servidor. #}
+    <nav class="todo-nav" aria-label="Trocar de semana">
+        <a class="todo-nav-btn" href="{{ url_for('todo.index', semana=header.previous) }}" aria-label="Semana anterior">‹</a>
+        <a class="todo-nav-now{% if header.is_current %} is-current{% endif %}"
+           href="{{ url_for('todo.index') }}"
+           {% if header.is_current %}aria-current="page"{% endif %}>Hoje</a>
+        <a class="todo-nav-btn" href="{{ url_for('todo.index', semana=header.next) }}" aria-label="Próxima semana">›</a>
+    </nav>
+
+    {# --todo-progress alimenta a barra: uma variável, nenhuma medida no HTML. #}
+    <div class="todo-score" style="--todo-progress: {{ (done / total) if total else 0 }}">
+        <span class="todo-score-text">{{ done }}<small>/{{ total }}</small></span>
+        <span class="todo-score-bar"><span class="todo-score-fill"></span></span>
+        <small class="todo-score-label">{{ 'feita' if done == 1 else 'feitas' }}</small>
+    </div>
+</section>
+
+<section class="panel-card todo-panel">
+    <ul class="todo-week-list" id="todo-week">
+        {% for day in days %}
+        <li class="todo-day{% if day.is_today %} is-today{% endif %}{% if day.is_weekend %} is-weekend{% endif %}"
+            data-day="{{ day.iso }}">
+            <div class="todo-date">
+                <strong>{{ day.number }}</strong>
+                <small>{{ day.weekday_short }}</small>
+                {# Estrela só quando o dia tem tarefa E está inteiro concluído —
+                   como as estrelinhas de agenda de papel. #}
+                <span class="todo-star" aria-hidden="true">★</span>
+            </div>
+
+            <div class="todo-body">
+                <ul class="todo-list" data-day="{{ day.iso }}">
+                    {% for item in day['items'] %}
+                    <li class="todo-item{% if item.done %} is-done{% endif %}" data-id="{{ item.id }}">
+                        <label class="todo-check">
+                            <input type="checkbox" {% if item.done %}checked{% endif %}
+                                   aria-label="Concluir {{ item.content }}" />
+                            <span class="todo-box" aria-hidden="true"></span>
+                        </label>
+                        <input class="todo-text" type="text" value="{{ item.content }}"
+                               aria-label="Tarefa de {{ day.weekday }}, dia {{ day.number }}" />
+                        <button class="todo-remove" type="button"
+                                aria-label="Apagar {{ item.content }}">×</button>
+                    </li>
+                    {% endfor %}
+                </ul>
+
+                <input class="todo-new" type="text" data-day="{{ day.iso }}"
+                       placeholder="Adicionar em {{ day.weekday_short }}…"
+                       aria-label="Nova tarefa em {{ day.weekday }}, dia {{ day.number }}"
+                       maxlength="{{ max_content }}" />
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+
+    <p class="todo-status" id="todo-status" role="status" hidden></p>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script defer src="{{ static_url('js/pages/todo/main.js') }}"></script>
+{% endblock %}

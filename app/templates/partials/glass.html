@@ -1,0 +1,30 @@
+{# Copo d'água.
+
+   Mesma ideia da ampulheta (partials/hourglass.html): um macro, porque o copo
+   aparece na tela da água (grande) e no widget da barra lateral (pequeno), e o
+   tamanho vem por classe — quem manda nas medidas é o CSS.
+
+   O nível é --water-level (0 a 1), herdada de quem contém o copo. Nenhum
+   atributo precisa ser escrito aqui, e é a mesma variável que o JS atualiza
+   quando um copo é registrado.
+
+   Feito com <span> e clip-path em vez de SVG pelo mesmo motivo de lá: SVG com
+   clipPath exige `id` único por instância, e duas cópias na mesma página
+   colidiriam. #}
+{% macro glass(size) %}
+<span class="glass glass-{{ size }}" aria-hidden="true">
+    <span class="glass-body">
+        {# A água é um bloco de altura inteira empurrado para baixo por
+           translateY: assim as ondas do topo não esticam junto, como
+           aconteceria com scaleY. #}
+        <span class="glass-water">
+            <span class="glass-wave"></span>
+            <span class="glass-wave glass-wave-back"></span>
+        </span>
+        <span class="glass-shine"></span>
+    </span>
+    {# Gota que cai ao registrar um copo. Fora do corpo para poder começar acima
+       da boca do copo, onde o clip-path já teria cortado. #}
+    <span class="glass-drop"></span>
+</span>
+{% endmacro %}

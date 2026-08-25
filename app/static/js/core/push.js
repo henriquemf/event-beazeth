@@ -1,4 +1,26 @@
 (function () {
+    /* Som do app quando a notificação chega com a aba aberta.
+
+       O service worker não tem AudioContext, então ele avisa as abas por
+       postMessage e quem toca é a página. Fica fora do guarda dos botões
+       abaixo de propósito: tocar o som não depende da barra lateral existir.
+
+       Sem aba aberta, ou com o áudio ainda travado por falta de gesto, fica só
+       o som do próprio sistema — que é o que o navegador já faz sozinho. */
+    function playNotificationSound() {
+        if (window.EN && EN.audio) {
+            EN.audio.notify();
+        }
+    }
+
+    if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.addEventListener("message", function (event) {
+            if (event.data && event.data.type === "en-push") {
+                playNotificationSound();
+            }
+        });
+    }
+
     const FALLBACK_KEY = "web_notify_live_fallback";
     const FALLBACK_INTERVAL_MS = 60000;
     const enableBtn = document.getElementById("push-enable-btn");
@@ -155,6 +177,13 @@
             icon: payload.icon || "/static/icon.svg",
             tag: payload.tag || "live-notification",
         };
+
+        /* Este caminho é o do modo em tempo real (e o do teste local): a
+           notificação é montada aqui, não chega por push, então o service
+           worker não dispara o evento que avisa as abas. O som sai daqui
+           mesmo — e não há risco de tocar duas vezes, porque
+           `showNotification` não gera evento `push`. */
+        playNotificationSound();
 
         const registration = await navigator.serviceWorker.getRegistration("/");
         if (registration) {

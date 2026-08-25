@@ -15,6 +15,43 @@ window.EN = window.EN || {};
     let pending = [];
     let listening = false;
 
+    /* Os dois avisos longos do app. Mesma família (seno macio, filtro passa-
+       baixa, volume de aviso e não de alarme) e desenhos opostos de propósito:
+       um sobe em três notas, o outro desce em duas. Dá para saber qual dos dois
+       tocou sem olhar para a tela. */
+    const MOTIFS = {
+        /* Fim do pomodoro: tríade maior ascendente, cauda longa. */
+        pomodoro: {
+            cutoff: 2400,
+            layers: [
+                { peak: 0.075, tail: 1.5, octave: 1 },
+                { peak: 0.028, tail: 1.2, octave: 0.5 },
+            ],
+            notes: [
+                { f: 523.25, t: 0 },     // dó
+                { f: 659.25, t: 0.19 },  // mi
+                { f: 783.99, t: 0.38 },  // sol
+            ],
+        },
+        /* Notificação: quinta descendente, duas notas, mais curta. Precisa ser
+           reconhecível em meio segundo, porque compete com a notificação do
+           próprio sistema. */
+        notify: {
+            cutoff: 2800,
+            layers: [
+                { peak: 0.062, tail: 1.1, octave: 1 },
+                { peak: 0.022, tail: 0.9, octave: 0.5 },
+            ],
+            /* Lá e ré: quinta descendente que não encosta em nenhuma nota do
+               motivo do pomodoro, nem nas oitavas dele. Assim os dois avisos
+               não têm como ser confundidos, mesmo ouvidos de longe. */
+            notes: [
+                { f: 880.00, t: 0 },     // lá
+                { f: 587.33, t: 0.16 },  // ré
+            ],
+        },
+    };
+
     function context() {
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
         if (!AudioCtx) {
@@ -24,6 +61,11 @@ window.EN = window.EN || {};
             ctx = new AudioCtx();
         }
         return ctx;
+    }
+
+    function isReady() {
+        const audio = context();
+        return !!audio && audio.state === "running";
     }
 
     /* O navegador só deixa tocar depois de um gesto. Enquanto não vem, a fila
@@ -82,39 +124,30 @@ window.EN = window.EN || {};
         }
     }
 
-    /* Sino do fim do pomodoro: tríade ascendente em seno, ataque lento e cauda
-       longa. Volume de propósito baixo (pico 0.075) — é aviso, não alarme. */
-    function buildChime(audio, startAt) {
+    /* Monta um motivo no instante `startAt` do relógio do contexto e devolve os
+       osciladores criados, para quem agendou poder cancelar. */
+    function buildMotif(audio, startAt, motif) {
         const master = audio.createGain();
         const filter = audio.createBiquadFilter();
 
         filter.type = "lowpass";
-        filter.frequency.value = 2400;
+        filter.frequency.value = motif.cutoff;
         filter.Q.value = 0.6;
         filter.connect(master);
         master.gain.value = 1;
         master.connect(audio.destination);
 
-        const notes = [
-            { f: 523.25, t: 0 },      // dó
-            { f: 659.25, t: 0.19 },   // mi
-            { f: 783.99, t: 0.38 },   // sol
-        ];
-
         const nodes = [];
-        notes.forEach(function (note, index) {
-            /* Duas oscilações por nota: a fundamental e uma oitava abaixo bem
-               baixinha, que dá corpo sem aumentar a sensação de volume. */
-            [
-                { freq: note.f, peak: 0.075, tail: 1.5 },
-                { freq: note.f / 2, peak: 0.028, tail: 1.2 },
-            ].forEach(function (layer) {
+        motif.notes.forEach(function (note, index) {
+            /* Cada nota sai em duas camadas: a fundamental e uma oitava abaixo
+               bem baixinha, que dá corpo sem aumentar a sensação de volume. */
+            motif.layers.forEach(function (layer) {
                 const osc = audio.createOscillator();
                 const gain = audio.createGain();
                 const at = startAt + note.t;
 
                 osc.type = "sine";
-                osc.frequency.value = layer.freq;
+                osc.frequency.value = note.f * layer.octave;
 
                 gain.gain.setValueAtTime(0.0001, at);
                 gain.gain.exponentialRampToValueAtTime(layer.peak * (1 - index * 0.12), at + 0.05);
@@ -129,6 +162,13 @@ window.EN = window.EN || {};
         });
 
         return nodes;
+    }
+
+    function playNow(name) {
+        const audio = context();
+        if (audio) {
+            buildMotif(audio, audio.currentTime, MOTIFS[name]);
+        }
     }
 
     EN.audio = {
@@ -179,16 +219,29 @@ window.EN = window.EN || {};
             });
         },
 
+        /* Fim do pomodoro. Espera o áudio ser liberado se ainda não foi: o
+           aviso continua valendo alguns segundos depois. */
         chime: function () {
             whenReady(function () {
-                const audio = context();
-                if (audio) {
-                    buildChime(audio, audio.currentTime);
-                }
+                playNow("pomodoro");
             });
         },
 
-        /* Agenda o sino para um instante absoluto (epoch em ms).
+        /* Notificação chegando. NÃO entra na fila de espera de propósito: se o
+           áudio ainda estiver travado, um som que só tocasse no próximo clique
+           chegaria fora de hora e sem contexto nenhum. Nesse caso fica só o som
+           do sistema, que é o que o navegador já toca sozinho.
+
+           Devolve se chegou a tocar, que é o que o teste observa. */
+        notify: function () {
+            if (!isReady()) {
+                return false;
+            }
+            playNow("notify");
+            return true;
+        },
+
+        /* Agenda o sino do pomodoro para um instante absoluto (epoch em ms).
 
            O relógio do WebAudio roda numa thread própria, que o navegador não
            estrangula quando a aba fica em segundo plano — ao contrário de
@@ -212,7 +265,7 @@ window.EN = window.EN || {};
                 if (!audio || delay < -1) {
                     return;
                 }
-                nodes = buildChime(audio, audio.currentTime + Math.max(delay, 0));
+                nodes = buildMotif(audio, audio.currentTime + Math.max(delay, 0), MOTIFS.pomodoro);
                 handle.armed = true;
             });
 

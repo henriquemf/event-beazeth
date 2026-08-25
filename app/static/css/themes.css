@@ -15,7 +15,6 @@
     --accent: #ff78b2;
     --accent-dark: #e45a98;
     --blue-soft: #7ec8ff;
-    --pink-soft: #f38ab7;
     --danger: #b23a7d;
     --success-bg: rgba(68, 178, 117, 0.13);
     --success-bd: rgba(68, 178, 117, 0.4);
@@ -36,7 +35,6 @@
     --accent: #b56dff;
     --accent-dark: #9d55e8;
     --blue-soft: #9ac1ff;
-    --pink-soft: #e9a0ff;
     --danger: #9b3aa7;
     --success-bg: rgba(86, 168, 136, 0.14);
     --success-bd: rgba(86, 168, 136, 0.38);
@@ -57,7 +55,6 @@
     --accent: #ff8d91;
     --accent-dark: #ea697e;
     --blue-soft: #89c9d8;
-    --pink-soft: #ffb2b4;
     --danger: #b54a65;
     --success-bg: rgba(88, 172, 127, 0.13);
     --success-bd: rgba(88, 172, 127, 0.38);
@@ -278,6 +275,16 @@ html[data-dark="true"] {
 
 /* No escuro a mesma mistura fica apagada: o fundo precisa de mais cor para
    sair do cartão e o texto de menos tinta para não escurecer. */
+/* Mesmo caso da ampulheta: o vidro claro vira um borrao no fundo escuro. So o
+   vidro muda -- a agua continua vindo do tom do tema. */
+[data-dark="true"] .glass {
+    --glass-tint: color-mix(in srgb, var(--blue-soft) 22%, rgba(255, 255, 255, 0.06));
+}
+
+[data-dark="true"] .glass-shine {
+    opacity: 0.45;
+}
+
 [data-dark="true"] .tag {
     background: color-mix(in srgb, var(--tag-color) 30%, transparent);
     color: color-mix(in srgb, var(--tag-color) 30%, var(--ink));

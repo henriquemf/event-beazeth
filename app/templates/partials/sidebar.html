@@ -22,6 +22,12 @@
 
     {% include 'partials/pomodoro-widget.html' %}
 
+    {# Só existe com o lembrete ligado: o servidor já sabe disso, então não há
+       widget escondido por CSS nem flash na primeira pintura. #}
+    {% if current_user['water_enabled'] %}
+    {% include 'partials/hydration-widget.html' %}
+    {% endif %}
+
     {# Um controle só, sem caixa em volta: lua/sol trocam conforme o estado. #}
     <label class="dark-switch" for="dark-toggle" title="Alternar dark mode">
         <input id="dark-toggle" type="checkbox" />

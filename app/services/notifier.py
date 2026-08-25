@@ -31,12 +31,26 @@ def send_desktop_notification(title: str, message: str, exact_title: bool = Fals
         return False, f"Falha desktop: {exc}"
 
 
+# O serviço de push responde isto quando a inscrição não existe mais: o
+# navegador foi reinstalado, a permissão foi revogada ou a inscrição expirou.
+# Não adianta tentar de novo — a linha tem que sair do banco.
+DEAD_SUBSCRIPTION_STATUSES = frozenset({404, 410})
+
+
 def send_web_push(config, subscription: dict, payload: str):
+    """Envia um push. Devolve `(ok, mensagem, status_http)`.
+
+    O status vem separado da mensagem de propósito. Antes quem chamava decidia
+    apagar a inscrição procurando `"(410"` dentro do texto do erro — decisão
+    destrutiva tomada por farejamento de string, que erra nos dois sentidos.
+
+    `status` é `None` quando nem chegou a haver resposta (DNS, timeout, TLS).
+    """
     vapid_private_key = config.get("VAPID_PRIVATE_KEY", "").strip()
     vapid_claims = {"sub": config.get("VAPID_SUBJECT", "mailto:admin@example.com")}
 
     if not vapid_private_key:
-        return False, "VAPID_PRIVATE_KEY não configurada"
+        return False, "VAPID_PRIVATE_KEY não configurada", None
 
     try:
         webpush(
@@ -46,9 +60,13 @@ def send_web_push(config, subscription: dict, payload: str):
             vapid_claims=vapid_claims,
             ttl=120,
         )
-        return True, "Web push enviado"
+        return True, "Web push enviado", 201
     except WebPushException as exc:
-        status_code = getattr(exc.response, "status_code", None) if exc.response else None
-        return False, f"Falha web push ({status_code or 'sem status'}): {exc}"
+        # `is not None` e não `if exc.response`: requests.Response.__bool__
+        # devolve `response.ok`, ou seja, TODA resposta de erro é falsa aqui.
+        # Era por isso que o status virava "sem status" justamente nos 410 —
+        # e a limpeza de inscrição morta nunca rodava.
+        status_code = exc.response.status_code if exc.response is not None else None
+        return False, f"Falha web push ({status_code or 'sem status'}): {exc}", status_code
     except Exception as exc:
-        return False, f"Falha web push: {exc}"
+        return False, f"Falha web push: {exc}", None

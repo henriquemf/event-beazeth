@@ -72,7 +72,9 @@ STATEMENTS = (
         interval_minutes INTEGER NOT NULL DEFAULT 60,
         start_time TEXT NOT NULL DEFAULT '08:00',
         end_time TEXT NOT NULL DEFAULT '22:00',
-        last_sent_at TEXT
+        last_sent_at TEXT,
+        daily_goal INTEGER NOT NULL DEFAULT 8,
+        glass_ml INTEGER NOT NULL DEFAULT 250
     )
     """,
     # O endpoint era único no banco inteiro. Com contas, o mesmo navegador pode
@@ -120,6 +122,34 @@ STATEMENTS = (
         updated_at TEXT NOT NULL
     )
     """,
+    """
+    CREATE TABLE IF NOT EXISTS todo_items (
+        id BIGSERIAL PRIMARY KEY,
+        user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        day TEXT NOT NULL,
+        content TEXT NOT NULL,
+        done BOOLEAN NOT NULL DEFAULT FALSE,
+        position INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL
+    )
+    """,
+    # Uma linha por conta e por DIA. Guardar o total do dia, e nao um registro
+    # por copo, e o que faz a tela abrir com uma leitura de chave primaria em
+    # vez de um COUNT sobre a historia inteira.
+    """
+    CREATE TABLE IF NOT EXISTS hydration_intake (
+        user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        day TEXT NOT NULL,
+        glasses INTEGER NOT NULL DEFAULT 0,
+        last_drink_at TEXT,
+        PRIMARY KEY (user_id, day)
+    )
+    """,
+    # Contas criadas antes da meta diaria existir. `IF NOT EXISTS` deixa isto
+    # rodar em toda subida sem custo e sem quebrar em banco ja migrado -- e o
+    # equivalente em Postgres das migracoes guardadas que o SQLite exigia.
+    "ALTER TABLE hydration_settings ADD COLUMN IF NOT EXISTS daily_goal INTEGER NOT NULL DEFAULT 8",
+    "ALTER TABLE hydration_settings ADD COLUMN IF NOT EXISTS glass_ml INTEGER NOT NULL DEFAULT 250",
     # Todo índice começa por `user_id`: nenhuma consulta do app lê linha de
     # outra conta, então o filtro do dono é sempre o primeiro a ser aplicado.
     "CREATE INDEX IF NOT EXISTS idx_events_user_datetime ON events(user_id, event_datetime)",
@@ -132,6 +162,8 @@ STATEMENTS = (
     "CREATE INDEX IF NOT EXISTS idx_planner_user_day ON planner_blocks(user_id, day_of_week, start_minute)",
     "CREATE INDEX IF NOT EXISTS idx_notes_user_bucket ON sticky_notes(user_id, bucket, z_index)",
     "CREATE INDEX IF NOT EXISTS idx_push_user ON push_subscriptions(user_id)",
+    # A tela sempre pede um intervalo de dias de UMA conta, nesta ordem exata.
+    "CREATE INDEX IF NOT EXISTS idx_todo_user_day ON todo_items(user_id, day, position)",
 )
 
 

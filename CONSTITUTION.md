@@ -21,8 +21,9 @@ app/
   static/
     css/
       base.css         tokens, reset, layout, sidebar, cartões, forms, botões
-      components.css   componentes que existem em TODAS as telas
+      components.css   casca comum a TODAS as telas
       components/      componente de 2–3 telas; carregado só por elas
+      widgets/         um arquivo por widget da barra lateral (global)
       pages/<tela>.css o que só existe naquela tela
       vendor/          ajustes sobre CSS de terceiros
     js/
@@ -34,11 +35,16 @@ app/
     partials/          pedaços incluídos e macros reutilizáveis
 ```
 
-**O critério do CSS é o alcance, não o assunto.** Está em toda tela → `components.css`.
+**O critério do CSS é o alcance, não o assunto.** Está em toda tela →
+`components.css`, ou `css/widgets/<nome>.css` se for widget da barra lateral.
 Está em duas ou três → `css/components/<nome>.css`, carregado no `head_extra`
 delas. Está em uma → `css/pages/<tela>.css`. Foi assim que o modal de evento saiu
 do pacote global: cinco telas baixavam 70 linhas de CSS de um modal que nunca
 abriria ali.
+
+Widget global ganha arquivo próprio mesmo cabendo junto: ampulheta e copo não têm
+nada a ver um com o outro, e os dois no mesmo arquivo chegaram a 690 das 700
+linhas — sem folga nenhuma para o próximo.
 
 ---
 
@@ -132,7 +138,7 @@ components.css → themes.css` não é negociável.
 ## 6. Estado do cliente: localStorage ou banco?
 
 Vai para o **banco** o que é conteúdo do usuário: post-its, blocos do planner,
-eventos, configuração de lembrete. Tudo isso é por conta (ver seção 8b) e vive
+eventos, tarefas do to-do, copos de água, configuração de lembrete. Tudo isso é por conta (ver seção 8b) e vive
 no Postgres, fora do ciclo de deploy — no arquivo SQLite de antes, cada
 publicação começava do zero.
 
@@ -253,13 +259,21 @@ As ferramentas ficam no scratchpad da sessão e rodam contra o app de verdade:
 
 | Ferramenta | O que garante |
 |---|---|
-| `audit.py` | 11 categorias de código morto: keyframes, variáveis CSS, ids, `data-*`, membros de `EN`, arquivos órfãos, assets faltando, templates órfãos, funções Python, regras duplicadas, classes sem CSS |
+| `devapp.py` | ponto de entrada de todo teste de servidor: crava o Postgres LOCAL antes de importar `app` e devolve um cliente já logado |
+| `audit.py` | 12 categorias de código morto: keyframes, variáveis CSS (declaradas sem leitor e lidas sem declaração), ids, `data-*`, membros de `EN`, arquivos órfãos, assets faltando, templates órfãos, funções Python, regras duplicadas, classes sem CSS |
 | `verify_coverage.py` | toda classe usada por uma tela tem regra num CSS que aquela tela carrega |
 | `treeshake.py` | classe CSS sem uso, import Python sem uso, biblioteca carregada sem ser chamada |
+| `verify_css_parse.mjs` | todo CSS passa por um parser de verdade — navegador descarta regra malformada calado |
+| `test_*.py` | rotas, API, isolamento entre contas e limites, contra o banco local |
 | `test-*.mjs` | comportamento em jsdom, contra o HTML renderizado pelo Flask |
 
-Duas lições que valem mais que as ferramentas:
+Três lições que valem mais que as ferramentas:
 
+- **Nenhuma ferramenta aponta para produção.** A `.env` do repositório aponta
+  para o Neon; um `create_app()` direto num verificador criaria conta de teste e
+  escreveria no banco de verdade. Todo script de servidor entra por `devapp.py`,
+  que crava a URL local **antes** de `app` ser importado e ainda checa isso de
+  novo na subida.
 - **Comparar contra o HTML renderizado, não contra o fonte do template.** Classe
   montada por interpolação (`hourglass-{{ size }}`) nunca aparece literal no
   fonte e parece morta sem estar.

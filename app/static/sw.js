@@ -54,7 +54,14 @@ self.addEventListener("push", (event) => {
     renotify: false,
   };
 
-  event.waitUntil(self.registration.showNotification(title, options));
+  // Avisa as abas abertas para tocarem o som do app. O service worker nao tem
+  // AudioContext, entao quem toca e a pagina; sem aba aberta fica so o som do
+  // proprio sistema, que e o comportamento normal de notificacao.
+  const avisarAbas = self.clients
+    .matchAll({ type: "window", includeUncontrolled: true })
+    .then((abas) => abas.forEach((aba) => aba.postMessage({ type: "en-push", tag: options.tag })));
+
+  event.waitUntil(Promise.all([self.registration.showNotification(title, options), avisarAbas]));
 });
 
 self.addEventListener("notificationclick", (event) => {

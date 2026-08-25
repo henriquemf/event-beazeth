@@ -1,21 +1,158 @@
-/* Tela do lembrete de beber agua. */
+/* Tela da água.
+
+   O copo e o widget da barra lateral NÃO estão aqui: são compartilhados com
+   todas as telas e moram em css/widgets/water.css. Aqui fica só o que existe
+   nesta página — o mostrador e o formulário de configuração. */
+
+/* ------------------------------------------------------------------ hero */
+
+.water-hero {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+}
+
+.water-hero-text {
+    min-width: 0;
+}
+
+.water-hero-drop {
+    flex: 0 0 auto;
+    font-size: clamp(2rem, 1.4rem + 2.2vw, 3rem);
+    line-height: 1;
+    animation: waterDropBob 3.4s ease-in-out infinite;
+}
+
+@keyframes waterDropBob {
+    0%,
+    100% {
+        transform: translateY(0) rotate(-4deg);
+    }
+    50% {
+        transform: translateY(-7px) rotate(5deg);
+    }
+}
+
+/* ---------------------------------------------------------------- layout */
+
+/* Sem breakpoint: duas colunas enquanto couberem 330px em cada uma, uma coluna
+   quando não couberem. */
+.water-layout {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr));
+    align-items: start;
+    gap: var(--space-3);
+}
+
+/* ------------------------------------------------------------- mostrador */
+
+/* Container de consulta: as medidas daqui para dentro são fração da largura do
+   CARTÃO, não da janela — é o que mantém o copo proporcional tanto no monitor
+   largo (onde o cartão tem metade da tela) quanto no celular. */
+.water-stage {
+    container-type: inline-size;
+    display: grid;
+    justify-items: center;
+    gap: var(--space-1);
+    text-align: center;
+}
+
+.water-figure {
+    display: grid;
+    place-items: center;
+    padding: var(--space-2) 0 var(--space-3);
+}
+
+.water-count {
+    margin: 0;
+    font-size: 1.05rem;
+    color: var(--ink-soft);
+}
+
+.water-count strong {
+    font-family: var(--font-display);
+    font-size: clamp(1.9rem, 13cqi, 2.9rem);
+    line-height: 1.1;
+    /* Sem largura tabular os dígitos trocam de largura e o número treme. */
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    transition: color 0.3s ease;
+}
+
+.water-stage[data-water-state="done"] .water-count strong {
+    color: #2f9e77;
+}
+
+.water-volume {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 1.02rem;
+    color: var(--ink-soft);
+}
+
+.water-note {
+    margin: var(--space-1) 0 0;
+    /* Reserva a linha: a mensagem troca (próximo lembrete, meta batida, erro) e
+       sem altura mínima o bloco todo pularia a cada mudança. */
+    min-height: 1.4em;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--ink-soft);
+}
+
+.water-stage[data-water-state="error"] .water-note {
+    color: var(--danger);
+}
+
+.water-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+}
+
+.water-drink {
+    min-width: 170px;
+    padding: 12px 22px;
+    font-size: 1rem;
+}
+
+/* Mesmo respiro vertical do principal: o padding padrão de .btn-secondary é
+   menor e os dois lado a lado ficariam desalinhados. */
+.water-undo {
+    padding: 12px 18px;
+    font-size: 1rem;
+}
+
+/* Nada bebido ainda, ou requisição em voo. Fica visível e inerte em vez de
+   sumir, senão a linha de botões muda de largura no meio do uso. */
+.water-actions button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* ------------------------------------------------------------ formulário */
 
 .hydration-form {
-    gap: 16px;
+    gap: var(--space-4);
 }
 
 .hydration-actions {
     display: flex;
-    gap: 10px;
+    gap: var(--space-2);
     flex-wrap: wrap;
 }
 
 .hydration-block {
     border: 1px dashed var(--stroke);
     border-radius: 14px;
-    padding: 12px;
+    padding: var(--space-3);
     display: grid;
-    gap: 10px;
+    gap: var(--space-2);
     background: color-mix(in srgb, var(--surface) 84%, transparent);
 }
 
@@ -24,4 +161,21 @@
     font-family: var(--font-display);
     color: var(--ink);
     font-size: 1.02rem;
+}
+
+/* O total em litros muda enquanto a pessoa digita a meta. */
+#water-goal-volume {
+    font-family: var(--font-display);
+    color: var(--accent-dark);
+}
+
+@media (max-width: 560px) {
+    .water-hero {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .water-drink {
+        width: 100%;
+    }
 }

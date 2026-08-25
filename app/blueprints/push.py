@@ -74,7 +74,7 @@ def test():
 
     ok_count = 0
     for sub in subscriptions:
-        ok, _ = send_web_push(current_app.config, subscription_info(sub), TEST_PAYLOAD)
+        ok, _, _ = send_web_push(current_app.config, subscription_info(sub), TEST_PAYLOAD)
         if ok:
             ok_count += 1
 

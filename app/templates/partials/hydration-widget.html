@@ -1,0 +1,31 @@
+{# Widget da água na barra lateral.
+
+   Ao contrário do widget do pomodoro, este NÃO precisa de bootstrap inline: o
+   estado é do banco, não do localStorage, então o servidor já sabe se deve
+   aparecer e com que valores. Sem flash e sem atributo de revelação.
+
+   Só entra quando o lembrete está ligado — foi o pedido: "assim que
+   configurado, aparecer no menu da esquerda". #}
+{% from 'partials/glass.html' import glass %}
+<div class="water-widget" id="water-widget"
+     data-water-boot
+     data-glasses="{{ current_user['water_glasses'] }}"
+     data-goal="{{ current_user['water_goal'] }}"
+     data-glass-ml="{{ current_user['water_glass_ml'] }}"
+     {% if water_next_in is not none %}data-next-in="{{ water_next_in }}"{% endif %}>
+
+    <a class="water-widget-main" href="{{ url_for('hydration.index') }}">
+        {{ glass('sm') }}
+        <span class="water-widget-info">
+            <strong class="water-widget-count"></strong>
+            <small class="water-widget-label">copos hoje</small>
+        </span>
+    </a>
+
+    <div class="water-widget-actions">
+        <button class="water-widget-btn is-primary" type="button"
+                data-water-action="drink">Bebi</button>
+        <button class="water-widget-btn" type="button"
+                data-water-action="undo" aria-label="Desfazer um copo">−</button>
+    </div>
+</div>
