@@ -276,14 +276,11 @@ html[data-dark="true"] {
     --hg-glass: color-mix(in srgb, var(--pomo-tint, var(--accent)) 26%, rgba(255, 255, 255, 0.08));
 }
 
-[data-dark="true"] .tag-evento {
-    background: rgba(126, 200, 255, 0.22);
-    color: #d0ecff;
-}
-
-[data-dark="true"] .tag-curso {
-    background: rgba(243, 138, 183, 0.28);
-    color: #ffd7eb;
+/* No escuro a mesma mistura fica apagada: o fundo precisa de mais cor para
+   sair do cartão e o texto de menos tinta para não escurecer. */
+[data-dark="true"] .tag {
+    background: color-mix(in srgb, var(--tag-color) 30%, transparent);
+    color: color-mix(in srgb, var(--tag-color) 30%, var(--ink));
 }
 
 @media (max-width: 1024px) {

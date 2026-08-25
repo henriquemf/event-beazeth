@@ -8,13 +8,13 @@ Website:
 - https://events-beazeth.onrender.com/
 
 Recursos de interface:
-- Tag de tipo no cadastro: `Evento` ou `Curso`, cada uma com cor própria
+- Tags criadas por você: nome, cor e regra de lembrete próprios; `Evento` e `Curso` vêm prontas
 - Sidebar com menu de navegação
-- Aba de calendário grande para visualizar eventos e cursos
+- Calendário grande como tela única dos eventos: clique num dia para agendar naquela data
 - Aba **Weekly Planner**: grade semanal de 24 horas com blocos arrastáveis
-- Aba **Pomodoro** 🍎: temporizador com ampulheta girando, que segue contando na barra lateral enquanto você navega
+- Aba **Pomodoro** 🍎: temporizador com ampulheta que chacoalha de vez em quando e segue contando na barra lateral enquanto você navega
 - **Home** é o quadro de **post-its**: papel livre, arrastável, redimensionável e colorido
-- Cadastro e lista de eventos numa aba própria (`/events`)
+- Cadastro e edição de evento em popup do calendário, com “Próximos eventos” na coluna ao lado
 - Aba de aparência com preview visual
 - 10 temas e 10 fontes selecionáveis
 - Seleção de tema e fonte por cards de preview (sem dropdown)
@@ -25,9 +25,9 @@ Recursos de interface:
 - PWA (manifest + service worker com cache de estáticos)
 - Inscrição de notificações web direto no menu lateral
 
-Regras de lembrete:
-- Todo evento: notificação na hora do evento
-- Se tag = curso: também notifica com 15 dias e 7 dias de antecedência
+Regras de lembrete (escolhidas por tag, ao criar a tag):
+- **Só no dia**: notificação na hora do evento
+- **Com antecedência**: na hora, e também 15 e 7 dias antes
 
 ## Weekly Planner
 
@@ -194,7 +194,8 @@ app/
   blueprints/            uma rota por tela/recurso
     system.py            /healthz, /sw.js, /favicon.ico
     home.py              /            (quadro de post-its)
-    events.py            /events      (cadastro e lista)
+    events.py            /events      (POST: criar, editar, remover)
+    tags.py              /tags        (POST: criar, remover)
     calendar.py          /calendar    + /api/events
     planner.py           /planner     + /api/planner/blocks
     pomodoro.py          /pomodoro    (tempos prontos; o timer é do cliente)
@@ -205,7 +206,7 @@ app/
   db/                    uma tabela por módulo
     connection.py        conexão SQLite (WAL, timeouts)
     schema.py            CREATE TABLE, migrações e índices
-    events.py  reminders.py  hydration.py  push.py  planner.py  notes.py
+    events.py  tags.py  reminders.py  hydration.py  push.py  planner.py  notes.py
   services/
     notifier.py          envio desktop e web push
     scheduler_service.py varredura de lembretes
@@ -217,8 +218,7 @@ app/
       components/        componente de 2-3 telas, carregado só por elas
         modal.css        modal de evento (calendário e planner)
       themes.css         10 temas, 10 fontes, dark mode, responsivo
-      pages/             notes, planner, calendar, events, appearance, hydration,
-                         pomodoro
+      pages/             notes, planner, calendar, appearance, hydration, pomodoro
       vendor/            tema do flatpickr e do FullCalendar
     js/
       core/              shared (namespace + utils), theme, audio, ui-effects,
@@ -226,16 +226,14 @@ app/
       pages/
         notes/           constants, context, store, card, board, interactions, main
         planner/         constants, time, context, grid, blocks, store, drag, editor, main
-        calendar/        calendar.js
-        events/          datepicker.js
+        calendar/        event-modal, tags-modal, main
         pomodoro/        main.js
     sw.js  manifest.webmanifest  icon.svg
   templates/
     layouts/base.html    casca da página
     partials/            sidebar, menu, flash, bootstrap de tema, widget do
-                         pomodoro, macro da ampulheta
-    pages/               home, events, calendar, planner, pomodoro, appearance,
-                         hydration
+                         pomodoro, macro da ampulheta, macro da pílula de tag
+    pages/               home, calendar, planner, pomodoro, appearance, hydration
 tools/                   geração de chaves VAPID
 Dockerfile  requirements.txt  run.py  wsgi.py  .env.example
 ```
@@ -308,8 +306,8 @@ python run.py
 
 http://127.0.0.1:5000
 
-Telas: `/` (post-its), `/events` (cadastro e lista), `/calendar`, `/planner`,
-`/appearance`, `/hydration`.
+Telas: `/` (post-its), `/calendar` (calendário, cadastro e tags), `/planner`,
+`/pomodoro`, `/appearance`, `/hydration`.
 
 ## Observações importantes
 

@@ -238,12 +238,11 @@
    barra lateral (pequena). Mora aqui, e não em pages/pomodoro.css, porque a
    sidebar é do layout base — o widget existe em todas as telas.
 
-   O giro é em torno do eixo VERTICAL (rotateY), não uma virada de 180°. A
-   primeira versão virava a ampulheta de cabeça para baixo, e isso é incompatível
-   com mostrar o tempo: depois de virar, o bulbo cheio passa a ser o de cima e a
-   areia teria de voltar a subir para a contagem continuar. Girando em Y, "para
-   baixo" nunca muda de lugar — a ampulheta gira o tempo todo e a areia continua
-   descrevendo o tempo que falta.
+   O vidro fica parado e só dá uma chacoalhada de vez em quando: giro contínuo
+   competia com o resto da tela pela atenção o tempo todo. Não é uma virada de
+   180° por outro motivo — depois de virar, o bulbo cheio passa a ser o de cima
+   e a areia teria de voltar a subir para a contagem continuar. Como a
+   chacoalhada é uma inclinação pequena, "para baixo" nunca muda de lugar.
 
    O nível da areia NÃO é animação: é --pomo-progress, a mesma variável que move
    o anel e a barra do widget, escrita pelo JS 4x por segundo. Ou seja, a
@@ -251,13 +250,15 @@
    minutos.
 
    Só `transform` e `opacity` mudam, então tudo isto vive no compositor: as duas
-   ampulhetas girando ao mesmo tempo não custam layout nenhum.
+   ampulhetas na tela ao mesmo tempo não custam layout nenhum.
 
    Geometria: tampa (6%), bulbo (44%), bulbo (44%), tampa (6%) — o gargalo cai
    exatamente na metade da altura. */
 
 .hourglass {
-    --hg-cycle: 9s;
+    /* Intervalo ENTRE chacoalhadas, não a duração de uma: a inclinação ocupa os
+       últimos ~12% do ciclo e o resto é a ampulheta parada. */
+    --hg-cycle: 7s;
     --hg-glass: color-mix(in srgb, var(--accent) 14%, rgba(255, 255, 255, 0.5));
     --hg-edge: color-mix(in srgb, var(--accent-dark) 65%, transparent);
     --hg-grain: color-mix(in srgb, var(--accent) 88%, #fff);
@@ -266,8 +267,6 @@
     flex: 0 0 auto;
     width: var(--hg-w);
     height: var(--hg-h);
-    /* Sem perspectiva o rotateY vira um simples achatamento horizontal. */
-    perspective: 340px;
 }
 
 /* O tamanho vive só nos modificadores: um padrão implícito na classe base
@@ -285,21 +284,34 @@
     --hg-h: calc(var(--hg-w) * 1.43);
 }
 
-.hg-spin {
+.hg-shake {
     position: absolute;
     inset: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
-    animation: hgSpin var(--hg-cycle) linear infinite;
+    /* `ease-in-out` no lugar de `linear` porque a chacoalhada tem que
+       desacelerar nas pontas: linear dava um vaivém de metrônomo. */
+    animation: hgShake var(--hg-cycle) ease-in-out infinite;
 }
 
-@keyframes hgSpin {
-    from {
-        transform: rotateY(0deg);
+/* O eixo do balanço fica no gargalo (centro), então a ampulheta pende para os
+   lados como um pêndulo em vez de escorregar sobre a base. Amplitude decrescente
+   para a chacoalhada morrer sozinha em vez de parar de repente. */
+@keyframes hgShake {
+    0%,
+    88%,
+    100% {
+        transform: rotate(0deg);
     }
-    to {
-        transform: rotateY(360deg);
+    90% {
+        transform: rotate(-5deg);
+    }
+    93% {
+        transform: rotate(4deg);
+    }
+    96% {
+        transform: rotate(-2deg);
     }
 }
 
@@ -355,8 +367,8 @@
     transform: scaleY(var(--pomo-progress, 0));
 }
 
-/* O filete de areia gira junto com o vidro: como o eixo do giro é vertical,
-   ele continua caindo para baixo em qualquer ângulo da rotação. */
+/* O filete de areia acompanha a inclinação do vidro. Como a chacoalhada é de
+   poucos graus, ele continua lendo como areia caindo do gargalo. */
 .hg-stream {
     position: absolute;
     left: 50%;
@@ -416,10 +428,10 @@
     --hg-fill: linear-gradient(180deg, color-mix(in srgb, var(--pomo-tint) 65%, #fff), var(--pomo-tint));
 }
 
-/* Sem tempo correndo, o vidro para de girar onde está. */
-[data-pomo-status="paused"] .hg-spin,
+/* Sem tempo correndo, a ampulheta para de chacoalhar. */
+[data-pomo-status="paused"] .hg-shake,
 [data-pomo-status="paused"] .hg-grain,
-[data-pomo-status="done"] .hg-spin,
+[data-pomo-status="done"] .hg-shake,
 [data-pomo-status="done"] .hg-grain {
     animation-play-state: paused;
 }

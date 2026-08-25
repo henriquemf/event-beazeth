@@ -1,4 +1,9 @@
-"""Tela de cadastro e lista de eventos."""
+"""Recurso evento: criação, edição e remoção.
+
+Não tem tela própria desde que o cadastro virou popup do calendário — todas as
+rotas daqui são POST e voltam para `/calendar`. O que sobrou de leitura é o
+view model (`as_card`), que o calendário importa para montar "Próximos eventos".
+"""
 
 from datetime import datetime
 
@@ -7,12 +12,11 @@ from flask import (
     current_app,
     flash,
     redirect,
-    render_template,
     request,
     url_for,
 )
 
-from app.db import delete_event, insert_event, list_events, update_event
+from app.db import FALLBACK_TAG, delete_event, insert_event, update_event
 
 
 bp = Blueprint("events", __name__)
@@ -40,6 +44,8 @@ def as_card(row):
         "title": row["title"],
         "description": row["description"],
         "tag_type": row["tag_type"],
+        "tag_label": row["tag_label"],
+        "tag_color": row["tag_color"],
         "event_datetime": raw,
         "day": f"{moment.day:02d}" if moment else "--",
         "month": MONTHS_SHORT[moment.month - 1] if moment else "",
@@ -74,76 +80,54 @@ def read_event_form():
         request.form.get("title", "").strip(),
         request.form.get("description", "").strip(),
         request.form.get("event_datetime", "").strip(),
-        request.form.get("tag_type", "evento").strip().lower(),
+        request.form.get("tag_type", FALLBACK_TAG).strip().lower(),
     )
 
 
-@bp.route("/events", methods=["GET", "POST"])
-def index():
-    if request.method == "POST":
-        title, description, event_datetime, tag_type = read_event_form()
+def validated_form():
+    """Campos do formulário, ou (None, mensagem) no primeiro erro."""
+    title, description, event_datetime, tag_type = read_event_form()
 
-        if not title:
-            flash("Informe o título do evento.", "error")
-            return redirect(url_for("events.index"))
+    if not title:
+        return None, "Informe o título do evento."
 
-        if not event_datetime:
-            flash("Informe a data do evento (horário é opcional).", "error")
-            return redirect(url_for("events.index"))
+    if not event_datetime:
+        return None, "Informe a data do evento (horário é opcional)."
 
-        _, error = parse_event_datetime(event_datetime)
-        if error:
-            flash(error, "error")
-            return redirect(url_for("events.index"))
+    _, error = parse_event_datetime(event_datetime)
+    if error:
+        return None, error
 
-        insert_event(
-            current_app.config["DB_PATH"],
-            title,
-            description,
-            event_datetime,
-            tag_type,
-        )
-        flash("Evento cadastrado com sucesso.", "success")
-        return redirect(url_for("events.index"))
+    return (title, description, event_datetime, tag_type), None
 
-    rows = list_events(current_app.config["DB_PATH"])
-    events = [as_card(row) for row in rows]
-    return render_template("pages/events.html", events=events, active_page="events")
+
+@bp.post("/events")
+def create_event():
+    fields, error = validated_form()
+    if error:
+        flash(error, "error")
+        return redirect(url_for("calendar.index"))
+
+    insert_event(current_app.config["DB_PATH"], *fields)
+    flash("Evento cadastrado com sucesso.", "success")
+    return redirect(url_for("calendar.index"))
 
 
 @bp.post("/events/<int:event_id>/delete")
 def remove_event(event_id: int):
     delete_event(current_app.config["DB_PATH"], event_id)
     flash("Evento removido.", "success")
-    return redirect(url_for("events.index"))
+    return redirect(url_for("calendar.index"))
 
 
 @bp.post("/events/<int:event_id>/update")
 def edit_event(event_id: int):
-    title, description, event_datetime, tag_type = read_event_form()
-
-    if not title:
-        flash("Informe o título do evento.", "error")
-        return redirect(url_for("calendar.index"))
-
-    if not event_datetime:
-        flash("Informe a data do evento.", "error")
-        return redirect(url_for("calendar.index"))
-
-    _, error = parse_event_datetime(event_datetime)
+    fields, error = validated_form()
     if error:
         flash(error, "error")
         return redirect(url_for("calendar.index"))
 
-    updated = update_event(
-        current_app.config["DB_PATH"],
-        event_id,
-        title,
-        description,
-        event_datetime,
-        tag_type,
-    )
-    if updated:
+    if update_event(current_app.config["DB_PATH"], event_id, *fields):
         flash("Evento atualizado com sucesso.", "success")
     else:
         flash("Evento não encontrado.", "error")

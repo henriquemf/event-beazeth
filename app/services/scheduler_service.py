@@ -26,9 +26,16 @@ def _parse_event_datetime(raw_value: str):
         return None
 
 
-def _build_reminders(event_dt: datetime, is_course: bool):
+def _build_reminders(event_dt: datetime, reminder_rule: str):
+    """Cronograma de avisos da tag do evento.
+
+    A regra vem da tag e não mais de `tag_type == "curso"`: com tags criadas
+    pelo usuário, o nome da tag deixou de dizer quantos lembretes ela arma.
+    Os nomes `course_*` ficaram porque são a chave gravada em
+    `reminder_dispatches` — trocá-los reenviaria todo aviso já disparado.
+    """
     reminders = [("event_now", event_dt)]
-    if is_course:
+    if reminder_rule == "curso":
         reminders.append(("course_15_days", event_dt - timedelta(days=15)))
         reminders.append(("course_7_days", event_dt - timedelta(days=7)))
     return reminders
@@ -40,18 +47,19 @@ def _is_due(now: datetime, trigger: datetime) -> bool:
     return 0 <= delta <= 300
 
 
-def _reminder_label(reminder_type: str) -> str:
+def _reminder_label(reminder_type: str, tag_label: str) -> str:
+    """Texto do aviso, com o nome da tag do evento em vez de "Evento"/"Curso" fixos."""
     if reminder_type == "event_now":
-        return "Evento Agora"
+        return f"{tag_label} Agora"
     if reminder_type == "course_15_days":
-        return "Curso em 15 Dias"
+        return f"{tag_label} em 15 Dias"
     if reminder_type == "course_7_days":
-        return "Curso em 7 Dias"
+        return f"{tag_label} em 7 Dias"
     return "Lembrete"
 
 
 def _build_message(event, reminder_type: str):
-    label = _reminder_label(reminder_type)
+    label = _reminder_label(reminder_type, event["tag_label"])
     event_dt = _parse_event_datetime(event["event_datetime"])
     when_text = event_dt.strftime("%d/%m/%Y %H:%M") if event_dt else event["event_datetime"]
 
@@ -79,7 +87,7 @@ def process_due_reminders(app):
         if not event_dt:
             continue
 
-        reminders = _build_reminders(event_dt, event["tag_type"] == "curso")
+        reminders = _build_reminders(event_dt, event["reminder_rule"])
         for reminder_type, trigger_dt in reminders:
             if not _is_due(now, trigger_dt):
                 continue
@@ -154,7 +162,7 @@ def collect_due_live_event_notifications(app):
         if not event_dt:
             continue
 
-        reminders = _build_reminders(event_dt, event["tag_type"] == "curso")
+        reminders = _build_reminders(event_dt, event["reminder_rule"])
         for reminder_type, trigger_dt in reminders:
             if not _is_due(now, trigger_dt):
                 continue

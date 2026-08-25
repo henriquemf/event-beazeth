@@ -181,9 +181,21 @@ Regra dura: **classe sem regra, regra sem uso, variável sem leitura, função s
 chamada, coluna sem interface — sai.** Coluna `pinned` e coluna `is_course`
 foram removidas por isso, com migração.
 
-Exceção só quando declarada por escrito, com o motivo. Hoje existe uma:
-`is-evento`/`is-curso` dependem de *dado*, não de código — só aparecem no HTML se
-houver evento daquela tag no banco.
+Exceção só quando declarada por escrito, com o motivo. Hoje existe uma família:
+as classes de "Próximos eventos", no calendário, que dependem de *dado* e não de
+código. Contra o banco vazio some a lista inteira (`event-list`, `event-item`,
+`event-date`, `event-body`, `event-title`, `event-meta`, `event-when-text`,
+`event-remove`, `upcoming-count`); com a lista cheia some `events-empty`. E
+mesmo com dado, `event-desc` só aparece em evento com descrição e
+`upcoming-more` só quando há mais de três à frente.
+
+Consequência prática para quem for auditar: rodar o verificador **duas vezes**,
+uma com o banco vazio e outra com dado que exercite os dois extremos. Uma
+passagem só sempre acusa metade da lista como morta.
+
+`is-evento`/`is-curso` eram a exceção anterior e saíram: a cor da tag virou
+`--tag-color` inline, então uma tag criada pelo usuário não precisa (nem
+poderia ter) uma regra própria escrita à mão.
 
 ---
 

@@ -14,13 +14,13 @@
    Todos os elementos são decorativos: o tempo é anunciado pelo texto ao lado. #}
 {% macro hourglass(size) %}
 <span class="hourglass hourglass-{{ size }}" aria-hidden="true">
-    <span class="hg-spin">
+    <span class="hg-shake">
         <span class="hg-cap"></span>
         <span class="hg-bulb hg-bulb-top"><span class="hg-sand hg-sand-a"></span></span>
         <span class="hg-bulb hg-bulb-bottom"><span class="hg-sand hg-sand-b"></span></span>
         <span class="hg-cap"></span>
-        {# O filete gira junto com o vidro: o eixo do giro é vertical, então ele
-           continua caindo para baixo em qualquer ângulo. #}
+        {# O filete acompanha a inclinação do vidro: como a chacoalhada é de
+           poucos graus, ele continua caindo do gargalo para baixo. #}
         <span class="hg-stream"><span class="hg-grain"></span></span>
     </span>
 </span>

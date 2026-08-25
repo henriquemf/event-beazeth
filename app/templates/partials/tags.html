@@ -1,0 +1,12 @@
+{# Etiqueta colorida de uma tag.
+
+   Macro e não markup copiado porque a mesma pílula aparece em quatro lugares
+   da tela do calendário: lista de próximos eventos, escolha de tag do popup de
+   agendamento, lista do popup de tags e prévia do formulário de tag nova.
+
+   A cor vem do banco, então entra como custom property inline — é dado do
+   usuário, não token de tema, e não teria como virar regra em arquivo. O valor
+   é validado como hex de 6 dígitos em `db/tags.py` antes de ser gravado. #}
+{% macro tag_chip(label, color) %}
+<span class="tag" style="--tag-color: {{ color }}">{{ label }}</span>
+{% endmacro %}

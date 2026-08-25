@@ -14,6 +14,7 @@ from app.blueprints import (
     pomodoro,
     push,
     system,
+    tags,
 )
 
 
@@ -23,6 +24,7 @@ BLUEPRINTS = (
     system.bp,
     home.bp,
     events.bp,
+    tags.bp,
     calendar.bp,
     planner.bp,
     pomodoro.bp,

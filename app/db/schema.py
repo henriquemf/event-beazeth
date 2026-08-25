@@ -1,6 +1,7 @@
 """Criacao das tabelas, migracoes e indices."""
 
-from app.db.connection import get_connection
+from app.db.connection import get_connection, utc_now_iso
+from app.db.tags import DEFAULT_TAGS
 
 
 def init_db(db_path: str) -> None:
@@ -38,6 +39,32 @@ def init_db(db_path: str) -> None:
         for legacy in ("is_course", "email_to", "whatsapp_to"):
             if legacy in columns:
                 conn.execute(f"ALTER TABLE events DROP COLUMN {legacy}")
+
+        # Tags de evento. A chave é o slug porque `events.tag_type` já guardava
+        # 'evento'/'curso' em texto: a tabela nasce apontada pelos eventos que
+        # já estavam no banco, sem migrar uma linha sequer de `events`.
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS event_tags (
+                slug TEXT PRIMARY KEY,
+                label TEXT NOT NULL,
+                color TEXT NOT NULL,
+                reminder_rule TEXT NOT NULL DEFAULT 'dia',
+                created_at TEXT NOT NULL
+            )
+            """
+        )
+
+        # As duas originais entram como qualquer outra: depois disto nada no
+        # código trata 'evento'/'curso' como caso especial, fora o fallback.
+        for slug, label, color, rule in DEFAULT_TAGS:
+            conn.execute(
+                """
+                INSERT OR IGNORE INTO event_tags (slug, label, color, reminder_rule, created_at)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (slug, label, color, rule, utc_now_iso()),
+            )
 
         conn.execute(
             """
@@ -159,6 +186,7 @@ def init_db(db_path: str) -> None:
             conn.execute("ALTER TABLE sticky_notes DROP COLUMN pinned")
 
         conn.execute("CREATE INDEX IF NOT EXISTS idx_events_datetime ON events(event_datetime)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_events_tag ON events(tag_type)")
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_dispatches_lookup "
             "ON reminder_dispatches(event_id, reminder_type, channel, status)"

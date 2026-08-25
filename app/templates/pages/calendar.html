@@ -1,4 +1,5 @@
 {% extends 'layouts/base.html' %}
+{% from 'partials/tags.html' import tag_chip %}
 
 {% block title %}Calendário | Event Notifier{% endblock %}
 
@@ -12,61 +13,217 @@
 {% endblock %}
 
 {% block content %}
-<section class="hero-card">
-    <h2>Calendário de Eventos e Cursos</h2>
-    <p>Visualize tudo em um calendário maior e identifique rapidamente por cor.</p>
-</section>
-
-<section class="panel-card calendar-panel">
-    <div class="calendar-topbar">
-        <label for="month-picker">Ir direto para mês/ano</label>
-        <input id="month-picker" type="text" placeholder="Selecione mês e ano" />
+<section class="hero-card calendar-hero">
+    <div class="calendar-hero-text">
+        <h2>Calendário de Eventos e Cursos</h2>
+        <p>Clique num dia para agendar direto naquela data. As cores vêm das suas tags.</p>
     </div>
-    <div id="events-calendar" data-events-url="{{ url_for('calendar.events_api') }}"></div>
+    <div class="calendar-hero-actions">
+        <button id="tags-open" class="btn-secondary" type="button">Gerenciar tags</button>
+        <button id="event-create-open" class="btn-primary" type="button">Criar agendamento</button>
+    </div>
 </section>
 
+<div class="calendar-layout">
+    <section class="panel-card calendar-panel">
+        <div class="calendar-topbar">
+            <label for="month-picker">Ir direto para mês/ano</label>
+            <input id="month-picker" type="text" placeholder="Selecione mês e ano" />
+        </div>
+        <div id="events-calendar" data-events-url="{{ url_for('calendar.events_api') }}"></div>
+    </section>
+
+    <aside class="panel-card upcoming-panel">
+        <header class="upcoming-header">
+            <h3>Próximos eventos</h3>
+            {% if upcoming_total %}
+                <span class="upcoming-count">{{ upcoming_total }}</span>
+            {% endif %}
+        </header>
+
+        {% if upcoming %}
+            <ul class="event-list">
+                {% for event in upcoming %}
+                    <li class="event-item" style="--item-tint: {{ event['tag_color'] }}">
+                        <span class="event-date" aria-hidden="true">
+                            <strong>{{ event['day'] }}</strong>
+                            <small>{{ event['month'] }}</small>
+                        </span>
+
+                        <span class="event-body">
+                            <strong class="event-title">{{ event['title'] }}</strong>
+                            <span class="event-meta">
+                                {{ tag_chip(event['tag_label'], event['tag_color']) }}
+                                <span class="event-when-text">
+                                    {{ event['year'] }}{% if event['time'] %} · {{ event['time'] }}{% endif %}
+                                </span>
+                            </span>
+                            {% if event['description'] %}
+                                <small class="event-desc">{{ event['description'] }}</small>
+                            {% endif %}
+                        </span>
+
+                        <form method="post" action="{{ url_for('events.remove_event', event_id=event['id']) }}" onsubmit="return confirm('Deseja excluir este evento?');">
+                            <button class="btn-danger event-remove" type="submit" aria-label="Excluir {{ event['title'] }}">Excluir</button>
+                        </form>
+                    </li>
+                {% endfor %}
+            </ul>
+            {% if upcoming_total > upcoming|length %}
+                <small class="upcoming-more">+ {{ upcoming_total - upcoming|length }} mais adiante no calendário</small>
+            {% endif %}
+        {% else %}
+            <p class="events-empty">
+                <span aria-hidden="true">🗓️</span>
+                <strong>Nada agendado por aqui</strong>
+                <small>Clique num dia do calendário para criar o primeiro.</small>
+            </p>
+        {% endif %}
+    </aside>
+</div>
+
+{# Um popup só para criar e para editar: os campos são os mesmos, e duas cópias
+   do formulário sairiam de sincronia na primeira mudança de campo. O que muda
+   entre os dois modos (título, action, prévia, botão de remover) é escrito pelo
+   JS na abertura. #}
 <div id="event-modal" class="event-modal" aria-hidden="true">
     <div class="event-modal-backdrop" data-close-modal="1"></div>
     <div class="event-modal-card" role="dialog" aria-modal="true" aria-labelledby="event-modal-title">
         <button class="event-modal-close" type="button" data-close-modal="1" aria-label="Fechar">×</button>
-        <h3 id="event-modal-title">Detalhes do evento</h3>
+        <h3 id="event-modal-title">Novo agendamento</h3>
 
-        <div class="event-preview">
+        <div class="event-preview" id="event-preview" hidden>
             <p class="event-preview-tag" id="event-preview-tag"></p>
             <p class="event-preview-title" id="event-preview-title"></p>
             <p class="event-preview-time" id="event-preview-time"></p>
             <p class="event-preview-desc" id="event-preview-desc"></p>
         </div>
 
-        <form id="event-edit-form" class="event-form event-modal-form" method="post">
+        <form id="event-form" class="event-form event-modal-form" method="post"
+              action="{{ url_for('events.create_event') }}"
+              data-create-action="{{ url_for('events.create_event') }}">
             <label>
                 Título
-                <input type="text" id="event-edit-title" name="title" required />
+                <input type="text" id="event-title" name="title" placeholder="Ex: Workshop de maquiagem" required />
             </label>
+
             <label>
                 Descrição
-                <textarea id="event-edit-description" name="description" rows="3"></textarea>
+                <textarea id="event-description" name="description" rows="3" placeholder="Detalhes do evento..."></textarea>
             </label>
-            <div class="inline-group">
+
+            <div class="event-when">
                 <label>
                     Data e hora
-                    <input type="text" id="event-edit-datetime" name="event_datetime" required />
+                    <input type="text" id="event-datetime" name="event_datetime" placeholder="Selecione data e hora" required />
                 </label>
-                <label>
-                    Tipo
-                    <select id="event-edit-tag" name="tag_type">
-                        <option value="evento">Evento</option>
-                        <option value="curso">Curso</option>
-                    </select>
+
+                <label class="dark-toggle fancy" for="include-time">
+                    <input id="include-time" type="checkbox" />
+                    <span class="track"><span class="dot"></span></span>
+                    <span class="text">Incluir horário</span>
                 </label>
             </div>
+
+            {# Cartões no lugar do <select>: além de o dropdown do sistema ignorar
+               o tema, é aqui que a regra de lembrete de cada tag fica visível. #}
+            <fieldset class="tag-picker">
+                <legend>Tag</legend>
+                {% for tag in tags %}
+                    <label class="tag-option">
+                        <input type="radio" name="tag_type" value="{{ tag['slug'] }}" {% if loop.first %}checked{% endif %} />
+                        <span class="tag-option-card">
+                            {{ tag_chip(tag['label'], tag['color']) }}
+                            <small>{{ reminder_rules[tag['reminder_rule']]['hint'] }}</small>
+                        </span>
+                    </label>
+                {% endfor %}
+            </fieldset>
+
             <div class="event-modal-actions">
-                <button class="btn-primary" type="submit">Salvar edição</button>
+                <button class="btn-primary event-submit" type="submit">Salvar evento</button>
             </div>
         </form>
 
-        <form id="event-delete-form" method="post" class="event-delete-form">
+        <form id="event-delete-form" method="post" class="event-delete-form" hidden
+              onsubmit="return confirm('Deseja excluir este evento?');">
             <button class="btn-danger" type="submit">Remover evento</button>
+        </form>
+    </div>
+</div>
+
+<div id="tags-modal" class="event-modal" aria-hidden="true">
+    <div class="event-modal-backdrop" data-close-modal="1"></div>
+    <div class="event-modal-card" role="dialog" aria-modal="true" aria-labelledby="tags-modal-title">
+        <button class="event-modal-close" type="button" data-close-modal="1" aria-label="Fechar">×</button>
+        <h3 id="tags-modal-title">Suas tags</h3>
+        <p class="tags-modal-intro">A tag define a cor do evento no calendário e quando você é avisada.</p>
+
+        <ul class="tag-manage-list">
+            {% for tag in tags %}
+                <li class="tag-manage-item" style="--tag-color: {{ tag['color'] }}">
+                    <span class="tag-manage-body">
+                        {{ tag_chip(tag['label'], tag['color']) }}
+                        <small>
+                            {{ reminder_rules[tag['reminder_rule']]['hint'] }}
+                            · {{ tag_usage.get(tag['slug'], 0) }} evento(s)
+                        </small>
+                    </span>
+                    {% if tag['slug'] == fallback_tag %}
+                        <small class="tag-manage-locked">padrão</small>
+                    {% else %}
+                        <form method="post" action="{{ url_for('tags.remove_tag', slug=tag['slug']) }}"
+                              onsubmit="return confirm('Remover a tag “{{ tag['label'] }}”? Os eventos dela voltam para a tag padrão.');">
+                            <button class="btn-danger tag-manage-remove" type="submit" aria-label="Remover tag {{ tag['label'] }}">Remover</button>
+                        </form>
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+
+        <form method="post" action="{{ url_for('tags.create_tag') }}" class="event-form tag-create-form">
+            <h4>Nova tag</h4>
+
+            <div class="tag-create-grid">
+                <label>
+                    Nome
+                    <input type="text" id="tag-label" name="label" maxlength="{{ max_label_length }}"
+                           placeholder="Ex: Prova" autocomplete="off" required />
+                </label>
+                <label class="tag-color-field">
+                    Cor
+                    <input type="color" id="tag-color" name="color" value="#b56dff" />
+                </label>
+            </div>
+
+            {# Atalhos para as cores que combinam com os temas do app: o seletor
+               nativo do sistema abre num roxo qualquer e não sabe nada disto. #}
+            <div class="tag-swatches" role="group" aria-label="Cores sugeridas">
+                {% for swatch in swatches %}
+                    <button class="tag-swatch" type="button" style="--tag-color: {{ swatch }}"
+                            data-swatch="{{ swatch }}" aria-label="Usar a cor {{ swatch }}"></button>
+                {% endfor %}
+            </div>
+
+            <fieldset class="tag-picker">
+                <legend>Quando lembrar</legend>
+                {% for rule, copy in reminder_rules.items() %}
+                    <label class="tag-option">
+                        <input type="radio" name="reminder_rule" value="{{ rule }}" {% if loop.first %}checked{% endif %} />
+                        <span class="tag-option-card">
+                            <strong class="tag-rule-title">{{ copy['title'] }}</strong>
+                            <small>{{ copy['hint'] }}</small>
+                        </span>
+                    </label>
+                {% endfor %}
+            </fieldset>
+
+            <p class="tag-preview-line">
+                <span>Fica assim:</span>
+                <span class="tag" id="tag-preview" style="--tag-color: #b56dff">Nova tag</span>
+            </p>
+
+            <button class="btn-primary event-submit" type="submit">Criar tag</button>
         </form>
     </div>
 </div>
@@ -77,5 +234,7 @@
 <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/pt.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/plugins/monthSelect/index.js"></script>
-<script defer src="{{ static_url('js/pages/calendar/calendar.js') }}"></script>
+<script defer src="{{ static_url('js/pages/calendar/event-modal.js') }}"></script>
+<script defer src="{{ static_url('js/pages/calendar/tags-modal.js') }}"></script>
+<script defer src="{{ static_url('js/pages/calendar/main.js') }}"></script>
 {% endblock %}

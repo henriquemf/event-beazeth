@@ -205,34 +205,6 @@ body.page-leaving {
     background: rgba(255, 120, 178, 0.18);
 }
 
-.legend-box {
-    border: 1px dashed rgba(173, 113, 167, 0.4);
-    border-radius: 16px;
-    padding: 10px 12px;
-    font-size: 0.9rem;
-}
-
-.legend-box h3 {
-    margin: 0 0 8px;
-    font-family: var(--font-display);
-}
-
-/* Duas colunas: o pill numa, a descrição na outra. Como <p> simples, o texto
-   longo do "Curso" voltava para baixo do pill e desalinhava a caixa. */
-.legend-box p {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    align-items: start;
-    gap: 8px;
-    margin: 8px 0 0;
-    color: var(--ink-soft);
-    line-height: 1.35;
-}
-
-.legend-box p .tag {
-    white-space: nowrap;
-}
-
 .main-content {
     display: grid;
     gap: 14px;
@@ -578,22 +550,22 @@ button:active,
     transform: translateY(0) scale(0.98);
 }
 
+/* A cor chega por `--tag-color` inline, escrita pelo macro `tag_chip`: ela é
+   dado do usuário (a tag que ele criou), não token de tema, então não teria
+   como virar uma regra por tag aqui.
+
+   O texto é a própria cor misturada com `--ink`, e é isso que faz a pílula
+   funcionar nos 10 temas e no dark mode sem uma segunda regra: `--ink` é
+   escuro no claro e claro no escuro, então o contraste vira junto. */
 .tag {
+    --tag-color: var(--accent);
     display: inline-block;
     padding: 4px 10px;
     border-radius: 999px;
     font-size: 0.8rem;
     font-weight: 700;
-}
-
-.tag-evento {
-    background: rgba(126, 200, 255, 0.25);
-    color: #1f4c70;
-}
-
-.tag-curso {
-    background: rgba(243, 138, 183, 0.25);
-    color: #7a214e;
+    background: color-mix(in srgb, var(--tag-color) 25%, transparent);
+    color: color-mix(in srgb, var(--tag-color) 45%, var(--ink));
 }
 
 .empty {
