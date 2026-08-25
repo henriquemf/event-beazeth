@@ -2,14 +2,30 @@
 
 Cada modulo cuida de uma tabela. Este __init__ reexporta a API publica para
 que `from app.db import <funcao>` continue funcionando como antes da divisao.
+
+Convenção depois das contas: onde antes a primeira posição era o caminho do
+arquivo SQLite, agora é o `user_id`. As poucas funções sem ele são as que rodam
+fora de requisição (o agendador varre todas as contas) ou as de autenticação,
+que existem justamente para descobrir quem é o usuário.
 """
 
 from app.db.connection import (
+    close_pool,
     get_connection,
+    init_pool,
     utc_now_iso,
 )
 from app.db.schema import (
     init_db,
+)
+from app.db.users import (
+    MIN_PASSWORD_LENGTH,
+    create_user,
+    get_user,
+    get_user_by_email,
+    list_user_ids,
+    normalize_email,
+    password_matches,
 )
 from app.db.events import (
     insert_event,
@@ -37,6 +53,7 @@ from app.db.reminders import (
 )
 from app.db.hydration import (
     get_hydration_settings,
+    list_enabled_hydration_settings,
     upsert_hydration_settings,
     update_hydration_last_sent,
 )
@@ -64,9 +81,18 @@ from app.db.notes import (
 )
 
 __all__ = [
+    "close_pool",
     "get_connection",
+    "init_pool",
     "utc_now_iso",
     "init_db",
+    "MIN_PASSWORD_LENGTH",
+    "create_user",
+    "get_user",
+    "get_user_by_email",
+    "list_user_ids",
+    "normalize_email",
+    "password_matches",
     "delete_event",
     "insert_event",
     "list_due_event_candidates",
@@ -86,6 +112,7 @@ __all__ = [
     "has_successful_dispatch",
     "save_dispatch",
     "get_hydration_settings",
+    "list_enabled_hydration_settings",
     "update_hydration_last_sent",
     "upsert_hydration_settings",
     "delete_push_subscription",

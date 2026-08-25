@@ -1,0 +1,27 @@
+# Deploy no Render. O banco NÃO está aqui de propósito: o Postgres gratuito do
+# Render expira em 30 dias e depois é apagado com os dados dentro, que é
+# exatamente a perda que este arquivo existe para evitar. Crie o banco no Neon
+# e cole a connection string em DATABASE_URL pelo painel.
+services:
+  - type: web
+    name: events-beazeth
+    runtime: docker
+    plan: free
+    healthCheckPath: /healthz
+    envVars:
+      # `sync: false` = o Render pede o valor no painel e não o guarda no git.
+      - key: DATABASE_URL
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_SUBJECT
+        sync: false
+      - key: DEBUG
+        value: "False"
+      # Notificação nativa é do Windows local; o container é Linux e usa Web Push.
+      - key: ENABLE_DESKTOP_NOTIFICATIONS
+        value: "False"

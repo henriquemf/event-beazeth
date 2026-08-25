@@ -2,6 +2,7 @@
 
 from flask import Blueprint, current_app, jsonify, request
 
+from app.auth import current_user
 from app.db import (
     delete_push_subscription,
     list_push_subscriptions,
@@ -47,7 +48,7 @@ def subscribe():
         return jsonify({"ok": False, "message": "Inscrição inválida"}), 400
 
     upsert_push_subscription(
-        current_app.config["DB_PATH"],
+        current_user()["id"],
         endpoint,
         p256dh,
         auth,
@@ -61,13 +62,13 @@ def unsubscribe():
     payload = request.get_json(silent=True) or {}
     endpoint = (payload.get("endpoint") or "").strip()
     if endpoint:
-        delete_push_subscription(current_app.config["DB_PATH"], endpoint)
+        delete_push_subscription(current_user()["id"], endpoint)
     return jsonify({"ok": True})
 
 
 @bp.post("/api/push/test")
 def test():
-    subscriptions = list_push_subscriptions(current_app.config["DB_PATH"])
+    subscriptions = list_push_subscriptions(current_user()["id"])
     if not subscriptions:
         return jsonify({"ok": False, "message": "Nenhuma inscrição ativa"}), 400
 
@@ -82,5 +83,9 @@ def test():
 
 @bp.get("/api/live/notifications")
 def live_notifications():
-    items = collect_due_live_event_notifications(current_app._get_current_object())
+    # Só a fila desta conta: a varredura do agendador é global, mas o que a aba
+    # aberta recebe tem que ser o que é dela.
+    items = collect_due_live_event_notifications(
+        current_app._get_current_object(), current_user()["id"]
+    )
     return jsonify({"ok": True, "items": items})

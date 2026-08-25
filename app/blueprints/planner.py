@@ -1,6 +1,8 @@
 """Tela do weekly planner: grade semanal e CRUD dos blocos."""
 
-from flask import Blueprint, current_app, jsonify, render_template, request
+from flask import Blueprint, jsonify, render_template, request
+
+from app.auth import current_user
 
 from app.db import (
     delete_planner_block,
@@ -72,7 +74,7 @@ def index():
 
 @bp.get("/api/planner/blocks")
 def blocks_list():
-    return jsonify({"ok": True, "blocks": list_planner_blocks(current_app.config["DB_PATH"])})
+    return jsonify({"ok": True, "blocks": list_planner_blocks(current_user()["id"])})
 
 
 @bp.post("/api/planner/blocks")
@@ -81,7 +83,7 @@ def blocks_create():
     if error:
         return jsonify({"ok": False, "message": error}), 400
 
-    block = insert_planner_block(current_app.config["DB_PATH"], **data)
+    block = insert_planner_block(current_user()["id"], **data)
     return jsonify({"ok": True, "block": block}), 201
 
 
@@ -91,7 +93,7 @@ def blocks_update(block_id: int):
     if error:
         return jsonify({"ok": False, "message": error}), 400
 
-    block = update_planner_block(current_app.config["DB_PATH"], block_id, **data)
+    block = update_planner_block(current_user()["id"], block_id, **data)
     if block is None:
         return jsonify({"ok": False, "message": "Bloco não encontrado."}), 404
     return jsonify({"ok": True, "block": block})
@@ -99,6 +101,6 @@ def blocks_update(block_id: int):
 
 @bp.delete("/api/planner/blocks/<int:block_id>")
 def blocks_delete(block_id: int):
-    if not delete_planner_block(current_app.config["DB_PATH"], block_id):
+    if not delete_planner_block(current_user()["id"], block_id):
         return jsonify({"ok": False, "message": "Bloco não encontrado."}), 404
     return jsonify({"ok": True})

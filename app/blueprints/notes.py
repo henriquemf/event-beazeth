@@ -1,6 +1,8 @@
 """Post-its do quadro da home: CRUD com atualização parcial."""
 
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, jsonify, request
+
+from app.auth import current_user
 
 from app.db import (
     delete_sticky_note,
@@ -24,20 +26,20 @@ def read_input(payload):
 
 @bp.get("/api/notes")
 def notes_list():
-    return jsonify({"ok": True, "notes": list_sticky_notes(current_app.config["DB_PATH"])})
+    return jsonify({"ok": True, "notes": list_sticky_notes(current_user()["id"])})
 
 
 @bp.post("/api/notes")
 def notes_create():
     payload = request.get_json(silent=True) or {}
-    note = insert_sticky_note(current_app.config["DB_PATH"], read_input(payload))
+    note = insert_sticky_note(current_user()["id"], read_input(payload))
     return jsonify({"ok": True, "note": note}), 201
 
 
 @bp.patch("/api/notes/<int:note_id>")
 def notes_update(note_id: int):
     payload = request.get_json(silent=True) or {}
-    note = update_sticky_note(current_app.config["DB_PATH"], note_id, read_input(payload))
+    note = update_sticky_note(current_user()["id"], note_id, read_input(payload))
     if note is None:
         return jsonify({"ok": False, "message": NOT_FOUND}), 404
     return jsonify({"ok": True, "note": note})
@@ -45,6 +47,6 @@ def notes_update(note_id: int):
 
 @bp.delete("/api/notes/<int:note_id>")
 def notes_delete(note_id: int):
-    if not delete_sticky_note(current_app.config["DB_PATH"], note_id):
+    if not delete_sticky_note(current_user()["id"], note_id):
         return jsonify({"ok": False, "message": NOT_FOUND}), 404
     return jsonify({"ok": True})

@@ -29,6 +29,10 @@
 </head>
 <body>
     <div class="bg-candy"></div>
+    {# As telas de entrar e criar conta trocam a casca inteira: quem não está
+       logado não tem barra lateral para navegar nem widget de pomodoro para
+       ver. Continua sendo um esqueleto só — o que muda é o miolo. #}
+    {% block shell %}
     <div class="layout-shell">
         {% include 'partials/sidebar.html' %}
 
@@ -38,6 +42,7 @@
             {% block content %}{% endblock %}
         </main>
     </div>
+    {% endblock %}
     <footer class="site-love-footer">EU TE AMO MOMO</footer>
     <script defer src="{{ static_url('js/core/shared.js') }}"></script>
     <script defer src="{{ static_url('js/core/theme.js') }}"></script>

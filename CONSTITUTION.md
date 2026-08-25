@@ -12,6 +12,7 @@ aqui, e o motivo está escrito junto. Tela nova segue tudo isto.
 app/
   __init__.py          fábrica (create_app) — só monta, não decide nada
   config.py            configuração
+  auth.py              sessão do usuário e o guarda de toda rota
   assets.py            versionamento de estáticos e cabeçalhos de resposta
   extensions.py        instâncias compartilhadas (scheduler)
   blueprints/          UMA tela ou recurso por módulo
@@ -131,7 +132,9 @@ components.css → themes.css` não é negociável.
 ## 6. Estado do cliente: localStorage ou banco?
 
 Vai para o **banco** o que é conteúdo do usuário: post-its, blocos do planner,
-eventos, configuração de lembrete.
+eventos, configuração de lembrete. Tudo isso é por conta (ver seção 8b) e vive
+no Postgres, fora do ciclo de deploy — no arquivo SQLite de antes, cada
+publicação começava do zero.
 
 Vai para o **localStorage** o que é do aparelho e precisa estar pintado antes da
 primeira requisição: tema, fonte, dark mode, timer do pomodoro.
@@ -170,12 +173,43 @@ JS depois do primeiro quadro empurra a página inteira.
 ## 8. Python
 
 - Um blueprint por tela; a fábrica só registra.
-- Um módulo de `db/` por tabela; migração sempre guardada (`if coluna in
-  colunas`), para banco antigo se ajustar sozinho.
+- Um módulo de `db/` por tabela. A primeira posição da assinatura é o `user_id`
+  — as poucas funções sem ele são as de autenticação e as que o agendador chama
+  fora de requisição.
+- **Configuração obrigatória falha na subida, não na primeira consulta.**
+  `DATABASE_URL` ausente e `SECRET_KEY` de exemplo em produção só apareceriam
+  depois, um como banco vazio e o outro como sessão forjável.
 - `PATCH` aplica só as chaves presentes no payload. Cliente que salva geometria
   no arrasto e texto no editor, cada um no seu debounce, precisa disso — um `PUT`
   cheio faria um sobrescrever o outro.
 - Constante que espelha limite do JS leva comentário dizendo de quem é o espelho.
+
+---
+
+## 8b. O dado é de alguém
+
+O app é multiconta. Isto não é detalhe do módulo de login: é invariante de toda
+consulta escrita daqui em diante.
+
+- **Toda tabela de conteúdo tem `user_id` com `ON DELETE CASCADE`.** Apagar a
+  conta leva junto o que era dela, sem varredura manual tabela por tabela.
+- **Toda leitura filtra por `user_id`; todo `UPDATE`/`DELETE` leva
+  `AND user_id = %s` no `WHERE`.** Não é redundância com o guarda de sessão: o
+  guarda diz *quem* está pedindo, e o id do registro vem do cliente. Sem o
+  filtro, trocar o número na URL edita o dado de outra pessoa.
+- **Chave composta onde o identificador é escolhido pelo usuário.**
+  `event_tags` é `(user_id, slug)` e `push_subscriptions` é
+  `(user_id, endpoint)`: duas pessoas podem criar uma tag "prova", e o mesmo
+  navegador pode estar inscrito em duas contas.
+- **Referência a valor escolhido pelo usuário é validada por par.** `tag_type`
+  é procurado por `(user_id, slug)` — sem isso, alguém marcaria o próprio
+  evento com o slug de uma tag alheia.
+- **O guarda é registrado na fábrica, não por decorador.** Rota nova nasce
+  protegida. Decorador por rota é uma coisa a esquecer, e o preço de esquecer é
+  vazamento.
+- **Quem roda fora de requisição não tem sessão.** O agendador varre o banco
+  inteiro de propósito; o recorte por conta acontece na entrega, com o
+  `user_id` que veio na linha do evento.
 
 ---
 

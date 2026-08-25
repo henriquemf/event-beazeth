@@ -1,0 +1,32 @@
+# Postgres para desenvolver. O app não roda com SQLite desde que os dados
+# passaram a ser por conta e a precisar sobreviver ao deploy — e manter dois
+# dialetos de SQL significaria que o do deploy só é exercitado em produção.
+#
+#   docker compose up -d
+#   DATABASE_URL=postgresql://dev:dev@127.0.0.1:5433/event_beazeth
+#
+# Quem já tem um Postgres na máquina pode ignorar este arquivo e só apontar a
+# DATABASE_URL para lá.
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: dev
+      POSTGRES_PASSWORD: dev
+      POSTGRES_DB: event_beazeth
+    # 5433 no host de propósito: 5432 costuma já estar tomada por um Postgres
+    # instalado na máquina, e o container falharia em subir sem dizer por quê.
+    ports:
+      - "5433:5432"
+    # Volume nomeado: sem ele o `docker compose down` levaria o banco junto e o
+    # problema que estamos resolvendo voltaria, só que na sua máquina.
+    volumes:
+      - event-beazeth-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dev -d event_beazeth"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  event-beazeth-db:

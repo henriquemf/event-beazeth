@@ -1,0 +1,25 @@
+{# Casca das telas de entrar e criar conta: um cartão centrado, sem navegação.
+
+   Macro em vez de um segundo layout porque as duas telas são o mesmo cartão com
+   formulário diferente — e um layout novo duplicaria o <head> inteiro, que é
+   onde moram tema, fontes e o bootstrap que pinta antes do primeiro quadro. #}
+{% macro auth_card(title, subtitle) %}
+<div class="auth-shell">
+    <main class="auth-card">
+        <div class="auth-brand">
+            <span class="brand-dot"></span>
+            <div>
+                <h1>Event Notifier</h1>
+                <small>Organize seus momentos</small>
+            </div>
+        </div>
+
+        {% include 'partials/flash-messages.html' %}
+
+        <h2>{{ title }}</h2>
+        <p class="auth-subtitle">{{ subtitle }}</p>
+
+        {{ caller() }}
+    </main>
+</div>
+{% endmacro %}

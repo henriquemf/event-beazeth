@@ -13,6 +13,7 @@ from flask import (
     url_for,
 )
 
+from app.auth import current_user
 from app.db import (
     get_hydration_settings,
     list_push_subscriptions,
@@ -36,6 +37,7 @@ def send_test_notification():
     Retorna quantos canais aceitaram o envio.
     """
     sent_channels = 0
+    user_id = current_user()["id"]
 
     if current_app.config.get("ENABLE_DESKTOP_NOTIFICATIONS", False):
         ok, _ = send_desktop_notification(
@@ -46,7 +48,7 @@ def send_test_notification():
         if ok:
             sent_channels += 1
 
-    subscriptions = list_push_subscriptions(current_app.config["DB_PATH"])
+    subscriptions = list_push_subscriptions(user_id)
     if subscriptions:
         payload = json.dumps(
             {
@@ -95,7 +97,7 @@ def index():
             return redirect(url_for("hydration.index"))
 
         upsert_hydration_settings(
-            current_app.config["DB_PATH"],
+            current_user()["id"],
             enabled,
             interval_minutes,
             start_time,
@@ -118,5 +120,5 @@ def index():
             flash("Lembrete de água atualizado.", "success")
         return redirect(url_for("hydration.index"))
 
-    settings = get_hydration_settings(current_app.config["DB_PATH"])
+    settings = get_hydration_settings(current_user()["id"])
     return render_template("pages/hydration.html", active_page="hydration", settings=settings)

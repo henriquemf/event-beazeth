@@ -196,6 +196,38 @@ body.page-leaving {
     color: var(--ink-soft);
 }
 
+/* Quem está logado. Fica logo abaixo da marca porque é a primeira coisa a
+   conferir quando duas contas usam o mesmo navegador. */
+.account-box {
+    display: grid;
+    gap: var(--space-1);
+    padding: var(--space-2) var(--space-3);
+    border: 1px dashed var(--stroke);
+    border-radius: 16px;
+}
+
+.account-name {
+    font-weight: 700;
+    color: var(--ink);
+    overflow-wrap: anywhere;
+}
+
+.account-email {
+    color: var(--ink-soft);
+    font-size: 0.78rem;
+    overflow-wrap: anywhere;
+}
+
+/* Prefixado pelo pai de propósito: `.btn-secondary` declara `width: fit-content`
+   mais abaixo neste mesmo arquivo, e com a mesma especificidade quem venceria
+   seria a ordem — o botão saía do tamanho da palavra "Sair". */
+.account-box .account-logout {
+    width: 100%;
+    margin-top: var(--space-1);
+    padding: 7px 12px;
+    font-size: 0.84rem;
+}
+
 .menu {
     display: grid;
     gap: var(--space-2);

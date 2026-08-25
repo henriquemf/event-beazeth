@@ -7,7 +7,9 @@ para a coluna da direita.
 
 from datetime import datetime
 
-from flask import Blueprint, current_app, jsonify, render_template
+from flask import Blueprint, jsonify, render_template
+
+from app.auth import current_user
 
 from app.blueprints.events import as_card
 from app.db import (
@@ -46,8 +48,8 @@ def _starts_from(row, floor: datetime) -> bool:
 
 @bp.get("/calendar")
 def index():
-    db_path = current_app.config["DB_PATH"]
-    rows = list_events(db_path)
+    user_id = current_user()["id"]
+    rows = list_events(user_id)
 
     # O piso é a meia-noite de hoje, não `now`: um evento das 09:00 tem que
     # continuar na lista às 10:00 — ele ainda é o compromisso de hoje.
@@ -59,8 +61,8 @@ def index():
         active_page="calendar",
         upcoming=upcoming[:UPCOMING_LIMIT],
         upcoming_total=len(upcoming),
-        tags=list_tags(db_path),
-        tag_usage=count_events_by_tag(db_path),
+        tags=list_tags(user_id),
+        tag_usage=count_events_by_tag(user_id),
         reminder_rules=REMINDER_RULES,
         fallback_tag=FALLBACK_TAG,
         max_label_length=MAX_LABEL_LENGTH,
@@ -70,7 +72,7 @@ def index():
 
 @bp.get("/api/events")
 def events_api():
-    rows = list_events(current_app.config["DB_PATH"])
+    rows = list_events(current_user()["id"])
     payload = []
     for event in rows:
         payload.append(

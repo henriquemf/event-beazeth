@@ -1,0 +1,44 @@
+{% extends 'layouts/base.html' %}
+{% from 'partials/auth-shell.html' import auth_card %}
+
+{% block title %}Criar conta | Event Notifier{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ static_url('css/pages/auth.css') }}" />
+{% endblock %}
+
+{% block shell %}
+{% call auth_card('Criar conta', 'Seu espaço é só seu: ninguém mais vê o que você guarda aqui.') %}
+    <form method="post" class="event-form auth-form">
+        <label>
+            Como te chamamos?
+            <input type="text" name="display_name" maxlength="40" autocomplete="nickname" required autofocus />
+        </label>
+
+        <label>
+            E-mail
+            <input type="email" name="email" autocomplete="email" required />
+        </label>
+
+        <label>
+            Senha
+            <input type="password" name="password" autocomplete="new-password"
+                   minlength="{{ min_password }}" required />
+            <small class="field-help">Pelo menos {{ min_password }} caracteres.</small>
+        </label>
+
+        <label>
+            Repita a senha
+            <input type="password" name="password_confirm" autocomplete="new-password"
+                   minlength="{{ min_password }}" required />
+        </label>
+
+        <button class="btn-primary" type="submit">Criar minha conta</button>
+    </form>
+
+    <p class="auth-switch">
+        Já tem conta?
+        <a href="{{ url_for('auth.login') }}">Entrar</a>
+    </p>
+{% endcall %}
+{% endblock %}

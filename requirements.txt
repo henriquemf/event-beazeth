@@ -1,5 +1,10 @@
 Flask==3.1.0
 APScheduler==3.10.4
+
+# Postgres. O `binary` evita precisar de libpq e compilador na imagem; o `pool`
+# mantém as conexões abertas — sem ele cada requisição pagaria um handshake TLS
+# com o banco gerenciado, que fica fora do datacenter do app.
+psycopg[binary,pool]==3.3.4
 python-dotenv==1.0.1
 pywebpush==2.0.3
 cryptography==42.0.8

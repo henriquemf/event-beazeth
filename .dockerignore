@@ -4,8 +4,5 @@ __pycache__/
 *.pyd
 .venv/
 .env
-notifier.db
-notifier.db-shm
-notifier.db-wal
 .git/
 .vscode/

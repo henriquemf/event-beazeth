@@ -1,9 +1,7 @@
 """Tags de evento: rótulo, cor e regra de lembrete.
 
-A chave primária é o `slug`, e não um id numérico, porque `events.tag_type` já
-guardava 'evento'/'curso' em texto desde a primeira versão. Com o slug como
-chave, a tabela nasce apontada pelos eventos que já existem — nenhuma migração
-de dado precisou tocar em `events`.
+A chave é (user_id, slug): o slug continua sendo o que `events.tag_type` guarda,
+e o par garante que a tag "prova" de uma conta não colida com a de outra.
 """
 
 import re
@@ -20,8 +18,8 @@ REMINDER_RULES = {
     "curso": {"title": "Com antecedência", "hint": "Na hora, e 15 e 7 dias antes"},
 }
 
-# `evento` é o destino de quem fica sem tag (evento antigo, tag apagada), então
-# é a única que não pode ser removida.
+# `evento` é o destino de quem fica sem tag (tag apagada), então é a única que
+# não pode ser removida. Toda conta nasce com ela.
 FALLBACK_TAG = "evento"
 
 # Cor em hex de 6 dígitos: o valor é escrito como custom property inline no
@@ -37,6 +35,8 @@ SUGGESTED_COLORS = (
     "#ffc46b", "#6fd8aa", "#89c9d8", "#ff78b2",
 )
 
+# Semeadas em `create_user`, e não na criação das tabelas: elas pertencem a uma
+# conta, não ao banco.
 DEFAULT_TAGS = (
     ("evento", "Evento", "#7ec8ff", "dia"),
     ("curso", "Curso", "#f38ab7", "curso"),
@@ -58,49 +58,55 @@ def normalize_color(color: str) -> str:
     return value.lower() if COLOR_PATTERN.match(value) else ""
 
 
-def list_tags(db_path: str):
-    with get_connection(db_path) as conn:
-        # `rowid` desempata: `created_at` tem precisão de segundo e as duas tags
+def list_tags(user_id: int):
+    with get_connection() as conn:
+        # `id` desempata: `created_at` tem precisão de segundo e as duas tags
         # padrão são semeadas no mesmo segundo. Sem ele a ordem podia virar, e a
         # primeira da lista é a que já vem marcada no popup de agendamento.
         rows = conn.execute(
-            _TAG_SELECT + " ORDER BY created_at ASC, rowid ASC"
+            _TAG_SELECT + " WHERE user_id = %s ORDER BY created_at ASC, slug ASC",
+            (user_id,),
         ).fetchall()
     return rows
 
 
-def count_events_by_tag(db_path: str):
+def count_events_by_tag(user_id: int):
     """Quantos eventos cada tag tem. A tela de tags avisa antes de remover."""
-    with get_connection(db_path) as conn:
+    with get_connection() as conn:
         rows = conn.execute(
-            "SELECT tag_type, COUNT(*) AS total FROM events GROUP BY tag_type"
+            "SELECT tag_type, COUNT(*) AS total FROM events WHERE user_id = %s GROUP BY tag_type",
+            (user_id,),
         ).fetchall()
     return {row["tag_type"]: row["total"] for row in rows}
 
 
-def insert_tag(db_path: str, slug: str, label: str, color: str, reminder_rule: str) -> bool:
-    """Cria a tag. Devolve False se o slug já existir."""
-    with get_connection(db_path) as conn:
+def insert_tag(user_id: int, slug: str, label: str, color: str, reminder_rule: str) -> bool:
+    """Cria a tag. Devolve False se a conta já tiver esse slug."""
+    with get_connection() as conn:
         cursor = conn.execute(
             """
-            INSERT OR IGNORE INTO event_tags (slug, label, color, reminder_rule, created_at)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO event_tags (user_id, slug, label, color, reminder_rule, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            ON CONFLICT (user_id, slug) DO NOTHING
             """,
-            (slug, label.strip(), color, reminder_rule, utc_now_iso()),
+            (user_id, slug, label.strip(), color, reminder_rule, utc_now_iso()),
         )
     return cursor.rowcount > 0
 
 
-def delete_tag(db_path: str, slug: str) -> int:
+def delete_tag(user_id: int, slug: str) -> int:
     """Remove a tag e devolve quantos eventos voltaram para a tag padrão.
 
     Os eventos são reapontados em vez de apagados junto: a tag é uma etiqueta,
     perder o compromisso ao trocar de etiqueta seria destruir o que importa.
     """
-    with get_connection(db_path) as conn:
+    with get_connection() as conn:
         moved = conn.execute(
-            "UPDATE events SET tag_type = ? WHERE tag_type = ?",
-            (FALLBACK_TAG, slug),
+            "UPDATE events SET tag_type = %s WHERE user_id = %s AND tag_type = %s",
+            (FALLBACK_TAG, user_id, slug),
         ).rowcount
-        conn.execute("DELETE FROM event_tags WHERE slug = ?", (slug,))
+        conn.execute(
+            "DELETE FROM event_tags WHERE user_id = %s AND slug = %s",
+            (user_id, slug),
+        )
     return moved

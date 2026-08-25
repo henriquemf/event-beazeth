@@ -9,13 +9,13 @@ from datetime import datetime
 
 from flask import (
     Blueprint,
-    current_app,
     flash,
     redirect,
     request,
     url_for,
 )
 
+from app.auth import current_user
 from app.db import FALLBACK_TAG, delete_event, insert_event, update_event
 
 
@@ -108,15 +108,19 @@ def create_event():
         flash(error, "error")
         return redirect(url_for("calendar.index"))
 
-    insert_event(current_app.config["DB_PATH"], *fields)
+    insert_event(current_user()["id"], *fields)
     flash("Evento cadastrado com sucesso.", "success")
     return redirect(url_for("calendar.index"))
 
 
 @bp.post("/events/<int:event_id>/delete")
 def remove_event(event_id: int):
-    delete_event(current_app.config["DB_PATH"], event_id)
-    flash("Evento removido.", "success")
+    # A checagem do dono vive no WHERE da consulta: o id vem do cliente, e sem
+    # ela trocar o número na URL apagaria evento de outra conta.
+    if delete_event(current_user()["id"], event_id):
+        flash("Evento removido.", "success")
+    else:
+        flash("Evento não encontrado.", "error")
     return redirect(url_for("calendar.index"))
 
 
@@ -127,7 +131,7 @@ def edit_event(event_id: int):
         flash(error, "error")
         return redirect(url_for("calendar.index"))
 
-    if update_event(current_app.config["DB_PATH"], event_id, *fields):
+    if update_event(current_user()["id"], event_id, *fields):
         flash("Evento atualizado com sucesso.", "success")
     else:
         flash("Evento não encontrado.", "error")

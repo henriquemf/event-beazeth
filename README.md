@@ -7,7 +7,12 @@ Aplicativo simples para cadastrar eventos e enviar notificações em:
 Website:
 - https://events-beazeth.onrender.com/
 
+**Cada pessoa tem a própria conta e o próprio espaço.** Nada é compartilhado, e
+os dados ficam num Postgres gerenciado — sobrevivem a build, deploy e restart.
+Detalhes em [Contas e privacidade dos dados](#contas-e-privacidade-dos-dados).
+
 Recursos de interface:
+- Conta com e-mail e senha; o espaço já nasce com as tags padrão
 - Tags criadas por você: nome, cor e regra de lembrete próprios; `Evento` e `Curso` vêm prontas
 - Sidebar com menu de navegação
 - Calendário grande como tela única dos eventos: clique num dia para agendar naquela data
@@ -76,7 +81,7 @@ No toque só a fita do topo e o canto de redimensionar arrastam, para o resto da
 área continuar rolando a página. O eixo vertical é livre e o quadro acompanha; o
 horizontal é limitado à largura visível para nenhum papel sumir da tela.
 
-A persistência é no SQLite, no mesmo banco do resto do app. O `localStorage`
+A persistência é no Postgres, no mesmo banco do resto do app e escopada pela sua conta. O `localStorage`
 guarda apenas uma cópia de leitura, usada para o quadro continuar visível quando
 o servidor não responde.
 
@@ -169,7 +174,7 @@ As três causas, isoladas por teste A/B:
 - Estáticos servidos com `?v=<mtime>` e `Cache-Control: immutable` de 1 ano
 - Service worker com cache-first para `/static/` (seguro, pois as URLs são versionadas)
 - Scripts com `defer` e tema aplicado antes da primeira pintura (sem flash de tema errado)
-- SQLite em modo WAL com `busy_timeout`, para o scheduler não travar as requisições
+- Pool de conexões do Postgres aberto na subida, com verificação de conexão viva: o banco gerenciado suspende a instância ociosa e derruba o socket
 - Índices em `events(event_datetime)`, `reminder_dispatches` e `planner_blocks(day_of_week, start_minute)`
 - `preconnect`/`dns-prefetch` para os CDNs usados
 - Geometria dos blocos do planner derivada de CSS custom properties: o zoom vira recálculo de estilo, sem reconstruir DOM
@@ -192,9 +197,11 @@ app/
   __init__.py            fábrica da aplicação (só monta e agenda)
   config.py              variáveis de ambiente
   assets.py              versionamento de estáticos + headers de resposta
+  auth.py                sessão do usuário e o guarda que protege toda rota
   extensions.py          scheduler compartilhado
   blueprints/            uma rota por tela/recurso
     system.py            /healthz, /sw.js, /favicon.ico
+    auth.py              /entrar, /criar-conta, /sair
     home.py              /            (quadro de post-its)
     events.py            /events      (POST: criar, editar, remover)
     tags.py              /tags        (POST: criar, remover)
@@ -206,8 +213,9 @@ app/
     hydration.py         /hydration
     push.py              /api/push/*  + /api/live/notifications
   db/                    uma tabela por módulo
-    connection.py        conexão SQLite (WAL, timeouts)
-    schema.py            CREATE TABLE, migrações e índices
+    connection.py        pool de conexões do Postgres
+    schema.py            CREATE TABLE e índices
+    users.py             contas, hash de senha e criação do espaço
     events.py  tags.py  reminders.py  hydration.py  push.py  planner.py  notes.py
   services/
     notifier.py          envio desktop e web push
@@ -221,7 +229,8 @@ app/
       components/        componente de 2-3 telas, carregado só por elas
         modal.css        modal de evento (calendário e planner)
       themes.css         10 temas, 10 fontes, dark mode, responsivo
-      pages/             notes, planner, calendar, appearance, hydration, pomodoro
+      pages/             notes, planner, calendar, appearance, hydration,
+                         pomodoro, auth
       vendor/            tema do flatpickr e do FullCalendar
     js/
       core/              shared (namespace + utils), theme, audio, ui-effects,
@@ -235,10 +244,13 @@ app/
   templates/
     layouts/base.html    casca da página
     partials/            sidebar, menu, flash, bootstrap de tema, widget do
-                         pomodoro, macro da ampulheta, macro da pílula de tag
-    pages/               home, calendar, planner, pomodoro, appearance, hydration
+                         pomodoro, macro da ampulheta, macro da pílula de tag,
+                         casca das telas de conta
+    pages/               home, calendar, planner, pomodoro, appearance,
+                         hydration, login, signup
 tools/                   geração de chaves VAPID
-Dockerfile  requirements.txt  run.py  wsgi.py  .env.example
+Dockerfile  docker-compose.yml  render.yaml
+requirements.txt  run.py  wsgi.py  .env.example
 ```
 
 Cada página carrega só o CSS e o JS da própria tela, além da base comum.
@@ -262,13 +274,55 @@ worker serviria submódulo velho para sempre. Os módulos conversam por
 As regras de organização, otimização e componentização que valem para qualquer
 tela nova estão em [CONSTITUTION.md](CONSTITUTION.md).
 
+## Contas e privacidade dos dados
+
+Cada pessoa tem o próprio espaço. Não existe conteúdo compartilhado: eventos,
+tags, post-its, blocos do planner, configuração de água e inscrições de push
+são todos por conta.
+
+- `/criar-conta` pede nome, e-mail e senha (mínimo de 8 caracteres). O espaço
+  nasce junto e na mesma transação: as tags `Evento` e `Curso` e a linha de
+  configuração de água. Sem isso a primeira visita abriria o popup de
+  agendamento sem nenhuma tag para marcar.
+- A senha nunca é gravada. Fica o hash do `werkzeug.security` (scrypt), com sal
+  e algoritmo embutidos no próprio texto — trocar de algoritmo depois não
+  invalida os hashes antigos.
+- A sessão é um cookie assinado pela `SECRET_KEY`, com `HttpOnly`,
+  `SameSite=Lax`, `Secure` fora do modo debug e validade de 30 dias.
+- Toda tela exige login, e o guarda é registrado uma vez na fábrica em vez de
+  um decorador por rota: rota nova nasce protegida, porque não existe decorador
+  para esquecer. Rota `/api/` sem sessão responde `401` em JSON em vez do HTML
+  do login — o cliente espera JSON e mostraria "erro de sintaxe" no lugar de
+  "sua sessão expirou".
+- Toda tabela de conteúdo tem `user_id` com `ON DELETE CASCADE`, e todo
+  `UPDATE`/`DELETE` leva `AND user_id = %s`. É isso que impede editar ou apagar
+  registro de outra conta trocando o id na URL — o id vem do cliente.
+- Marcar um evento com o slug de uma tag de outra conta não funciona: a tag é
+  procurada por `(user_id, slug)` e, não existindo, o evento cai na tag padrão.
+
+## Banco de dados
+
+Postgres. O SQLite em arquivo saiu porque o disco do container no Render é
+efêmero: cada build, restart ou deploy criava um container novo e levava o
+`.db` junto — todo mundo compartilhava o mesmo banco e perdia tudo a cada
+publicação. O banco gerenciado vive fora do ciclo de deploy.
+
+Um dialeto só, no local e no deploy. Manter SQLite de um lado e Postgres do
+outro significaria duas versões de cada consulta, e a que não roda no dia a dia
+é a que quebra sem ninguém ver.
+
+As datas continuam gravadas como texto ISO-8601 (`2026-12-01T14:30`) e não como
+`TIMESTAMP`: é o formato que chega do formulário, é o que o JS devolve, e a
+ordenação lexicográfica de ISO-8601 coincide com a cronológica. Trocar o tipo
+mudaria o formato em cinco lugares sem ganhar nada.
+
 ## Como rodar
 
-1. Crie e ative o ambiente virtual (Windows PowerShell):
+1. Crie e ative o ambiente virtual:
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+```bash
+python3 -m venv .venv
+source .venv/bin/activate          # Windows: .\.venv\Scripts\Activate.ps1
 ```
 
 2. Instale as dependências:
@@ -277,13 +331,36 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-3. Crie o `.env` a partir do exemplo:
+3. Suba um Postgres local:
 
-```powershell
-Copy-Item .env.example .env
+```bash
+docker compose up -d
 ```
 
-4. Ajuste as variáveis locais do app no `.env` se necessário.
+O compose publica na porta **5433**, e não na 5432, porque essa costuma já
+estar tomada por um Postgres instalado na máquina — o container falharia em
+subir sem dizer claramente por quê.
+
+Quem já tem Postgres na máquina pode pular o compose e apontar a `DATABASE_URL`
+para lá:
+
+```bash
+createdb event_beazeth
+```
+
+4. Crie o `.env` a partir do exemplo e ajuste a `DATABASE_URL`:
+
+```bash
+cp .env.example .env               # Windows: Copy-Item .env.example .env
+```
+
+```env
+DATABASE_URL=postgresql://dev:dev@127.0.0.1:5433/event_beazeth
+DEBUG=True
+```
+
+As tabelas são criadas sozinhas na primeira subida (`init_db`), então não há
+passo de migração.
 
 5. Gere chaves VAPID para Web Push:
 
@@ -305,12 +382,10 @@ VAPID_SUBJECT=mailto:voce@exemplo.com
 python run.py
 ```
 
-7. Acesse no navegador:
+7. Acesse http://127.0.0.1:5000 e crie sua conta em `/criar-conta`.
 
-http://127.0.0.1:5000
-
-Telas: `/` (post-its), `/calendar` (calendário, cadastro e tags), `/planner`,
-`/pomodoro`, `/appearance`, `/hydration`.
+Telas (todas exigem login): `/` (post-its), `/calendar` (calendário, cadastro e
+tags), `/planner`, `/pomodoro`, `/appearance`, `/hydration`.
 
 ## Observações importantes
 
@@ -318,8 +393,78 @@ Telas: `/` (post-its), `/calendar` (calendário, cadastro e tags), `/planner`,
 - Em localhost também pode funcionar para testes.
 - Notificação desktop local depende da máquina Windows com o app rodando.
 - O scheduler roda a cada 60 segundos e aceita atraso de até 5 minutos para não perder lembretes.
+- Ele vive dentro do processo web, então só roda enquanto o serviço está de pé — veja [Limitação conhecida](#limitação-conhecida-quando-os-lembretes-disparam).
+- As duas rotinas da varredura (eventos e água) têm try/except separados: uma falhando não cala a outra.
 
-## Docker (recomendado para deploy simples)
+## Deploy no Render
+
+O `render.yaml` descreve o serviço. O banco NÃO está nele de propósito: o
+Postgres gratuito do próprio Render expira 30 dias após a criação, tem 14 dias
+de carência e depois é **apagado com os dados dentro** — exatamente a perda que
+esta arquitetura existe para evitar.
+
+### Por que Neon
+
+O plano gratuito não expira e não pausa: o compute apenas dorme após 5 minutos
+sem consulta e acorda sozinho na consulta seguinte. Como o serviço gratuito do
+Render também dorme, os dois dormem juntos e o consumo fica em torno de 30 das
+100 CU-horas mensais.
+
+(O Supabase seria o certo no cenário oposto, de serviço sempre acordado: ele não
+mede compute, mas pausa após 7 dias sem atividade e exige um clique para
+voltar.)
+
+### Criando o banco no Neon
+
+1. Entre em [neon.tech](https://neon.tech) com o GitHub. Nenhum cartão é pedido.
+2. **Create project**:
+   - **Name**: `event-beazeth`
+   - **Postgres version**: 17
+   - **Cloud / Region**: a mais próxima de você (`AWS / São Paulo` ou
+     `AWS / US East (Ohio)`) — a latência entra em toda requisição
+3. O painel abre o **Connection string** já pronto. Copie inteiro, com o
+   `?sslmode=require` no fim. Vai ter esta cara:
+
+```
+postgresql://event-beazeth_owner:npg_XXXX@ep-nome-123456-pooler.sa-east-1.aws.neon.tech/event-beazeth?sslmode=require
+```
+
+Pode deixar o **Pooled connection** marcado (é o padrão). Ele é PgBouncer em
+modo transação, onde o prepared statement do psycopg colidiria — e é por isso
+que `db/connection.py` desliga o `prepare_threshold`. A conexão direta também
+funciona.
+
+Não há passo de migração: as tabelas nascem na primeira subida.
+
+### Configurando o Render
+
+Em **Environment → Environment Variables**, do serviço web:
+
+| Variável | O que preencher |
+| --- | --- |
+| `DATABASE_URL` | a connection string copiada do Neon, inteira |
+| `SECRET_KEY` | a saída de `python -c "import secrets; print(secrets.token_urlsafe(48))"` |
+| `DEBUG` | `False` |
+| `ENABLE_DESKTOP_NOTIFICATIONS` | `False` |
+| `VAPID_PUBLIC_KEY` | a chave pública de `python tools/generate_vapid_keys.py` |
+| `VAPID_PRIVATE_KEY` | a chave privada do mesmo comando |
+| `VAPID_SUBJECT` | `mailto:seu@email.com` |
+
+`PORT` o Render injeta sozinho, e o `Dockerfile` já a respeita.
+
+Depois do deploy, confira em `https://SEU-APP.onrender.com/healthz` —
+`{"ok": true, "database": "ok"}` significa que o app alcançou o Neon. Então
+crie sua conta em `/criar-conta`.
+
+O app **se recusa a subir** sem `DATABASE_URL`, e em produção também sem uma
+`SECRET_KEY` de verdade. Os dois erros só apareceriam depois: o primeiro como
+banco vazio a cada deploy, o segundo como cookie de sessão forjável — quem
+soubesse a chave entraria como qualquer conta.
+
+Trocar a `SECRET_KEY` depois desloga todo mundo (as sessões assinadas com a
+chave antiga deixam de valer), mas não perde nenhum dado.
+
+## Docker
 
 Build:
 
@@ -335,14 +480,36 @@ docker run -p 8000:8000 --env-file .env event-notifier
 
 Nota: o container usa `gunicorn -w 1` para evitar execução duplicada do scheduler de lembretes.
 
-## Deploy gratuito sugerido
+## Limitação conhecida: quando os lembretes disparam
 
-Opções práticas gratuitas:
-- Render (web service com Docker)
-- Railway (container + variáveis de ambiente)
+O agendador vive dentro do processo web, e o serviço gratuito do Render **dorme
+após 15 minutos sem tráfego**. Enquanto ele dorme, ninguém varre nada: o
+lembrete das 14:00 só sai quando alguém abre o site. A janela de tolerância de
+5 minutos do `_is_due` cobre atraso de execução, não horas de sono.
 
-Passos gerais:
-1. Subir o projeto para GitHub
-2. Criar serviço apontando para o `Dockerfile`
-3. Configurar variáveis do `.env` no painel da plataforma
-4. Usar URL HTTPS gerada para ativar Web Push no navegador
+Na prática, os lembretes funcionam bem enquanto o app está em uso e chegam
+atrasados depois de um período parado. O `reminder_dispatches` garante que
+atrasado é diferente de perdido — quando o serviço acorda, o aviso ainda não
+entregue sai, e sai uma vez só.
+
+`/healthz` responde `lastScanSeconds`, que é quanto tempo faz desde a última
+varredura, para conferir se o agendador está girando.
+
+Duas saídas, se um dia isso incomodar:
+
+- **Ping externo** em `/healthz` a cada 10 minutos (cron-job.org e afins) mantém
+  o serviço acordado. Cuidado com dois limites: o Render dá 750 horas de
+  instância por workspace por mês contra as 730–744 de um mês, e o agendador
+  acordado consulta o banco de 60 em 60 segundos, o que impede o compute do Neon
+  de dormir e estoura as 100 CU-horas por volta do dia 17. Ligar o ping implica
+  restringir o horário do ping *e* trocar o Neon pelo Supabase, que não mede
+  compute.
+- **Render Background Worker** (plano pago): o agendador sai do processo web e
+  vira serviço próprio, sempre ligado. É a solução sem ressalva.
+
+## Outras plataformas
+
+Qualquer uma que rode container serve (Railway, Fly.io, Koyeb). O roteiro é o
+mesmo: apontar para o `Dockerfile`, configurar as variáveis da tabela acima e
+usar a URL HTTPS gerada para ativar o Web Push no navegador. O banco continua
+sendo externo — é justamente o que faz o dado sobreviver ao redeploy.

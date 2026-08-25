@@ -5,6 +5,7 @@
 
 from app.blueprints import (
     appearance,
+    auth,
     calendar,
     events,
     home,
@@ -22,6 +23,7 @@ from app.blueprints import (
 # do menu lateral para facilitar a leitura.
 BLUEPRINTS = (
     system.bp,
+    auth.bp,
     home.bp,
     events.bp,
     tags.bp,

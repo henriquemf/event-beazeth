@@ -4,7 +4,9 @@ Sem tela própria de propósito — as tags só fazem sentido ao lado dos evento
 então a interface é um popup do calendário e estas rotas só recebem POST.
 """
 
-from flask import Blueprint, current_app, flash, redirect, request, url_for
+from flask import Blueprint, flash, redirect, request, url_for
+
+from app.auth import current_user
 
 from app.db import (
     FALLBACK_TAG,
@@ -39,7 +41,7 @@ def create_tag():
         flash("Escolha quando a tag deve lembrar você.", "error")
         return redirect(url_for("calendar.index"))
 
-    if insert_tag(current_app.config["DB_PATH"], slug, label, color, rule):
+    if insert_tag(current_user()["id"], slug, label, color, rule):
         flash(f"Tag “{label}” criada.", "success")
     else:
         flash(f"Já existe uma tag chamada “{label}”.", "error")
@@ -54,7 +56,7 @@ def remove_tag(slug: str):
         flash("A tag padrão não pode ser removida.", "error")
         return redirect(url_for("calendar.index"))
 
-    moved = delete_tag(current_app.config["DB_PATH"], slug)
+    moved = delete_tag(current_user()["id"], slug)
     if moved:
         plural = "s" if moved > 1 else ""
         flash(f"Tag removida. {moved} evento{plural} voltou para a tag padrão.", "success")

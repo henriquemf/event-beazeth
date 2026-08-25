@@ -1,0 +1,35 @@
+{% extends 'layouts/base.html' %}
+{% from 'partials/auth-shell.html' import auth_card %}
+
+{% block title %}Entrar | Event Notifier{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ static_url('css/pages/auth.css') }}" />
+{% endblock %}
+
+{% block shell %}
+{% call auth_card('Entrar', 'Seus eventos, post-its e rotina esperando por você.') %}
+    <form method="post" class="event-form auth-form">
+        {# O destino volta pelo formulário, e não pela URL, para o POST não
+           depender da query string ter sobrevivido ao redirecionamento. #}
+        <input type="hidden" name="proxima" value="{{ proxima }}" />
+
+        <label>
+            E-mail
+            <input type="email" name="email" autocomplete="email" required autofocus />
+        </label>
+
+        <label>
+            Senha
+            <input type="password" name="password" autocomplete="current-password" required />
+        </label>
+
+        <button class="btn-primary" type="submit">Entrar</button>
+    </form>
+
+    <p class="auth-switch">
+        Ainda não tem conta?
+        <a href="{{ url_for('auth.signup') }}">Criar uma agora</a>
+    </p>
+{% endcall %}
+{% endblock %}

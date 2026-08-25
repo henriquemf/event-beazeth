@@ -12,4 +12,9 @@ COPY . .
 
 EXPOSE 8000
 
-CMD ["gunicorn", "-w", "1", "-b", "0.0.0.0:8000", "wsgi:app"]
+# Um worker só, e não é economia: o APScheduler roda dentro do processo, então
+# dois workers dariam dois agendadores e cada lembrete sairia em duplicata.
+#
+# Forma shell para o ${PORT} ser expandido — o Render injeta a porta por
+# variável de ambiente; o 8000 é o padrão de quem roda o container na mão.
+CMD gunicorn -w 1 -b 0.0.0.0:${PORT:-8000} wsgi:app
