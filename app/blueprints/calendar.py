@@ -23,9 +23,10 @@ from app.db import (
 
 bp = Blueprint("calendar", __name__)
 
-# Quantos cartões cabem na coluna lateral sem ela virar uma segunda lista
-# rolável ao lado do mês.
-UPCOMING_LIMIT = 3
+# Quantos cartões a coluna lateral mostra. Acima disto a lista rola dentro do
+# próprio cartão (ver `.upcoming-panel .event-list` em pages/calendar.css), em
+# vez de esticar a página para além do mês.
+UPCOMING_LIMIT = 5
 
 # Cor do texto dentro do bloco do FullCalendar. Fixa e escura porque o fundo do
 # bloco é a cor da tag, escolhida pelo usuário e sempre clara o bastante — o

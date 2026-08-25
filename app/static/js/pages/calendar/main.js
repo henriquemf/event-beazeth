@@ -14,7 +14,28 @@
             return;
         }
 
-        const eventModal = EN.calendarEventModal();
+        /* Marca no <td> do dia clicado, para o popup não tapar a informação de
+           qual dia está sendo agendado. Fica como atributo e não como classe
+           porque quem pinta é o CSS do tema do FullCalendar, e o atributo deixa
+           claro na inspeção que o estado é nosso e não da biblioteca. */
+        let pickedCell = null;
+
+        function clearPickedDay() {
+            if (pickedCell) {
+                pickedCell.removeAttribute("data-picked");
+                pickedCell = null;
+            }
+        }
+
+        function markPickedDay(dateStr) {
+            clearPickedDay();
+            pickedCell = calendarEl.querySelector('.fc-daygrid-day[data-date="' + dateStr + '"]');
+            if (pickedCell) {
+                pickedCell.setAttribute("data-picked", "1");
+            }
+        }
+
+        const eventModal = EN.calendarEventModal({ onClose: clearPickedDay });
         const tagsModal = EN.calendarTagsModal();
         const popups = [eventModal, tagsModal].filter(Boolean);
 
@@ -43,6 +64,7 @@
         const createButton = document.getElementById("event-create-open");
         if (createButton && eventModal) {
             createButton.addEventListener("click", function () {
+                clearPickedDay();
                 eventModal.openCreate("");
             });
         }
@@ -107,6 +129,9 @@
             },
             dateClick: function (info) {
                 if (eventModal) {
+                    /* Na grade de semana/dia `dateStr` traz a hora junto, e o
+                       seletor da célula do mês espera só a data. */
+                    markPickedDay(info.dateStr.slice(0, 10));
                     eventModal.openCreate(info.dateStr);
                 }
             },

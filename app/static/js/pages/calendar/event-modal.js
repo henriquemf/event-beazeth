@@ -35,7 +35,7 @@ window.EN = window.EN || {};
         return dateStr.length >= 16 ? dateStr.slice(0, 16) : dateStr;
     }
 
-    EN.calendarEventModal = function () {
+    EN.calendarEventModal = function (options) {
         const modal = document.getElementById("event-modal");
         const form = document.getElementById("event-form");
         const deleteForm = document.getElementById("event-delete-form");
@@ -55,6 +55,10 @@ window.EN = window.EN || {};
         }
 
         const createAction = form.dataset.createAction;
+        /* Quem abriu precisa saber do fechamento para desmarcar o dia clicado
+           na grade — e o fechamento vem de três lados (×, fundo, Escape). Um
+           aviso na saída única evita repetir a limpeza nos três. */
+        const onClose = (options && options.onClose) || function () {};
         let picker = null;
 
         function mountPicker(withTime, value) {
@@ -109,6 +113,7 @@ window.EN = window.EN || {};
         function close() {
             modal.classList.remove("show");
             modal.setAttribute("aria-hidden", "true");
+            onClose();
         }
 
         function openCreate(isoDate) {

@@ -58,6 +58,10 @@ components.css → themes.css` não é negociável.
 - **Cor, medida e fonte saem de custom properties.** Nada de hex solto numa
   regra de componente: existem 10 temas × 10 fontes × dark mode, e valor cravado
   fica errado em 19 combinações.
+- **Espaçamento do shell sai da escala `--space-1..5`** (base.css). Não é sobre
+  tema — é sobre conseguir afrouxar a interface inteira num lugar só. Antes cada
+  regra escolhia o próprio número, e "dar mais ar" virava caçar 14, 16, 18 e 20
+  espalhados por seis arquivos.
 - **Um padrão e seus modificadores declaram-se no mesmo arquivo**, senão a
   especificidade empata e quem decide passa a ser a ordem de carga. `--pomo-tint`
   tem o padrão em `components.css` junto com as fases justamente por isso — em
@@ -70,6 +74,16 @@ components.css → themes.css` não é negociável.
   *layout* (algo troca de lugar), nunca para *tamanho* (algo cresce ou encolhe).
   `cqi` acima de `vw` quando o elemento vive num cartão: numa tela larga o cartão
   tem metade do espaço, e `vw` não sabe disso.
+- **`@container` acima de `@media` pelo mesmo motivo**, inclusive para mudança de
+  layout. A barra do calendário reflui pela largura do CARTÃO: numa janela de
+  1280 ela tem 590px se dividir a linha com "Próximos eventos" e 920px se a
+  lista já desceu. A janela mede 1280 nos dois casos e erraria um dos dois.
+  Exige `container-type: inline-size` em quem contém — sem isso `cqi` cai
+  silenciosamente no viewport, que é o bug que a regra existe para evitar.
+- **Quebra escolhida, não quebra sofrida.** Onde `flex-wrap` decidia sozinho, a
+  barra do calendário quebrava num lugar qualquer — às vezes com o título
+  sozinho à direita. Passado o ponto em que não cabe, o layout das duas linhas
+  é declarado.
 - **Foco visível sempre**, com `outline: 2px solid transparent` junto do
   `box-shadow` — o outline transparente é o que mantém o indicador no modo de
   alto contraste do Windows.

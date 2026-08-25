@@ -11,6 +11,8 @@ Recursos de interface:
 - Tags criadas por você: nome, cor e regra de lembrete próprios; `Evento` e `Curso` vêm prontas
 - Sidebar com menu de navegação
 - Calendário grande como tela única dos eventos: clique num dia para agendar naquela data
+- O dia sob o mouse acende e o dia clicado fica marcado enquanto o popup está aberto
+- “Próximos eventos” lista os 5 mais próximos; lado a lado com o mês em telas largas, embaixo dele nas demais
 - Aba **Weekly Planner**: grade semanal de 24 horas com blocos arrastáveis
 - Aba **Pomodoro** 🍎: temporizador com ampulheta que chacoalha de vez em quando e segue contando na barra lateral enquanto você navega
 - **Home** é o quadro de **post-its**: papel livre, arrastável, redimensionável e colorido
@@ -212,7 +214,8 @@ app/
     scheduler_service.py varredura de lembretes
   static/
     css/
-      base.css           tokens, reset, layout, sidebar, cartões, forms, botões
+      base.css           tokens (cor, fonte e escala --space-1..5), reset, layout,
+                         sidebar, cartões, forms, botões
       components.css     o que existe em TODA tela: caixas da sidebar, toggle de
                          dark mode, ampulheta e widget do pomodoro
       components/        componente de 2-3 telas, carregado só por elas

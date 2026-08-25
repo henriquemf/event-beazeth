@@ -27,6 +27,21 @@
     --font-main: "Quicksand", sans-serif;
     --font-display: "Baloo 2", cursive;
     --input-bg: rgba(255, 255, 255, 0.9);
+
+    /* Escala de espaçamento do shell (casca, cartões, listas).
+
+       Nasceu de "a interface está apertada": até aqui cada regra escolhia o
+       próprio número, então dar ar na tela significava caçar 14, 16, 18 e 20
+       espalhados por seis arquivos. Com a escala, afrouxar tudo é mexer aqui.
+
+       Não está em themes.css junto das cores de propósito: espaçamento não
+       muda por tema, e repetir a escala em 10 blocos seria 10 chances de as
+       telas saírem de sincronia. */
+    --space-1: 6px;
+    --space-2: 10px;
+    --space-3: 14px;
+    --space-4: 18px;
+    --space-5: 24px;
 }
 
 /* Transição suave entre páginas, feita pelo compositor do navegador.
@@ -97,13 +112,17 @@ body.page-leaving {
         radial-gradient(circle at 24% 84%, rgba(255, 195, 214, 0.27), transparent 36%);
 }
 
+/* O teto de 1280px era a causa real do calendário apertado: numa tela de
+   1440 a casca parava em 1280 e sobravam 636px para o mês, com o título
+   quebrando em duas linhas. O limite existe para o texto não virar linha
+   infinita — o calendário é grade, não texto, e aguenta bem mais. */
 .layout-shell {
-    width: min(1280px, 96vw);
-    margin: 20px auto;
+    width: min(1560px, 96vw);
+    margin: var(--space-5) auto;
     display: grid;
     grid-template-columns: 280px minmax(0, 1fr);
     align-items: start;
-    gap: 20px;
+    gap: var(--space-5);
     position: relative;
     z-index: 1;
     flex: 1 0 auto;
@@ -120,10 +139,10 @@ body.page-leaving {
 
 .sidebar {
     border-radius: 24px;
-    padding: 18px;
+    padding: var(--space-4);
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: var(--space-4);
     position: sticky;
     top: 14px;
     max-height: calc(100vh - 28px);
@@ -179,7 +198,7 @@ body.page-leaving {
 
 .menu {
     display: grid;
-    gap: 8px;
+    gap: var(--space-2);
 }
 
 .menu-link {
@@ -207,7 +226,7 @@ body.page-leaving {
 
 .main-content {
     display: grid;
-    gap: 14px;
+    gap: var(--space-4);
     min-width: 0;
     align-content: start;
 }
@@ -247,7 +266,7 @@ body.page-leaving {
 .hero-card,
 .panel-card {
     border-radius: 24px;
-    padding: 20px;
+    padding: var(--space-5);
     animation: cardRise 0.32s cubic-bezier(0.22, 0.61, 0.36, 1) backwards;
 }
 
@@ -300,7 +319,7 @@ body.page-leaving {
 
 .alerts {
     display: grid;
-    gap: 10px;
+    gap: var(--space-2);
 }
 
 .alerts .alert {

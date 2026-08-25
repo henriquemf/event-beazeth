@@ -27,22 +27,26 @@
     flex: 0 0 auto;
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: var(--space-2);
 }
 
 /* --------------------------------------------------------------- layout */
 
 /* O mês e os próximos eventos lado a lado. A coluna da direita tem largura
-   fixa de propósito: ela cabe três cartões e mais nada, e o que sobra é do
-   calendário, que é quem precisa de espaço para os dias não espremerem. */
+   fixa de propósito: o que sobra é todo do calendário, que é quem precisa de
+   espaço para os dias não espremerem. */
 .calendar-layout {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 330px;
+    grid-template-columns: minmax(0, 1fr) 340px;
     align-items: start;
-    gap: 14px;
+    gap: var(--space-4);
 }
 
+/* É este cartão que o `cqi` do tema do FullCalendar mede — sem o contêiner
+   declarado aqui, `cqi` cairia no viewport e o mês acharia que tem a largura
+   da janela inteira quando tem pouco mais da metade. */
 .calendar-panel {
+    container-type: inline-size;
     min-height: 720px;
 }
 
@@ -50,8 +54,8 @@
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 10px;
-    margin-bottom: 10px;
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
 }
 
 .calendar-topbar label {
@@ -73,8 +77,9 @@
 /* ----------------------------------------------------- próximos eventos */
 
 .upcoming-panel {
+    container-type: inline-size;
     display: grid;
-    gap: 12px;
+    gap: var(--space-3);
     align-content: start;
 }
 
@@ -82,7 +87,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
+    gap: var(--space-2);
 }
 
 .upcoming-header h3 {
@@ -107,9 +112,10 @@
     font-size: 0.82rem;
 }
 
+
 .event-list {
     display: grid;
-    gap: 10px;
+    gap: var(--space-2);
     margin: 0;
     padding: 0;
     list-style: none;
@@ -126,8 +132,8 @@
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
-    gap: 12px;
-    padding: 12px;
+    gap: var(--space-3);
+    padding: var(--space-3);
     border: 1px solid var(--stroke);
     border-left: 4px solid var(--item-tint);
     border-radius: 14px;
@@ -364,8 +370,8 @@
 
 .tag-manage-list {
     display: grid;
-    gap: 8px;
-    margin: 0 0 18px;
+    gap: var(--space-2);
+    margin: 0 0 var(--space-5);
     padding: 0;
     list-style: none;
 }
@@ -475,11 +481,25 @@
 
 /* --------------------------------------------------------- responsivo */
 
-/* Só mudança de lugar: abaixo desta largura a coluna da direita não cabe ao
-   lado do mês e desce para baixo dele. */
-@media (max-width: 1180px) {
+/* Só mudança de lugar: abaixo desta largura a coluna da direita desce para
+   baixo do mês.
+
+   O corte é em 1400px e não em 1180 porque a conta não é "cabe?", é "sobra
+   quanto para o mês?". Numa janela de 1280 as duas colunas cabiam, mas
+   deixavam o calendário com 566px — sete colunas de 72px, com a barra de
+   controles quebrando em duas linhas. Com a lista embaixo, o mesmo 1280 dá
+   924px ao mês. Duas colunas só quando as duas ficam confortáveis. */
+@media (max-width: 1400px) {
     .calendar-layout {
         grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+/* Embaixo do mês a coluna vira faixa larga, e cinco cartões empilhados fariam
+   uma torre de espaço vazio à direita. A grade se resolve sozinha. */
+@container (min-width: 620px) {
+    .upcoming-panel .event-list {
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
     }
 }
 
@@ -495,17 +515,29 @@
     }
 }
 
-@media (max-width: 560px) {
+/* O botão desce para a segunda linha em vez de espremer o título. Era media
+   query de janela e virou container query porque quem aperta o cartão é a
+   COLUNA: numa tela de 1440 a lista tem 290px de conteúdo e precisa do refluxo
+   tanto quanto num celular — a janela larga dizia que estava tudo bem. */
+@container (max-width: 340px) {
     .event-item {
         grid-template-columns: auto minmax(0, 1fr);
     }
 
-    /* O botão desce para a segunda linha em vez de espremer o título. */
     .event-item form {
         grid-column: 1 / -1;
         justify-self: end;
     }
 
+    /* Numa coluna de cinco cartões, cinco botões em tamanho cheio pesam mais
+       que os eventos que eles acompanham. */
+    .event-remove {
+        padding: 6px 12px;
+        font-size: 0.78rem;
+    }
+}
+
+@media (max-width: 560px) {
     .calendar-hero {
         flex-direction: column;
         align-items: flex-start;

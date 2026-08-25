@@ -1,7 +1,19 @@
-/* Tema do FullCalendar (biblioteca de terceiros) nas cores do app. */
+/* Tema do FullCalendar (biblioteca de terceiros) nas cores do app.
 
-#events-calendar {
-    padding: 8px;
+   As medidas daqui vêm de `cqi` e não de `vw`: o mês vive dentro de um cartão
+   que divide a linha com "Próximos eventos", e `vw` não sabe disso — numa tela
+   larga ele achava que tinha 1440px quando tinha 700. Quem declara o contêiner
+   é `.calendar-panel`, em pages/calendar.css. */
+
+/* --------------------------------------------------------------- topo */
+
+/* A barra vinha em duas linhas com o título quebrado no meio ("Agosto De" /
+   "2026"): o tamanho fixo de 1.75em do FullCalendar não cabia na largura que
+   sobra para o cartão. Agora ele encolhe com o cartão e a barra respira. */
+.fc .fc-toolbar.fc-header-toolbar {
+    gap: var(--space-3);
+    margin-bottom: var(--space-5);
+    flex-wrap: wrap;
 }
 
 .fc .fc-toolbar-title {
@@ -9,26 +21,28 @@
     color: var(--ink);
     text-transform: capitalize;
     letter-spacing: 0.2px;
+    font-size: clamp(1.1rem, 0.72rem + 2.4cqi, 1.65rem);
+    line-height: 1.25;
+    white-space: nowrap;
 }
 
-[data-dark="true"] .fc .fc-button {
-    background: rgba(255, 120, 178, 0.3);
-    color: #ffeaff;
+.fc .fc-toolbar-chunk {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
 }
 
-[data-dark="true"] .fc .fc-daygrid-day.fc-day-today {
-    background: rgba(126, 200, 255, 0.2);
-}
+/* ------------------------------------------------------------ botões */
 
 .fc .fc-button {
     border: 1px solid var(--stroke);
     border-radius: 999px;
-    padding: 0.45rem 0.85rem;
+    padding: 0.5rem 1rem;
     background: linear-gradient(120deg, rgba(255, 120, 178, 0.25), rgba(126, 200, 255, 0.22));
     color: var(--ink);
     font-weight: 700;
     box-shadow: 0 7px 18px -12px var(--shadow);
-    transition: background 0.2s ease, color 0.2s ease;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.16s ease;
 }
 
 /* Mês/Semana/Dia vêm num .fc-button-group, que deve ler como uma pílula só:
@@ -68,7 +82,7 @@
 }
 
 .fc .fc-button:focus-visible {
-    outline: none;
+    outline: 2px solid transparent;
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent);
     z-index: 2;
 }
@@ -77,6 +91,155 @@
     opacity: 0.55;
 }
 
+/* ------------------------------------------------------------- grade */
+
+/* Cabeçalho dos dias da semana: 2px de padding deixava "dom." colado na linha
+   da grade. */
+.fc .fc-col-header-cell-cushion {
+    padding: var(--space-2) var(--space-1);
+    font-size: 0.82rem;
+    letter-spacing: 0.04em;
+    color: var(--ink-soft);
+}
+
+/* Altura mínima da célula em `cqi`: a semana tem 7 colunas, então uma célula
+   vale ~14cqi de largura, e a altura acompanha para o quadrado não achatar
+   quando o cartão encolhe. O clamp segura os extremos. */
+.fc .fc-daygrid-day-frame {
+    min-height: clamp(76px, 11cqi, 124px);
+    padding: var(--space-1);
+}
+
+.fc .fc-daygrid-day-number {
+    padding: 5px 9px;
+    font-size: 0.88rem;
+    font-weight: 700;
+    border-radius: 999px;
+    line-height: 1.1;
+    transition:
+        background-color 0.18s ease,
+        color 0.18s ease,
+        transform 0.18s cubic-bezier(0.34, 1.45, 0.64, 1);
+}
+
+/* ---------------------------------------------- dia sob o mouse e escolhido */
+
+/* Clicar num dia abre o agendamento, então o dia tem que parecer clicável. O
+   número vira pílula sob o mouse — é o alvo visual do clique, e crescer só ele
+   evita o pisca-pisca de repintar a célula inteira. */
+.fc .fc-daygrid-day {
+    transition: background-color 0.18s ease;
+}
+
+.fc .fc-daygrid-day-frame {
+    cursor: pointer;
+}
+
+.fc .fc-daygrid-day:hover {
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.fc .fc-daygrid-day:hover .fc-daygrid-day-number {
+    background: color-mix(in srgb, var(--accent) 85%, #fff);
+    color: #fff;
+    transform: scale(1.08);
+}
+
+/* `data-picked` fica no <td> enquanto o popup daquele dia está aberto: sem
+   isto, com o popup por cima, não dava para saber qual dia tinha sido clicado. */
+.fc .fc-daygrid-day[data-picked] {
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 70%, transparent);
+}
+
+.fc .fc-daygrid-day[data-picked] .fc-daygrid-day-number {
+    background: var(--accent);
+    color: #fff;
+}
+
 .fc .fc-daygrid-day.fc-day-today {
     background: rgba(126, 200, 255, 0.16);
+}
+
+/* ----------------------------------------------------------- eventos */
+
+.fc .fc-daygrid-event {
+    padding: 2px 7px;
+    border-radius: 9px;
+    font-weight: 700;
+    transition: transform 0.16s ease, box-shadow 0.2s ease;
+}
+
+.fc .fc-daygrid-event:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px -10px var(--shadow);
+}
+
+/* ------------------------------------------- cartão estreito (não janela) */
+
+/* Container query e não media query de propósito: o que decide se a barra cabe
+   numa linha é a largura do CARTÃO, não a da janela. Numa tela de 1280 o mês
+   fica com ~590px porque divide a linha com "Próximos eventos"; na mesma tela,
+   com a coluna já embaixo, ele tem 920px e a barra cabe folgada. A janela mede
+   1280 nos dois casos e erraria um dos dois.
+
+   É mudança de LAYOUT (os controles trocam de tamanho e a barra reflui), que é
+   o caso em que a consulta é permitida. */
+@container (max-width: 640px) {
+    .fc .fc-toolbar.fc-header-toolbar {
+        gap: var(--space-2);
+        margin-bottom: var(--space-4);
+    }
+
+    .fc .fc-button {
+        padding: 0.4rem 0.7rem;
+        font-size: 0.86rem;
+    }
+
+    .fc .fc-toolbar-chunk {
+        gap: var(--space-1);
+    }
+}
+
+/* Abaixo disto nem compacto cabe numa linha, e o `flex-wrap` quebrava a barra
+   num lugar qualquer — às vezes deixando o título sozinho à direita. Duas
+   linhas declaradas: título em cima, controles embaixo. Quebra escolhida em
+   vez de quebra sofrida. */
+@container (max-width: 560px) {
+    .fc .fc-toolbar.fc-header-toolbar {
+        display: grid;
+        grid-template-columns: auto auto;
+        justify-content: space-between;
+        row-gap: var(--space-3);
+    }
+
+    .fc .fc-toolbar-chunk:nth-child(2) {
+        grid-area: 1 / 1 / 2 / -1;
+        justify-content: center;
+    }
+
+    .fc .fc-toolbar-chunk:nth-child(1),
+    .fc .fc-toolbar-chunk:nth-child(3) {
+        grid-row: 2;
+    }
+}
+
+/* --------------------------------------------------------- dark mode */
+
+[data-dark="true"] .fc .fc-button {
+    background: rgba(255, 120, 178, 0.3);
+    color: #ffeaff;
+}
+
+/* O ativo precisa ser repetido no escuro. `[data-dark] .fc .fc-button` empata
+   em especificidade com `.fc .fc-button.fc-button-active`, então quem decidia
+   era a ORDEM no arquivo — e o ativo perdeu o rosa assim que este bloco desceu
+   para o fim. Declarado, ganha em qualquer ordem. */
+[data-dark="true"] .fc .fc-button.fc-button-active {
+    background: linear-gradient(120deg, var(--accent), #ff96c2);
+    color: #fff;
+}
+
+[data-dark="true"] .fc .fc-daygrid-day.fc-day-today {
+    background: rgba(126, 200, 255, 0.2);
 }
