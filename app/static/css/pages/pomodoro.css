@@ -20,7 +20,7 @@
 
 .pomo-hero-apple {
     flex: 0 0 auto;
-    font-size: 2.7rem;
+    font-size: clamp(2rem, 1.4rem + 2.2vw, 3rem);
     line-height: 1;
     animation: pomoApple 3.6s ease-in-out infinite;
 }
@@ -37,16 +37,24 @@
 
 /* ---------------------------------------------------------------- layout */
 
+/* Sem breakpoint: as colunas cabem enquanto houver 330px para cada uma e
+   viram uma só quando não houver. `min(100%, 330px)` evita que o mínimo
+   estoure a largura disponível em telas bem estreitas. */
 .pomo-layout {
     display: grid;
-    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr));
     align-items: start;
     gap: 14px;
 }
 
 /* ------------------------------------------------------------- mostrador */
 
+/* Vira um container de consulta: daqui para dentro as medidas são uma fração
+   da largura do CARTÃO (unidade cqi), não da janela. É o que faz o mostrador
+   ficar proporcional tanto no monitor largo (onde o cartão tem metade da tela)
+   quanto no celular (onde ele ocupa tudo), sem nenhum media query. */
 .pomo-stage {
+    container-type: inline-size;
     display: grid;
     justify-items: center;
     gap: 10px;
@@ -57,7 +65,7 @@
     position: relative;
     display: grid;
     place-items: center;
-    width: min(238px, 60vw);
+    width: clamp(158px, 68cqi, 288px);
     aspect-ratio: 1;
 }
 
@@ -90,7 +98,7 @@
 .pomo-clock {
     margin: 0;
     font-family: var(--font-display);
-    font-size: clamp(2.4rem, 1.5rem + 3.6vw, 3.4rem);
+    font-size: clamp(2rem, 15cqi, 3.4rem);
     line-height: 1.1;
     /* Sem largura tabular os dígitos trocam de largura e o relógio treme. */
     font-variant-numeric: tabular-nums;
@@ -242,17 +250,25 @@
     color: var(--ink);
 }
 
+/* Flex com quebra em vez de duas colunas fixas: o campo desce sozinho para a
+   linha de baixo quando o slider não tem mais os 140px de que precisa. */
 .pomo-custom-controls {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 88px;
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 10px;
+}
+
+.pomo-custom-controls input[type="range"] {
+    flex: 1 1 140px;
+    min-width: 0;
 }
 
 /* O campo numérico está fora de .event-form, então não herda o estilo de campo
    de lá; repetido aqui em vez de generalizar aquele seletor, que mudaria os
    formulários de todas as outras telas. */
 .pomo-minutes-field {
+    flex: 0 0 88px;
     border: 1px solid var(--stroke);
     border-radius: 12px;
     padding: 9px 10px;
@@ -307,20 +323,13 @@
 
 /* ---------------------------------------------------------- responsividade */
 
-@media (max-width: 1024px) {
-    .pomo-layout {
-        grid-template-columns: minmax(0, 1fr);
-    }
-}
-
+/* Sobrou um único media query, e ele não trata de proporção: é uma decisão de
+   layout (o emoji sai da direita do título e vai para baixo dele). Tudo que é
+   tamanho já se resolve sozinho por clamp/cqi/auto-fit acima. */
 @media (max-width: 560px) {
     .pomo-hero {
         flex-direction: column;
         align-items: flex-start;
-    }
-
-    .pomo-custom-controls {
-        grid-template-columns: minmax(0, 1fr);
     }
 
     .pomo-primary {

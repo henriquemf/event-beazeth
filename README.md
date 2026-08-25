@@ -12,6 +12,7 @@ Recursos de interface:
 - Sidebar com menu de navegação
 - Aba de calendário grande para visualizar eventos e cursos
 - Aba **Weekly Planner**: grade semanal de 24 horas com blocos arrastáveis
+- Aba **Pomodoro** 🍎: temporizador com ampulheta girando, que segue contando na barra lateral enquanto você navega
 - **Home** é o quadro de **post-its**: papel livre, arrastável, redimensionável e colorido
 - Cadastro e lista de eventos numa aba própria (`/events`)
 - Aba de aparência com preview visual
@@ -98,6 +99,39 @@ para um projeto que hoje não tem nenhum dos três. Os padrões aproveitados del
 grupo de swatches, molas de entrada e saída) foram reimplementados sobre os
 tokens de tema que já existem no CSS.
 
+## Pomodoro
+
+Temporizador em `/pomodoro`, com widget que acompanha o usuário pelo site.
+
+- Seis tempos prontos (5, 15, 25, 30, 45 e 60 min) ou qualquer valor de 1 a 600
+- Ampulheta girando no eixo vertical, com a areia escoando **no ritmo do tempo
+  configurado** — o nível é a mesma fração que move o anel de progresso
+- Ao começar, o timer vira um widget na barra lateral: tempo, ampulheta, barra de
+  progresso e botões de pausar/parar, presentes em todas as telas
+- Faltando 5 minutos, tela e widget mudam para âmbar e ganham um pulso. Em timers
+  de até 5 min a regra vira "últimos 20%", senão um pomodoro de 3 minutos nasceria
+  em estado de alerta
+- No fim, um sino sintetizado (tríade dó–mi–sol em seno, pico de volume 0.075)
+
+Três decisões que valem registro:
+
+**O giro é em torno do eixo vertical, não uma virada de 180°.** Virar a ampulheta
+de cabeça para baixo é incompatível com mostrar o tempo: depois da virada o bulbo
+cheio passa a ser o de cima, e a areia teria de subir para a contagem continuar.
+Girando em Y, "para baixo" nunca muda de lugar.
+
+**O som é agendado no relógio do WebAudio, não em `setTimeout`.** Aba em segundo
+plano tem `setInterval`/`setTimeout` estrangulados — chegam a disparar uma vez por
+minuto. O relógio do WebAudio roda em thread própria e não sofre isso, então o
+sino toca na hora exata mesmo com a aba escondida. Quem detecta o fim consulta se
+o som já estava garantido, para não tocar duas vezes.
+
+**O estado mora no localStorage, não no banco.** O widget precisa aparecer já
+pintado a cada navegação; o que se guarda é `endsAt` (epoch absoluto), então
+recarregar ou dormir a máquina não desalinha a contagem; e um timer rodando é do
+aparelho — sincronizar pelo servidor faria o celular herdar o pomodoro do
+notebook.
+
 ## Bibliotecas
 
 | Biblioteca | Situação | Decisão |
@@ -141,6 +175,10 @@ As três causas, isoladas por teste A/B:
 - `contain: layout paint style` nas colunas do planner
 - Animações restritas a `transform`/`opacity` (rodam no compositor), respeitando `prefers-reduced-motion`
 - Post-its com geometria em custom properties e `transform`: arrastar não passa por layout, e as gravações são agrupadas por debounce (uma requisição por pausa, não por tecla ou pixel)
+- Ampulheta do pomodoro inteiramente em CSS: o giro é `@keyframes` e o nível da areia é `scaleY(var(--pomo-progress))`, então o JS escreve uma variável 4x por segundo e nada mais — nenhum trabalho por quadro
+- Proporções da tela do pomodoro por `clamp()`, `cqi` (container query) e `auto-fit`: o mostrador se dimensiona pela largura do cartão, não da janela, e sobrou um único media query (para mudança de layout, não de tamanho)
+- Um único `AudioContext` para toda a interface (`core/audio.js`): dois contextos no mesmo documento significariam dois desbloqueios independentes, e o som do fim do timer não sairia em metade das visitas
+- Modal de evento fora do CSS global: cinco das sete telas deixaram de baixá-lo
 
 ## Estrutura
 
@@ -159,6 +197,7 @@ app/
     events.py            /events      (cadastro e lista)
     calendar.py          /calendar    + /api/events
     planner.py           /planner     + /api/planner/blocks
+    pomodoro.py          /pomodoro    (tempos prontos; o timer é do cliente)
     notes.py             /api/notes
     appearance.py        /appearance
     hydration.py         /hydration
@@ -173,27 +212,41 @@ app/
   static/
     css/
       base.css           tokens, reset, layout, sidebar, cartões, forms, botões
-      components.css     modal, caixas da sidebar, toggle de dark mode
+      components.css     o que existe em TODA tela: caixas da sidebar, toggle de
+                         dark mode, ampulheta e widget do pomodoro
+      components/        componente de 2-3 telas, carregado só por elas
+        modal.css        modal de evento (calendário e planner)
       themes.css         10 temas, 10 fontes, dark mode, responsivo
-      pages/             notes, planner, calendar, appearance, hydration
+      pages/             notes, planner, calendar, events, appearance, hydration,
+                         pomodoro
       vendor/            tema do flatpickr e do FullCalendar
     js/
-      core/              shared (namespace + utils), theme, ui-effects, push
+      core/              shared (namespace + utils), theme, audio, ui-effects,
+                         push, pomodoro
       pages/
         notes/           constants, context, store, card, board, interactions, main
         planner/         constants, time, context, grid, blocks, store, drag, editor, main
         calendar/        calendar.js
         events/          datepicker.js
+        pomodoro/        main.js
     sw.js  manifest.webmanifest  icon.svg
   templates/
     layouts/base.html    casca da página
-    partials/            sidebar, menu, flash, bootstrap de tema
-    pages/               home, events, calendar, planner, appearance, hydration
+    partials/            sidebar, menu, flash, bootstrap de tema, widget do
+                         pomodoro, macro da ampulheta
+    pages/               home, events, calendar, planner, pomodoro, appearance,
+                         hydration
 tools/                   geração de chaves VAPID
 Dockerfile  requirements.txt  run.py  wsgi.py  .env.example
 ```
 
 Cada página carrega só o CSS e o JS da própria tela, além da base comum.
+
+O que decide onde uma regra de CSS mora é o **alcance**, não o assunto: em toda
+tela vai para `components.css`; em duas ou três vai para `css/components/`,
+carregado só por elas; em uma só vai para `css/pages/`. Foi por essa regra que o
+modal de evento saiu do pacote global — cinco telas baixavam 70 linhas de CSS de
+um modal que nunca abriria ali.
 
 Os três arquivos da base são faixas contíguas do CSS original e precisam
 ser carregados nesta ordem (`base` → `components` → `themes`): trocar a
@@ -204,6 +257,9 @@ sequência muda a cascata, porque `themes.css` sobrescreve cores das outras duas
 versionadas. Um `import "./x.js"` estático não carrega a versão, então o service
 worker serviria submódulo velho para sempre. Os módulos conversam por
 `window.EN` e a ordem vem das tags `<script defer>`, que executam em ordem.
+
+As regras de organização, otimização e componentização que valem para qualquer
+tela nova estão em [CONSTITUTION.md](CONSTITUTION.md).
 
 ## Como rodar
 

@@ -238,15 +238,26 @@
    barra lateral (pequena). Mora aqui, e não em pages/pomodoro.css, porque a
    sidebar é do layout base — o widget existe em todas as telas.
 
-   Tudo o que anima são `transform` e `opacity`, resolvidos no compositor:
-   nenhuma animação abaixo provoca layout, então as duas ampulhetas girando ao
-   mesmo tempo saem de graça. Também não há JS por quadro — o giro é só CSS.
+   O giro é em torno do eixo VERTICAL (rotateY), não uma virada de 180°. A
+   primeira versão virava a ampulheta de cabeça para baixo, e isso é incompatível
+   com mostrar o tempo: depois de virar, o bulbo cheio passa a ser o de cima e a
+   areia teria de voltar a subir para a contagem continuar. Girando em Y, "para
+   baixo" nunca muda de lugar — a ampulheta gira o tempo todo e a areia continua
+   descrevendo o tempo que falta.
 
-   Geometria do grupo que gira: tampa (6%), bulbo (44%), bulbo (44%), tampa
-   (6%). O gargalo cai exatamente em 50% da altura, que é o centro de rotação. */
+   O nível da areia NÃO é animação: é --pomo-progress, a mesma variável que move
+   o anel e a barra do widget, escrita pelo JS 4x por segundo. Ou seja, a
+   ampulheta esvazia no ritmo do tempo configurado, seja ele de 1 ou de 600
+   minutos.
+
+   Só `transform` e `opacity` mudam, então tudo isto vive no compositor: as duas
+   ampulhetas girando ao mesmo tempo não custam layout nenhum.
+
+   Geometria: tampa (6%), bulbo (44%), bulbo (44%), tampa (6%) — o gargalo cai
+   exatamente na metade da altura. */
 
 .hourglass {
-    --hg-cycle: 8s;
+    --hg-cycle: 9s;
     --hg-glass: color-mix(in srgb, var(--accent) 14%, rgba(255, 255, 255, 0.5));
     --hg-edge: color-mix(in srgb, var(--accent-dark) 65%, transparent);
     --hg-grain: color-mix(in srgb, var(--accent) 88%, #fff);
@@ -255,6 +266,8 @@
     flex: 0 0 auto;
     width: var(--hg-w);
     height: var(--hg-h);
+    /* Sem perspectiva o rotateY vira um simples achatamento horizontal. */
+    perspective: 340px;
 }
 
 /* O tamanho vive só nos modificadores: um padrão implícito na classe base
@@ -264,9 +277,12 @@
     --hg-h: 44px;
 }
 
+/* cqi acompanha a largura do CARTÃO, não a da janela: numa tela larga o cartão
+   fica com metade do espaço, e a ampulheta precisa saber disso. O clamp segura
+   os extremos. */
 .hourglass-lg {
-    --hg-w: 94px;
-    --hg-h: 134px;
+    --hg-w: clamp(58px, 33cqi, 106px);
+    --hg-h: calc(var(--hg-w) * 1.43);
 }
 
 .hg-spin {
@@ -275,7 +291,16 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    animation: hgFlip var(--hg-cycle) linear infinite;
+    animation: hgSpin var(--hg-cycle) linear infinite;
+}
+
+@keyframes hgSpin {
+    from {
+        transform: rotateY(0deg);
+    }
+    to {
+        transform: rotateY(360deg);
+    }
 }
 
 .hg-cap {
@@ -305,37 +330,33 @@
     clip-path: polygon(44% 0, 56% 0, 100% 100%, 0 100%);
 }
 
-/* A areia é uma faixa de altura fixa esticada por scaleY. Animar `height` seria
-   layout a cada quadro; scaleY roda no compositor. */
+/* Os dois montes de areia são ancorados EMBAIXO, que é para onde a gravidade
+   puxa nos dois bulbos: no de cima a areia fica encostada no gargalo e o vazio
+   cresce por cima; no de baixo o monte cresce a partir do fundo.
+
+   Esticar por scaleY em vez de mexer em `height` mantém tudo no compositor. */
 .hg-sand {
     position: absolute;
     left: 0;
     right: 0;
+    bottom: 0;
     height: 100%;
+    transform-origin: bottom;
     background: var(--hg-fill);
-    animation-duration: var(--hg-cycle);
-    animation-timing-function: linear;
-    animation-iteration-count: infinite;
+    /* Costura os degraus de 250ms com que o JS atualiza o progresso. */
+    transition: transform 0.3s linear;
 }
 
-/* Nenhum dos dois bulbos troca de âncora no meio do ciclo: girar 180° já leva o
-   topo do elemento para baixo na tela, que é exatamente onde a areia precisa se
-   acumular depois da virada. */
 .hg-sand-a {
-    top: 0;
-    transform-origin: top;
-    animation-name: hgSandA;
+    transform: scaleY(calc(1 - var(--pomo-progress, 0)));
 }
 
 .hg-sand-b {
-    bottom: 0;
-    transform-origin: bottom;
-    animation-name: hgSandB;
+    transform: scaleY(var(--pomo-progress, 0));
 }
 
-/* Fica fora de .hg-spin: areia cai para baixo mesmo com a ampulheta de cabeça
-   para baixo. Como o gargalo é o centro de rotação, um filete vertical a partir
-   do meio cai dentro do bulbo de baixo nas duas orientações. */
+/* O filete de areia gira junto com o vidro: como o eixo do giro é vertical,
+   ele continua caindo para baixo em qualquer ângulo da rotação. */
 .hg-stream {
     position: absolute;
     left: 50%;
@@ -343,8 +364,14 @@
     width: max(2px, calc(var(--hg-w) * 0.05));
     height: 32%;
     overflow: hidden;
+    opacity: 0;
     transform: translateX(-50%);
-    animation: hgStream var(--hg-cycle) linear infinite;
+    transition: opacity 0.35s ease;
+}
+
+/* Areia só cai quando o tempo está correndo. */
+[data-pomo-status="running"] .hg-stream {
+    opacity: 1;
 }
 
 .hg-grain {
@@ -354,86 +381,12 @@
     animation: hgGrain 0.55s linear infinite;
 }
 
-@keyframes hgFlip {
-    0% {
-        transform: rotate(0deg);
-    }
-    /* A curva só é declarada nos quadros que iniciam uma virada; os outros
-       trechos são de espera e não se movem. */
-    40% {
-        transform: rotate(0deg);
-        animation-timing-function: cubic-bezier(0.72, 0.02, 0.28, 1);
-    }
-    50% {
-        transform: rotate(180deg);
-    }
-    90% {
-        transform: rotate(180deg);
-        animation-timing-function: cubic-bezier(0.72, 0.02, 0.28, 1);
-    }
-    100% {
-        transform: rotate(360deg);
-    }
-}
-
-@keyframes hgSandA {
-    0% {
-        transform: scaleY(1);
-    }
-    40%,
-    50% {
-        transform: scaleY(0);
-    }
-    90%,
-    100% {
-        transform: scaleY(1);
-    }
-}
-
-@keyframes hgSandB {
-    0% {
-        transform: scaleY(0);
-    }
-    40%,
-    50% {
-        transform: scaleY(1);
-    }
-    90%,
-    100% {
-        transform: scaleY(0);
-    }
-}
-
 @keyframes hgGrain {
     from {
         transform: translateY(-100%);
     }
     to {
         transform: translateY(100%);
-    }
-}
-
-/* Some durante as viradas. Começa e termina em 0 para o laço não dar um salto
-   de opacidade ao reiniciar. */
-@keyframes hgStream {
-    0% {
-        opacity: 0;
-    }
-    5%,
-    37% {
-        opacity: 1;
-    }
-    41%,
-    50% {
-        opacity: 0;
-    }
-    55%,
-    87% {
-        opacity: 1;
-    }
-    91%,
-    100% {
-        opacity: 0;
     }
 }
 
@@ -463,14 +416,10 @@
     --hg-fill: linear-gradient(180deg, color-mix(in srgb, var(--pomo-tint) 65%, #fff), var(--pomo-tint));
 }
 
-/* Sem tempo correndo, a ampulheta congela onde está. */
+/* Sem tempo correndo, o vidro para de girar onde está. */
 [data-pomo-status="paused"] .hg-spin,
-[data-pomo-status="paused"] .hg-sand,
-[data-pomo-status="paused"] .hg-stream,
 [data-pomo-status="paused"] .hg-grain,
 [data-pomo-status="done"] .hg-spin,
-[data-pomo-status="done"] .hg-sand,
-[data-pomo-status="done"] .hg-stream,
 [data-pomo-status="done"] .hg-grain {
     animation-play-state: paused;
 }
