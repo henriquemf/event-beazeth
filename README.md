@@ -599,6 +599,49 @@ soubesse a chave entraria como qualquer conta.
 Trocar a `SECRET_KEY` depois desloga todo mundo (as sessões assinadas com a
 chave antiga deixam de valer), mas não perde nenhum dado.
 
+## Casca de celular
+
+O app é o mesmo site, então "parecer um app" é trabalho de CSS, não de
+plataforma. O que foi feito, e por quê:
+
+**Barra de navegação inferior.** A lateral é menu de desktop; no celular ela
+virava um bloco ACIMA do conteúdo, e era preciso rolar sete links e três
+widgets antes de chegar na tela. Agora os destinos ficam fixos ao alcance do
+polegar (`partials/bottom-nav.html`), o menu da lateral some, e o que sobra
+dela — pomodoro, água, notificações, conta — desce para depois do conteúdo.
+
+A lista de destinos vive em `app/navigation.py`, compartilhada pelas duas
+barras: com duas listas, um destino novo entraria numa e faltaria na outra.
+
+**Acabamentos de toque** (`css/app-shell.css`): sem realce cinza ao tocar, sem
+menu de long-press na casca (o conteúdo segue selecionável), sem
+puxar-para-recarregar, e `env(safe-area-inset-*)` para o conteúdo não passar
+sob a barra de gestos — o que exige `viewport-fit=cover` no `<meta viewport>`.
+
+**Pré-renderização** (`speculationrules` no `base.html`): o destino é carregado
+enquanto o dedo ainda está no link, então o toque cai numa página pronta. É o
+que substitui um roteador de SPA aqui — sem reescrever as telas, que são
+renderizadas no servidor. Escopado aos links de menu, nunca `"/*"`.
+
+### `min-width: 0`, ou por que a página inteira ficava larga demais
+
+Vale registrar porque o sintoma não parece ter a ver com a causa.
+
+Todo filho de flex e de grid nasce com `min-width: auto`, que o proíbe de
+encolher abaixo da largura mínima do próprio conteúdo. Basta um elo da corrente
+recusar encolher para o piso subir até a página: o navegador estica o viewport
+de LAYOUT para caber, e tudo passa a ser mais largo que o aparelho — título
+cortado, botão principal fora da tela, e o último item da barra inferior
+invisível. Nada disso aparece como "rolagem horizontal".
+
+Por isso `.layout-shell`, `.main-content`, `.sidebar` e `.main-content > *`
+levam `min-width: 0` no celular. E por isso o calendário é contido no próprio
+cartão (`#events-calendar { min-width: 0; overflow-x: auto }`): o FullCalendar
+tem largura mínima própria e não é nosso para redimensionar.
+
+O teste `test-mobile.mjs` roda as sete telas num Chromium a 360px e falha se o
+viewport esticar — é a rede que impede isso de voltar.
+
 ## Gerando o .apk
 
 O app Android é um **TWA** (Trusted Web Activity): um `.apk` de verdade que

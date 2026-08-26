@@ -1,0 +1,201 @@
+/* Acabamentos de aplicativo.
+
+   Este arquivo existe para uma queixa concreta: dentro do .apk o site "parecia
+   um site". Nada aqui muda o que a aplicação faz — muda o que o dedo sente.
+
+   São três frentes:
+     1. tirar os tiques de página web no toque (retângulo cinza, menu de
+        long-press, seleção de texto na casca, puxar-para-recarregar);
+     2. respeitar as áreas do sistema (entalhe, barra de gestos);
+     3. barra de navegação inferior no celular.
+
+   Fora do base.css de propósito: aquele arquivo já está em 625 linhas, e o
+   limite do projeto é 700. */
+
+/* ------------------------------------------------- 1. toque não é mouse */
+
+/* O realce cinza que o Android pinta em cima de todo elemento tocável é a marca
+   registrada de "isto é uma página". Nenhum app nativo faz isso — o retorno
+   visual vem do :active de cada componente, que já existe no projeto. */
+html {
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Seleção de texto na CASCA, não no conteúdo.
+   Segurar o dedo num botão de menu e ver "Copiar / Selecionar tudo" aparecer é
+   comportamento de documento, não de aplicativo. O conteúdo — post-it, campo de
+   texto, título de evento — continua selecionável, porque ali a pessoa de fato
+   quer copiar. */
+.sidebar,
+.bottom-nav,
+.menu-link,
+.brand,
+.btn,
+button {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+}
+
+/* O conteúdo volta a ser selecionável mesmo dentro da casca. */
+input,
+textarea,
+[contenteditable="true"] {
+    -webkit-user-select: text;
+    user-select: text;
+    -webkit-touch-callout: default;
+}
+
+/* Puxar-para-recarregar: dentro do app, arrastar a lista para baixo e ver a
+   página inteira recarregar é desorientador — a pessoa esperava rolar. */
+html,
+body {
+    overscroll-behavior-y: contain;
+}
+
+/* --------------------------------------------- 2. áreas do sistema */
+
+/* `viewport-fit=cover` (no <meta>) deixa a página ocupar a tela toda, inclusive
+   sob o entalhe e a barra de gestos. Estas variáveis devolvem esse espaço a
+   quem precisa, e valem zero em aparelho sem entalhe. */
+body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+}
+
+/* ----------------------------------------- 3. barra inferior no celular */
+
+/* Escondida por padrão: no desktop quem navega é a lateral. */
+.bottom-nav {
+    display: none;
+}
+
+@media (max-width: 860px) {
+    .bottom-nav {
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: 1fr;
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 40;
+        gap: 2px;
+        padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+        background: var(--surface-solid);
+        border-top: 1px solid var(--stroke);
+        /* A sombra sobe, não desce: o que ela separa está acima da barra. */
+        box-shadow: 0 -10px 30px -20px var(--shadow);
+    }
+
+    .bottom-nav-link {
+        display: grid;
+        justify-items: center;
+        align-content: center;
+        gap: 2px;
+        padding: 6px 2px;
+        border-radius: 12px;
+        text-decoration: none;
+        color: var(--ink-soft);
+        /* `min-height` e não `height`: rótulo que quebre em duas linhas cresce
+           em vez de vazar. 44px é o alvo de toque mínimo confortável. */
+        min-height: 44px;
+        transition: color 0.18s ease, background-color 0.18s ease;
+    }
+
+    .bottom-nav-icon {
+        font-size: 1.15rem;
+        line-height: 1;
+        /* O ícone sobe um fio quando o item está ativo; é a única animação
+           aqui, e roda no compositor. */
+        transition: transform 0.18s cubic-bezier(0.22, 0.61, 0.36, 1);
+    }
+
+    .bottom-nav-label {
+        font-size: 0.62rem;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        /* Rótulo longo encurta em vez de empurrar os vizinhos. */
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .bottom-nav-link.active {
+        color: var(--accent-dark);
+        background: color-mix(in srgb, var(--accent) 16%, transparent);
+    }
+
+    .bottom-nav-link.active .bottom-nav-icon {
+        transform: translateY(-1px) scale(1.08);
+    }
+
+    .bottom-nav-link:active {
+        background: color-mix(in srgb, var(--accent) 26%, transparent);
+    }
+
+    /* A barra é fixa e cobriria o fim da página. O respiro extra é a altura da
+       barra mais a área de gestos do aparelho. */
+    body {
+        padding-bottom: calc(64px + env(safe-area-inset-bottom));
+    }
+
+    /* No celular a lateral deixa de ser menu: os destinos estão na barra de
+       baixo. O que sobra ali (pomodoro, água, notificações, conta) é painel, e
+       painel vai DEPOIS do conteúdo — não antes dele. */
+    .layout-shell {
+        display: flex;
+        flex-direction: column;
+        /* O `align-items: start` do desktop existe para as duas colunas da
+           grade não esticarem à altura da mais alta. Em coluna, porém, o eixo
+           transversal é o horizontal, e aquele `start` faz cada painel encolher
+           até a largura do próprio texto — a lateral ficava com dois terços da
+           tela e o layout torto. */
+        align-items: stretch;
+    }
+
+    /* `min-width: 0` é obrigatório aqui, não enfeite.
+       Todo filho de flex e de grid nasce com `min-width: auto`, que o proíbe de
+       encolher abaixo da largura mínima do próprio conteúdo. Sem isto, o
+       conteúdo mais largo de uma tela (no quadro de post-its, a linha de
+       ferramentas) estica a coluna, o navegador aumenta o viewport de layout
+       para caber, e a página inteira passa a ser mais larga que o celular: o
+       título sai cortado e o botão principal fica fora da tela. */
+    .main-content,
+    .sidebar {
+        min-width: 0;
+    }
+
+    /* E a mesma liberação um nível abaixo, para a seção de cada tela.
+       O piso se propaga: enquanto QUALQUER elo da corrente puder recusar
+       encolher, o estouro sobe até a página. */
+    .main-content > *,
+    .layout-shell {
+        min-width: 0;
+    }
+
+    .main-content {
+        order: 1;
+    }
+
+    .sidebar {
+        order: 2;
+    }
+
+    .sidebar .menu {
+        display: none;
+    }
+}
+
+/* Quem pediu menos movimento não ganha o pulinho do ícone. */
+@media (prefers-reduced-motion: reduce) {
+    .bottom-nav-link,
+    .bottom-nav-icon {
+        transition: none;
+    }
+
+    .bottom-nav-link.active .bottom-nav-icon {
+        transform: none;
+    }
+}

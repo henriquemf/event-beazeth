@@ -1,18 +1,11 @@
-{# Menu lateral. `active_page` vem de cada blueprint. #}
-{% set links = [
-    ('home',       url_for('home.index'),       '🗒️', 'Post-its'),
-    ('calendar',   url_for('calendar.index'),   '📅', 'Calendário'),
-    ('planner',    url_for('planner.index'),    '🗓️', 'Weekly Planner'),
-    ('pomodoro',   url_for('pomodoro.index'),   '🍎', 'Pomodoro'),
-    ('todo',       url_for('todo.index'),       '✅', 'To-do'),
-    ('appearance', url_for('appearance.index'), '🎨', 'Aparência'),
-    ('hydration',  url_for('hydration.index'),  '💧', 'Beber água'),
-] %}
+{# Menu da barra lateral. A lista vem de `app/navigation.py`, compartilhada com
+   a barra inferior do celular. `active_page` vem de cada blueprint. #}
 <nav class="menu">
-    {% for key, href, icon, label in links %}
-    <a class="menu-link {% if active_page == key %}active{% endif %}" href="{{ href }}">
-        <span>{{ icon }}</span>
-        <span>{{ label }}</span>
+    {% for link in nav_links %}
+    <a class="menu-link {% if active_page == link.key %}active{% endif %}" href="{{ url_for(link.endpoint) }}"
+       {% if active_page == link.key %}aria-current="page"{% endif %}>
+        <span aria-hidden="true">{{ link.icon }}</span>
+        <span>{{ link.label }}</span>
     </a>
     {% endfor %}
 </nav>

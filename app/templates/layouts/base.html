@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>{% block title %}Event Notifier{% endblock %}</title>
     <meta name="description" content="Organize eventos, cursos, rotina semanal e lembretes com notificações web." />
     <meta name="theme-color" content="#ff78b2" />
@@ -26,6 +26,7 @@
     <link rel="stylesheet" href="{{ static_url('css/widgets/pomodoro.css') }}" />
     <link rel="stylesheet" href="{{ static_url('css/widgets/water.css') }}" />
     <link rel="stylesheet" href="{{ static_url('css/themes.css') }}" />
+    <link rel="stylesheet" href="{{ static_url('css/app-shell.css') }}" />
     {% include 'partials/theme-bootstrap.html' %}
     {% block head_extra %}{% endblock %}
 </head>
@@ -44,6 +45,7 @@
             {% block content %}{% endblock %}
         </main>
     </div>
+    {% include 'partials/bottom-nav.html' %}
     {% endblock %}
     <footer class="site-love-footer">EU TE AMO MOMO</footer>
     <script defer src="{{ static_url('js/core/shared.js') }}"></script>
@@ -54,5 +56,25 @@
     <script defer src="{{ static_url('js/core/pomodoro.js') }}"></script>
     <script defer src="{{ static_url('js/core/hydration.js') }}"></script>
     {% block scripts %}{% endblock %}
+    {# Pre-renderiza o destino enquanto o dedo ainda esta no link, para o toque
+       cair numa pagina ja pronta em vez de comecar a carrega-la.
+
+       Escopo pelos links de menu, e nao por "/*": alcanca exatamente os sete
+       destinos e nunca /entrar, /criar-conta ou uma rota de formulario. Todas
+       as rotas destrutivas do app sao POST, e pre-renderizacao so vale para
+       navegacao GET -- mas restringir e mais barato do que confiar nisso.
+
+       `moderate` dispara ao passar o dedo/mouse por ~200ms. Navegador sem
+       suporte ignora o bloco inteiro; nada aqui e requisito. #}
+    <script type="speculationrules">
+    {
+        "prerender": [
+            {
+                "where": { "selector_matches": ".menu-link, .bottom-nav-link" },
+                "eagerness": "moderate"
+            }
+        ]
+    }
+    </script>
 </body>
 </html>

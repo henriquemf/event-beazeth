@@ -13,6 +13,7 @@ from app.blueprints import register_blueprints
 from app.config import Config, check_required
 from app.db import init_db, init_pool
 from app.extensions import scheduler
+from app.navigation import register_navigation
 from app.services.scheduler_service import run_scan
 
 
@@ -56,6 +57,7 @@ def create_app():
     register_asset_helpers(app)
     register_response_headers(app)
     register_auth_guard(app)
+    register_navigation(app)
     register_blueprints(app)
 
     start_reminder_scheduler(app)

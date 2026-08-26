@@ -504,6 +504,23 @@
 }
 
 @media (max-width: 760px) {
+    /* Contém o calendário dentro do próprio cartão.
+       O FullCalendar tem largura mínima própria (sete colunas mais a barra de
+       botões) e não é nosso para redimensionar. Sem `min-width: 0` essa mínima
+       vira piso da coluna, do shell e da página: o navegador estica o viewport
+       de layout para caber e a tela INTEIRA fica mais larga que o aparelho —
+       inclusive a barra inferior, que passa a ter o último item fora da tela.
+       Com o `overflow-x`, o que não couber rola aqui dentro e para aqui. */
+    .calendar-layout,
+    .calendar-panel {
+        min-width: 0;
+    }
+
+    #events-calendar {
+        min-width: 0;
+        overflow-x: auto;
+    }
+
     .calendar-panel {
         min-height: 560px;
     }
@@ -542,4 +559,20 @@
         flex-direction: column;
         align-items: flex-start;
     }
+
+    /* A barra do FullCalendar é um flex de três blocos que não quebra linha:
+       setas, "Hoje", e Mês/Semana/Dia. Num aparelho de 360px eles somam uns
+       366px e vazam — e o vazamento não fica contido no calendário: o
+       navegador estica o viewport de layout para caber, e a PÁGINA inteira
+       passa a ser mais larga que a tela.
+
+       Não dá para atacar pela largura dos botões, que é do componente. Deixar
+       quebrar em duas linhas resolve e é o que se espera num celular. */
+    /* A barra de botões do calendário NÃO é reorganizada daqui.
+       Tentei empilhar os blocos com flex e não funciona: o FullCalendar v6
+       injeta o próprio CSS em tempo de execução, e o `display` da barra vem de
+       lá — o `flex-direction` até era aplicado, mas sobre uma grade ele é
+       ignorado em silêncio, o que faz a regra parecer certa e não mudar nada.
+       Quem cuida do tamanho dos botões é `css/vendor/fullcalendar.css`, junto
+       das outras adaptações do componente. */
 }

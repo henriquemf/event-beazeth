@@ -1,0 +1,19 @@
+{# Barra de navegação inferior — só aparece no celular (ver css/app-shell.css).
+
+   No desktop a lateral é o menu; no celular ela virava um bloco ACIMA do
+   conteúdo, e era preciso rolar sete links e três widgets antes de chegar na
+   tela. Aqui os destinos ficam fixos ao alcance do polegar, que é onde app de
+   celular põe navegação.
+
+   `aria-current="page"` e não só uma classe: leitor de tela precisa saber onde
+   está, e a classe só pinta. #}
+<nav class="bottom-nav" aria-label="Navegação principal">
+    {% for link in bottom_links %}
+    <a class="bottom-nav-link {% if active_page == link.key %}active{% endif %}"
+       href="{{ url_for(link.endpoint) }}"
+       {% if active_page == link.key %}aria-current="page"{% endif %}>
+        <span class="bottom-nav-icon" aria-hidden="true">{{ link.icon }}</span>
+        <span class="bottom-nav-label">{{ link.short }}</span>
+    </a>
+    {% endfor %}
+</nav>
