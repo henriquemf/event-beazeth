@@ -27,6 +27,12 @@ services:
         sync: false
       - key: VAPID_SUBJECT
         sync: false
+      # Só para o .apk (TWA). Sem estes dois o site funciona igual; é o app
+      # que abre com barra de endereço. Ver "Gerando o .apk" no README.
+      - key: ANDROID_PACKAGE_NAME
+        sync: false
+      - key: ANDROID_CERT_FINGERPRINT
+        sync: false
       - key: DEBUG
         value: "False"
       # Notificação nativa é do Windows local; o container é Linux e usa Web Push.

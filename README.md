@@ -599,6 +599,93 @@ soubesse a chave entraria como qualquer conta.
 Trocar a `SECRET_KEY` depois desloga todo mundo (as sessões assinadas com a
 chave antiga deixam de valer), mas não perde nenhum dado.
 
+## Gerando o .apk
+
+O app Android é um **TWA** (Trusted Web Activity): um `.apk` de verdade que
+abre este mesmo site em tela cheia. Não é uma segunda versão do app — é a
+mesma, então conta, senha e dados são os do Neon, e o que é criado no celular
+aparece no navegador do computador na hora. Não existe banco no dispositivo e
+não existe sincronização para escrever: só há um banco.
+
+O que isso **não** faz: deixar mais rápido. É a mesma rede e o mesmo banco. Vale
+migrar a região antes de empacotar, senão o resultado é um app lento em vez de
+um site lento.
+
+### 1. Ícones
+
+Já versionados em `app/static/`. Se o desenho mudar:
+
+```bash
+pip install Pillow
+python tools/generate_icons.py
+```
+
+Gera 192, 512 e a versão *maskable* (com a margem que o Android exige para
+recortar em círculo sem cortar o desenho).
+
+### 2. Empacotar
+
+Precisa de Node 18+ (o Bubblewrap baixa o JDK e o Android SDK sozinho):
+
+```bash
+npm install -g @bubblewrap/cli
+bubblewrap init --manifest https://SEU-APP.onrender.com/static/manifest.webmanifest
+bubblewrap build
+```
+
+No `init` ele pergunta o **package name** (algo como `com.seunome.notifier` —
+anote, vai no passo 3) e cria um **keystore**. Guarde o keystore e a senha: é a
+chave que assina o app, e sem ela não dá para publicar atualização que instale
+por cima da anterior — a pessoa teria que desinstalar e perder o login.
+
+Saem `app-release-signed.apk` (para enviar direto) e um `.aab` (só serve para a
+Play Store; ignore).
+
+### 3. Tirar a barra de endereço
+
+Sem este passo o app abre, funciona e sincroniza — mas com uma barra de
+endereço no topo, com cara de navegador. O Android precisa confirmar que o site
+e o pacote são da mesma pessoa.
+
+Pegue a impressão digital da chave:
+
+```bash
+bubblewrap fingerprint list
+```
+
+E preencha no Render, em **Environment**:
+
+| Variável | Valor |
+| --- | --- |
+| `ANDROID_PACKAGE_NAME` | o package name do passo 2 |
+| `ANDROID_CERT_FINGERPRINT` | o SHA-256, no formato `AB:CD:EF:...` |
+
+Faça deploy e confira em `https://SEU-APP.onrender.com/.well-known/assetlinks.json`
+que o JSON aparece. **404 ali significa que as variáveis não chegaram** — e o
+app vai abrir com a barra.
+
+Depois reinstale o `.apk` no celular: a verificação acontece na instalação, não
+a cada abertura.
+
+Aceita mais de uma impressão digital separadas por vírgula, que é como se troca
+a chave de assinatura sem quebrar quem já instalou.
+
+### 4. Instalar sem loja
+
+Mande o `.apk` por qualquer meio. No Android é preciso autorizar "instalar apps
+desconhecidos" para o aplicativo que vai abrir o arquivo (o WhatsApp, o
+Arquivos, o Drive). O aviso do sistema é normal para app fora da Play Store.
+
+Notificações: o Web Push já funciona dentro do TWA. No Android 13+ o app tem que
+pedir a permissão de notificação — passe `--enableNotifications` no `init` para
+o Bubblewrap declará-la.
+
+### Sem .apk nenhum
+
+Se em algum momento o `.apk` não valer o trabalho: no Chrome do Android, menu →
+**Instalar app**. O ícone vai para a tela inicial e abre em tela cheia igual,
+usando o mesmo manifest. Não dá para enviar por WhatsApp, mas custa zero.
+
 ## Docker
 
 Build:

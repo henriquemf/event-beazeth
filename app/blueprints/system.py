@@ -77,3 +77,44 @@ def service_worker():
 @bp.get("/favicon.ico")
 def favicon():
     return current_app.send_static_file("icon.svg")
+
+
+@bp.get("/.well-known/assetlinks.json")
+def assetlinks():
+    """Prova ao Android que este site e o .apk são da mesma pessoa.
+
+    Sem este arquivo o app ainda abre e funciona, mas **com barra de endereço**
+    no topo — o Android não conseguiu confirmar o vínculo e trata a janela como
+    navegador. Com ele, abre em tela cheia, como aplicativo.
+
+    Serve de rota e não de arquivo estático porque a impressão digital sai da
+    chave que assina o .apk: ela vive no ambiente, junto com os outros segredos,
+    e não no repositório. Enquanto não estiver configurada, responde 404 —
+    honesto, e visível no navegador na hora de diagnosticar.
+
+    O caminho é fixado pela especificação do Digital Asset Links; não adianta
+    servir noutro lugar.
+    """
+    package = current_app.config["ANDROID_PACKAGE_NAME"]
+    fingerprint = current_app.config["ANDROID_CERT_FINGERPRINT"]
+
+    if not package or not fingerprint:
+        return jsonify({
+            "ok": False,
+            "message": "ANDROID_PACKAGE_NAME e ANDROID_CERT_FINGERPRINT não configurados.",
+        }), 404
+
+    return jsonify([
+        {
+            "relation": ["delegate_permission/common.handle_all_urls"],
+            "target": {
+                "namespace": "android_app",
+                "package_name": package,
+                # Aceita mais de uma, separadas por vírgula: é o que permite
+                # trocar de chave de assinatura sem quebrar quem já instalou.
+                "sha256_cert_fingerprints": [
+                    valor.strip() for valor in fingerprint.split(",") if valor.strip()
+                ],
+            },
+        }
+    ])

@@ -37,6 +37,18 @@ class Config:
     VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY", "")
     VAPID_SUBJECT = os.getenv("VAPID_SUBJECT", "mailto:admin@example.com")
 
+    # Identidade do .apk, para o `/.well-known/assetlinks.json`.
+    #
+    # Vem do ambiente e não do código porque a impressão digital é derivada da
+    # chave que assina o app: quem tiver a chave publica atualizações em nome
+    # dele. Fora daqui, só o `.apk` e o keystore sabem esses valores.
+    #
+    # Vazios, o app funciona igual — só o .apk é que abre com barra de endereço,
+    # porque o Android não consegue confirmar que o site e o pacote são da mesma
+    # pessoa. Ver "Gerando o .apk" no README.
+    ANDROID_PACKAGE_NAME = os.getenv("ANDROID_PACKAGE_NAME", "").strip()
+    ANDROID_CERT_FINGERPRINT = os.getenv("ANDROID_CERT_FINGERPRINT", "").strip()
+
 
 def check_required(config) -> None:
     """Recusa subir mal configurado.

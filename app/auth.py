@@ -20,6 +20,8 @@ USERLESS_ENDPOINTS = frozenset({
     "system.healthz",
     "system.service_worker",
     "system.favicon",
+    # Quem busca este é o Android, na instalação do .apk, sem cookie nenhum.
+    "system.assetlinks",
 })
 
 # O que responde sem sessão. Tudo o mais exige login.
