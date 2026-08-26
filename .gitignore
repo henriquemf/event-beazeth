@@ -15,33 +15,30 @@ notifier.db-wal
 *.sqlite3
 .DS_Store
 notifier.db
-# --- Projeto Android gerado pelo Bubblewrap (TWA) ---
-# Tudo aqui é gerado por `bubblewrap init` / `bubblewrap build` a partir do
-# manifest que já está versionado. Nada disto é fonte.
+# --- Android / .apk ---
+# O projeto Android NAO mora aqui: fica em ../event-beazeth-android/, porque e
+# um consumidor deste site, nao parte dele. As regras abaixo sao rede de
+# seguranca para o caso de alguem rodar `bubblewrap init` na pasta errada de
+# novo -- foi o que aconteceu da primeira vez, e o `bubblewrap` escreve ate
+# dentro de app/, que aqui e o pacote Python.
 #
-# O keystore é o único item de verdade insubstituível, e é justamente o que
-# NÃO pode ser versionado: quem o tiver assina atualizações em nome do app.
-# Guarde-o fora do repositório, num gerenciador de senhas ou backup pessoal.
-android.keystore
-*.jks
+# O keystore e o item insubstituivel: quem o tiver assina atualizacoes em nome
+# do app e as instala por cima, no celular de quem ja tem o app.
 *.keystore
-
-# Saídas do build (o .apk chega a dezenas de MB).
+*.jks
 *.apk
 *.aab
 *.idsig
 
-# Andaimes do Gradle. `app/` é do Flask; o módulo Android roubou o nome.
+# Andaimes do Gradle, se reaparecerem por engano.
 .gradle/
-gradle/
 gradlew
 gradlew.bat
-build/
-app/build/
-app/src/
-app/build.gradle
 build.gradle
 settings.gradle
 gradle.properties
 manifest-checksum.txt
-store_icon.png
+twa-manifest.json
+app/src/
+app/build/
+build/

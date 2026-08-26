@@ -625,10 +625,16 @@ recortar em círculo sem cortar o desenho).
 
 ### 2. Empacotar
 
-Precisa de Node 18+ (o Bubblewrap baixa o JDK e o Android SDK sozinho):
+Precisa de Node 18+ (o Bubblewrap baixa o JDK e o Android SDK sozinho).
+
+**Rode fora deste repositorio.** O `bubblewrap init` cria um projeto Android
+inteiro na pasta atual, e o modulo Android dele tambem se chama `app` -- dentro
+daqui, ele se mistura com o pacote Python. O projeto vive em
+`../event-beazeth-android/`, com README proprio.
 
 ```bash
 npm install -g @bubblewrap/cli
+mkdir ../event-beazeth-android && cd ../event-beazeth-android
 bubblewrap init --manifest https://SEU-APP.onrender.com/static/manifest.webmanifest
 bubblewrap build
 ```
@@ -647,11 +653,15 @@ Sem este passo o app abre, funciona e sincroniza — mas com uma barra de
 endereço no topo, com cara de navegador. O Android precisa confirmar que o site
 e o pacote são da mesma pessoa.
 
-Pegue a impressão digital da chave:
+Pegue a impressao digital da chave -- lendo do `.apk` ja assinado, o que
+dispensa a senha do keystore:
 
 ```bash
-bubblewrap fingerprint list
+"$HOME/.bubblewrap/jdk/jdk-17.0.11+9/bin/keytool" -printcert -jarfile app-release-signed.apk
 ```
+
+O `bubblewrap fingerprint list` NAO serve aqui: ele lista as impressoes ja
+registradas no `twa-manifest.json`, que comeca vazio.
 
 E preencha no Render, em **Environment**:
 

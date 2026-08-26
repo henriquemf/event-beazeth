@@ -7,16 +7,17 @@ __pycache__/
 .git/
 .vscode/
 
-# Projeto Android: 30 MB de build que não têm o que fazer na imagem do servidor.
-.gradle/
-gradle/
-gradlew
-gradlew.bat
-build/
-app/build/
-app/src/
+# Android: nada disto tem o que fazer na imagem do servidor. O projeto vive
+# fora do repositorio, mas o Docker copia o diretorio inteiro -- se reaparecer
+# aqui, nao entra na imagem.
+*.keystore
+*.jks
 *.apk
 *.aab
 *.idsig
-*.keystore
+.gradle/
+build/
+app/src/
+app/build/
 twa-manifest.json
+tools/
