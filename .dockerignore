@@ -6,3 +6,17 @@ __pycache__/
 .env
 .git/
 .vscode/
+
+# Projeto Android: 30 MB de build que não têm o que fazer na imagem do servidor.
+.gradle/
+gradle/
+gradlew
+gradlew.bat
+build/
+app/build/
+app/src/
+*.apk
+*.aab
+*.idsig
+*.keystore
+twa-manifest.json
