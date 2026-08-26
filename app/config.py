@@ -39,9 +39,14 @@ class Config:
 
     # Identidade do .apk, para o `/.well-known/assetlinks.json`.
     #
-    # Vem do ambiente e não do código porque a impressão digital é derivada da
-    # chave que assina o app: quem tiver a chave publica atualizações em nome
-    # dele. Fora daqui, só o `.apk` e o keystore sabem esses valores.
+    # Nada aqui é segredo — os dois valores são servidos publicamente naquele
+    # arquivo, e é assim que tem de ser: eles existem para o Android confirmar,
+    # de fora, que o site e o pacote são da mesma pessoa. O segredo é o
+    # keystore, que não aparece em lugar nenhum deste repositório.
+    #
+    # Ficam no ambiente por serem configuração de implantação, como a
+    # DATABASE_URL: não existem quando o código é escrito (nascem ao gerar a
+    # chave de assinatura) e mudam se a chave for trocada.
     #
     # Vazios, o app funciona igual — só o .apk é que abre com barra de endereço,
     # porque o Android não consegue confirmar que o site e o pacote são da mesma
