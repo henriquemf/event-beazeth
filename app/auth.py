@@ -8,6 +8,7 @@ de vazar dado, e aqui não existe decorador para esquecer.
 
 from flask import g, jsonify, redirect, request, session, url_for
 
+from app.api_auth import bearer_token_from_request, user_id_from_token
 from app.db import get_user
 
 
@@ -28,6 +29,10 @@ USERLESS_ENDPOINTS = frozenset({
 PUBLIC_ENDPOINTS = USERLESS_ENDPOINTS | frozenset({
     "auth.login",
     "auth.signup",
+    # As mesmas duas portas, na versão JSON que o app nativo usa. Precisam ser
+    # públicas pelo mesmo motivo: são elas que entregam a credencial.
+    "api.login",
+    "api.signup",
 })
 
 
@@ -61,12 +66,22 @@ def register_auth_guard(app) -> None:
         if request.endpoint in USERLESS_ENDPOINTS:
             return None
 
-        user_id = session.get(SESSION_KEY)
-        if user_id is not None:
-            g.user = get_user(user_id)
-            if g.user is None:
-                # Conta apagada com a sessão ainda válida no navegador.
-                session.clear()
+        # Duas credenciais para a mesma conta: o cookie de sessão, que o
+        # navegador manda sozinho, e o token do cabeçalho, que é como o app
+        # Android se identifica. O token vem primeiro porque um cliente que se
+        # deu ao trabalho de mandá-lo está dizendo qual conta quer — mesmo que
+        # por acaso exista um cookie de outra pendurado na mesma requisição.
+        token_user_id = user_id_from_token(bearer_token_from_request())
+
+        if token_user_id is not None:
+            g.user = get_user(token_user_id)
+        else:
+            user_id = session.get(SESSION_KEY)
+            if user_id is not None:
+                g.user = get_user(user_id)
+                if g.user is None:
+                    # Conta apagada com a sessão ainda válida no navegador.
+                    session.clear()
 
         if g.user is not None or request.endpoint in PUBLIC_ENDPOINTS:
             return None

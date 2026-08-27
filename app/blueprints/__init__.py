@@ -4,6 +4,7 @@
 """
 
 from app.blueprints import (
+    api,
     appearance,
     auth,
     calendar,
@@ -24,6 +25,8 @@ from app.blueprints import (
 # do menu lateral para facilitar a leitura.
 BLUEPRINTS = (
     system.bp,
+    # Entrada da API do app nativo; sem tela, então fora da ordem do menu.
+    api.bp,
     auth.bp,
     home.bp,
     events.bp,

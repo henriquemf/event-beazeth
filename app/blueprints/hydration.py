@@ -175,6 +175,37 @@ def index():
     )
 
 
+@bp.get("/api/hydration")
+def state():
+    """O dia da água em JSON: consumo, meta, tamanho do copo e lembrete.
+
+    Existe para o app nativo, que não recebe a tela pronta. Os mesmos números
+    que a página e o widget da barra lateral usam — `next_reminder_seconds`
+    devolve SEGUNDOS e não um horário de propósito: o servidor roda em UTC e o
+    aparelho está noutro fuso, então mandar um instante convidaria a erro.
+    """
+    user_id = current_user()["id"]
+    settings = get_hydration_settings(user_id)
+
+    return jsonify({
+        "ok": True,
+        "glasses": get_hydration_today(user_id),
+        "goal": settings["daily_goal"],
+        "glassMl": settings["glass_ml"],
+        "enabled": bool(settings["enabled"]),
+        "intervalMinutes": settings["interval_minutes"],
+        "startTime": settings["start_time"],
+        "endTime": settings["end_time"],
+        "nextIn": next_reminder_seconds(settings),
+        "limits": {
+            "minGoal": MIN_GOAL,
+            "maxGoal": MAX_GOAL,
+            "minMl": MIN_GLASS_ML,
+            "maxMl": MAX_GLASS_ML,
+        },
+    })
+
+
 @bp.post("/api/hydration/drink")
 def drink():
     """Registra (ou desfaz) um copo e devolve o dia recalculado.

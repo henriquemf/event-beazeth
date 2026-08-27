@@ -116,6 +116,30 @@ def index():
     )
 
 
+@bp.get("/api/todo")
+def list_items():
+    """A semana em JSON, para quem não recebe HTML pronto (o app nativo).
+
+    Mesma semana que `/todo` renderiza, mesmo formato de dia e item — quem
+    muda a regra da semana muda para os dois de uma vez, porque os dois passam
+    por `week_bounds` e `build_week`.
+    """
+    reference = parse_day(request.args.get("semana")) or date.today()
+    monday, sunday = week_bounds(reference)
+
+    items = list_todo_items(current_user()["id"], monday, sunday)
+    days = build_week(reference, items)
+
+    return jsonify({
+        "ok": True,
+        "header": build_header(reference),
+        "days": days,
+        "done": sum(day["done"] for day in days),
+        "total": sum(day["total"] for day in days),
+        "maxContent": MAX_CONTENT,
+    })
+
+
 @bp.post("/api/todo")
 def create_item():
     payload = request.get_json(silent=True) or {}

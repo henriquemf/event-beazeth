@@ -4,7 +4,7 @@ Sem tela própria de propósito — as tags só fazem sentido ao lado dos evento
 então a interface é um popup do calendário e estas rotas só recebem POST.
 """
 
-from flask import Blueprint, flash, redirect, request, url_for
+from flask import Blueprint, flash, jsonify, redirect, request, url_for
 
 from app.auth import current_user
 
@@ -12,14 +12,37 @@ from app.db import (
     FALLBACK_TAG,
     MAX_LABEL_LENGTH,
     REMINDER_RULES,
+    count_events_by_tag,
     delete_tag,
     insert_tag,
+    list_tags,
     normalize_color,
     slugify,
 )
 
 
 bp = Blueprint("tags", __name__)
+
+
+@bp.get("/api/tags")
+def list_tags_api():
+    """As tags da conta em JSON, com quantos eventos usam cada uma.
+
+    O site recebe isto embutido no HTML do calendario (`calendar.index`); o app
+    nativo precisa pedir. As regras de lembrete vao junto porque a tela de
+    criar tag precisa oferecer as opcoes, e elas sao do servidor -- deixar o
+    cliente com a propria copia significaria uma regra nova aparecer no site e
+    faltar no aplicativo.
+    """
+    user_id = current_user()["id"]
+    return jsonify({
+        "ok": True,
+        "tags": list_tags(user_id),
+        "usage": count_events_by_tag(user_id),
+        "reminderRules": REMINDER_RULES,
+        "fallbackTag": FALLBACK_TAG,
+        "maxLabelLength": MAX_LABEL_LENGTH,
+    })
 
 
 @bp.post("/tags")
