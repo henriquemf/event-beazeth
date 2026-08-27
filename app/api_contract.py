@@ -20,6 +20,8 @@ ENDPOINTS = (
     ("/api/auth/login", "POST", False, ("ok", "token", "expiresIn", "user")),
     ("/api/auth/signup", "POST", False, ("ok", "token", "expiresIn", "user")),
     ("/api/me", "GET", True, ("ok", "user")),
+    # A espinha dorsal do app offline: o que mudou e o que sumiu.
+    ("/api/sync", "GET", True, ("ok", "now", "changed", "deleted")),
 
     # --- post-its ----------------------------------------------------------
     ("/api/notes", "GET", True, ("ok", "notes")),

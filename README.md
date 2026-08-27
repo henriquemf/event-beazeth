@@ -642,6 +642,57 @@ tem largura mínima própria e não é nosso para redimensionar.
 O teste `test-mobile.mjs` roda as sete telas num Chromium a 360px e falha se o
 viewport esticar — é a rede que impede isso de voltar.
 
+## API para o app nativo
+
+O site recebe a tela pronta do servidor, então nunca precisou de rotas de
+leitura. O app Android precisa: ele pede os dados e monta a tela sozinho.
+
+| Rota | Para quê |
+| --- | --- |
+| `POST /api/auth/login`, `/api/auth/signup` | devolvem um token `Bearer` |
+| `GET /api/me` | o app confere na abertura se o token ainda vale |
+| `GET /api/sync?since=` | o que mudou e o que sumiu desde a última vez |
+
+O token é **assinado, não guardado**: leva o id da conta e o instante de
+emissão, assinados com a mesma `SECRET_KEY` do cookie. Sem tabela, sem consulta
+ao banco para validar. O preço é não poder revogar um token específico antes de
+vencer — o botão de emergência é trocar a `SECRET_KEY`, que derruba todos.
+
+O guarda de sessão aceita as duas credenciais. O token vem primeiro: um cliente
+que se deu ao trabalho de mandá-lo está dizendo qual conta quer, mesmo que haja
+um cookie de outra pendurado na mesma requisição.
+
+### Carimbo e lápide, feitos pelo banco
+
+Para o app perguntar "o que mudou desde ontem?", cada linha precisa saber
+quando mudou — e o app precisa saber o que foi **apagado**, senão ressuscita no
+celular o que você removeu no site.
+
+Duas decisões que valem registro:
+
+**Lápide em tabela separada (`deletions`), não `deleted_at` em cada tabela.**
+Com `deleted_at`, toda consulta do app precisaria lembrar de filtrar
+`WHERE deleted_at IS NULL`, e a que esquecesse mostraria lixo apagado em
+silêncio. Assim, o `DELETE` continua sendo `DELETE` e nenhuma consulta muda.
+
+**Quem carimba é um gatilho do Postgres, não o Python.** São 21 pontos de
+escrita em sete módulos; bastaria esquecer um para aquela tabela parar de
+sincronizar. E o modo de falhar não avisa: a linha grava, o site mostra tudo
+certo, e semanas depois o celular está desatualizado. No gatilho é uma regra
+só, e vale até para um `UPDATE` feito à mão no painel do Neon.
+
+O gatilho da lápide ignora a exclusão quando a conta já sumiu: o `CASCADE`
+remove o dono antes de propagar, então cada linha filha tentaria gravar uma
+lápide apontando para um usuário inexistente — e a exclusão inteira falharia
+por chave estrangeira.
+
+### O contrato
+
+`app/api_contract.py` lista rotas, métodos, exigência de credencial e campos
+obrigatórios. Um teste falha quando o servidor diverge dele — inclusive quando
+uma rota `/api/` nova **não** entra no contrato, que é o jeito de uma
+funcionalidade existir no site e o app nunca ficar sabendo.
+
 ## Gerando o .apk
 
 O app Android é um **TWA** (Trusted Web Activity): um `.apk` de verdade que

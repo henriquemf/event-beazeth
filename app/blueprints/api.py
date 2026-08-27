@@ -13,6 +13,7 @@ from flask import Blueprint, jsonify, request
 
 from app.api_auth import TOKEN_MAX_AGE_SECONDS, issue_token
 from app.auth import current_user
+from app.db.sync import coletar_mudancas
 from app.db import (
     MIN_PASSWORD_LENGTH,
     create_user,
@@ -83,6 +84,23 @@ def signup():
         "expiresIn": TOKEN_MAX_AGE_SECONDS,
         "user": {"id": user_id, "email": email, "displayName": nome},
     }), 201
+
+
+@bp.get("/api/sync")
+def sync():
+    """O que mudou desde a última vez — a espinha dorsal do app offline.
+
+    Sem `since`, devolve tudo: é a primeira sincronização, num aparelho novo.
+    Com `since`, devolve só a diferença, que na maioria das aberturas é vazia e
+    custa uma requisição curta.
+
+    O `now` da resposta é o que o aplicativo guarda para a próxima chamada. Ele
+    tem de vir daqui e não do relógio do celular: o aparelho pode estar
+    adiantado, e um `since` no futuro faria a sincronização pular alterações
+    para sempre, sem erro nenhum aparecer.
+    """
+    return jsonify({"ok": True, **coletar_mudancas(current_user()["id"],
+                                                   request.args.get("since"))})
 
 
 @bp.get("/api/me")
