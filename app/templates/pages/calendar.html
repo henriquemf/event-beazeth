@@ -63,7 +63,7 @@
                             {% endif %}
                         </span>
 
-                        <form method="post" action="{{ url_for('events.remove_event', event_id=event['id']) }}" onsubmit="return confirm('Deseja excluir este evento?');">
+                        <form method="post" action="{{ url_for('events.remove_event', event_id=event['id']) }}" data-confirmar="Deseja excluir este evento?">
                             <button class="btn-danger event-remove" type="submit" aria-label="Excluir {{ event['title'] }}">Excluir</button>
                         </form>
                     </li>
@@ -146,7 +146,7 @@
         </form>
 
         <form id="event-delete-form" method="post" class="event-delete-form" hidden
-              onsubmit="return confirm('Deseja excluir este evento?');">
+              data-confirmar="Deseja excluir este evento?">
             <button class="btn-danger" type="submit">Remover evento</button>
         </form>
     </div>
@@ -173,7 +173,7 @@
                         <small class="tag-manage-locked">padrão</small>
                     {% else %}
                         <form method="post" action="{{ url_for('tags.remove_tag', slug=tag['slug']) }}"
-                              onsubmit="return confirm('Remover a tag “{{ tag['label'] }}”? Os eventos dela voltam para a tag padrão.');">
+                              data-confirmar="Remover a tag “{{ tag['label'] }}”? Os eventos dela voltam para a tag padrão.">
                             <button class="btn-danger tag-manage-remove" type="submit" aria-label="Remover tag {{ tag['label'] }}">Remover</button>
                         </form>
                     {% endif %}

@@ -13,6 +13,7 @@ from flask import Blueprint, jsonify, request
 
 from app.api_auth import TOKEN_MAX_AGE_SECONDS, issue_token
 from app.auth import current_user
+from app.ratelimit import espera_para_tentar, registrar_acerto, registrar_falha
 from app.db.sync import coletar_mudancas
 from app.db import (
     MIN_PASSWORD_LENGTH,
@@ -26,6 +27,11 @@ from app.db import (
 bp = Blueprint("api", __name__)
 
 CREDENCIAIS_INVALIDAS = "E-mail ou senha incorretos."
+
+# Não diz quanto falta no corpo: quem está tentando adivinhar aprenderia a
+# cadência exata do freio. O `Retry-After` diz, porque esse cabeçalho existe
+# para um cliente legítimo saber quando voltar.
+MUITAS_TENTATIVAS = "Tentativas demais. Espere alguns minutos e tente de novo."
 
 
 def _conta(user) -> dict:
@@ -44,13 +50,24 @@ def _conta(user) -> dict:
 @bp.post("/api/auth/login")
 def login():
     payload = request.get_json(silent=True) or {}
-    user = get_user_by_email(payload.get("email", ""))
+    email = payload.get("email", "")
+
+    espera = espera_para_tentar(request, email)
+    if espera:
+        return jsonify({"ok": False, "message": MUITAS_TENTATIVAS}), 429, {
+            "Retry-After": str(espera),
+        }
+
+    user = get_user_by_email(email)
 
     if not password_matches(user, payload.get("password", "")):
+        registrar_falha(request, email)
         # Mesma mensagem para e-mail inexistente e senha errada: dizer qual dos
-        # dois falhou entrega quais e-mails têm conta aqui.
+        # dois falhou entrega quais e-mails têm conta aqui. O tempo de resposta
+        # também é o mesmo -- ver `password_matches`.
         return jsonify({"ok": False, "message": CREDENCIAIS_INVALIDAS}), 401
 
+    registrar_acerto(request, email)
     return jsonify({
         "ok": True,
         "token": issue_token(user["id"]),
@@ -66,6 +83,15 @@ def signup():
     email = normalize_email(payload.get("email", ""))
     senha = payload.get("password", "")
 
+    # Criar conta também entra no freio: sem isso, o caminho caro (um scrypt
+    # NOVO por chamada) fica aberto para quem quiser ocupar a CPU do plano
+    # gratuito, e nada impede encher o banco de contas.
+    espera = espera_para_tentar(request, email)
+    if espera:
+        return jsonify({"ok": False, "message": MUITAS_TENTATIVAS}), 429, {
+            "Retry-After": str(espera),
+        }
+
     if not nome or not email:
         return jsonify({"ok": False, "message": "Informe nome e e-mail."}), 400
     if len(senha) < MIN_PASSWORD_LENGTH:
@@ -76,6 +102,7 @@ def signup():
 
     user_id = create_user(email, senha, nome)
     if user_id is None:
+        registrar_falha(request, email)
         return jsonify({"ok": False, "message": "Já existe uma conta com este e-mail."}), 409
 
     return jsonify({

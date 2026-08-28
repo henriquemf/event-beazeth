@@ -38,4 +38,41 @@ window.EN = window.EN || {};
             return data;
         },
     };
+
+    /* Confirmação de formulário destrutivo, por atributo.
+
+       Era `onsubmit="return confirm(...)"` no HTML, em três lugares. Saiu
+       porque a Content-Security-Policy recusa manipulador inline — e recusa
+       CALADA: o formulário continuava enviando, só que sem perguntar nada.
+       Um "excluir" que deixou de confirmar é pior do que um que não funciona.
+
+       De quebra, a mensagem agora é dado (`data-confirmar`) e a regra é uma
+       só, em vez de três cópias da mesma linha. */
+    document.addEventListener("submit", function (event) {
+        const pergunta = event.target && event.target.dataset
+            ? event.target.dataset.confirmar
+            : null;
+        if (pergunta && !window.confirm(pergunta)) {
+            event.preventDefault();
+        }
+    });
+
+    /* CSS que carrega sem bloquear a pintura.
+
+       Mesmo caso: era `onload="this.media='all'"` no `<link>`. A folha entra
+       como `media="print"` (o navegador baixa sem bloquear) e vira `all`
+       quando termina. Sob CSP, o handler inline não rodava e a folha ficava
+       para sempre em "print" — na tela de Aparência, isso deixava as 18
+       fontes de preview sem carregar.
+
+       O `if` cobre a folha que já chegou antes deste script rodar. */
+    document.querySelectorAll("link[data-ativar-ao-carregar]").forEach(function (folha) {
+        if (folha.sheet) {
+            folha.media = "all";
+        } else {
+            folha.addEventListener("load", function () {
+                folha.media = "all";
+            });
+        }
+    });
 })(window.EN);

@@ -1,7 +1,7 @@
 {# Precisa ficar inline e síncrono: roda antes da primeira pintura para evitar
    flash de tema errado. Virar arquivo externo adicionaria uma requisição
    bloqueante no caminho crítico, que é exatamente o que se quer evitar aqui. #}
-<script>
+<script nonce="{{ csp_nonce }}">
     (function () {
         var FONT_FAMILIES = {
             bubble: "Nunito:wght@400;600;700&family=Fredoka:wght@400;600;700",

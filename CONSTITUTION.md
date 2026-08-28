@@ -219,6 +219,72 @@ consulta escrita daqui em diante.
 
 ---
 
+## 8c. A superfície de autenticação
+
+A seção 8b trata de quem pode ler o quê depois de entrar. Esta trata de entrar.
+
+- **Errar senha custa cota.** `/entrar` e `/api/auth/login` são a mesma porta
+  para a mesma senha, e um contador só, no módulo (`app/ratelimit.py`), atende
+  as duas — proteger uma delas não protege nada. Conta-se **falha**, nunca
+  requisição: quem acerta não gasta cota, então ninguém é barrado por usar o
+  app. Duas chaves, e as duas precisam passar: por IP pega a máquina que
+  ataca muitas contas, por e-mail pega a botnet que distribui os palpites
+  contra uma conta só.
+
+- **Caminho de erro custa o mesmo que o caminho normal.** A resposta já era
+  igual para "e-mail não existe" e "senha errada"; o relógio não era.
+  `bool(user_row) and check_password_hash(...)` faz curto-circuito, então
+  e-mail sem conta voltava na hora e e-mail com conta pagava o scrypt inteiro.
+  Quem cronometrasse separava as duas listas sem acertar uma senha. Hoje o
+  caminho "não existe" compara contra um hash descartável e gasta o mesmo.
+  **Regra geral: onde a resposta é deliberadamente ambígua, o tempo também tem
+  de ser.**
+
+- **Estado do freio é do processo, e isso está escrito.** A alternativa era uma
+  escrita no banco a cada senha errada (num banco que está noutro datacenter)
+  ou um Redis, que seria a primeira dependência de infraestrutura nova do
+  projeto. Com um worker de gunicorn, memória de processo é o servidor inteiro;
+  com dois, o teto efetivo dobra. Continua servindo para o que o freio existe,
+  que é tirar a força bruta da mesa — não para contar tentativas com precisão
+  contábil.
+
+- **O `X-Forwarded-For` só vale o PRIMEIRO valor.** Atrás do proxy do Render, o
+  cabeçalho é uma lista e os últimos valores são os proxies. Confiar no último
+  entregaria sempre o mesmo IP, e o freio inteiro passaria a contar uma chave
+  só para o mundo todo.
+
+## 8d. Cabeçalhos de resposta
+
+Ficam todos em `app/assets.py`, num `after_request` só.
+
+- **A CSP usa nonce, não `'unsafe-inline'`.** São dois scripts inline no
+  projeto (o bootstrap de tema e as speculation rules) e os dois recebem o
+  nonce do pedido, gerado em `before_request`. Com `'unsafe-inline'` a política
+  não valeria quase nada: qualquer `<script>` injetado rodaria igual.
+- **`style-src` precisa de `'unsafe-inline'` e não tem jeito**: a geometria dos
+  post-its e a cor das tags chegam em `style="--n-x: ..."`, atributo de estilo é
+  inline por definição, e o FullCalendar injeta `<style>` sozinho. Perde-se
+  pouco — CSS injetado não executa código.
+- **Toda origem externa na política tem de estar escrita com o motivo.** Uma
+  linha a mais ali é uma porta a mais. Hoje são três: `fonts.googleapis.com`,
+  `fonts.gstatic.com` e `cdn.jsdelivr.net` (flatpickr e FullCalendar).
+- **`font-src` aceita `data:`** porque o CSS do flatpickr traz o próprio
+  iconefonte em base64.
+- **CSP se confere no NAVEGADOR, não no teste de servidor.** O Flask manda o
+  cabeçalho, o teste vê o cabeçalho, e quem recusa o script é o Chrome — que
+  nenhum dos dois estava rodando. `verify_csp.mjs` abre as sete telas e falha
+  se houver uma violação, ou se o que a política tinha de deixar passar não
+  passou (tema pintado, fontes carregadas, calendário desenhado).
+
+**Manipulador inline em HTML está proibido, e a CSP é quem cobra.** Existiam
+quatro: um `onload` na tela de Aparência e três `onsubmit="return confirm(...)"`
+no calendário. Sob a política, os quatro pararam de rodar — **em silêncio**: a
+folha das 18 fontes ficava para sempre em `media="print"`, e o "excluir" do
+calendário deixava de perguntar antes de apagar. Um botão destrutivo que parou
+de confirmar é pior do que um que parou de funcionar. Viraram `data-confirmar`
+e `data-ativar-ao-carregar`, com um ouvinte delegado em `core/shared.js` — uma
+regra em vez de três cópias.
+
 ## 9. Acessibilidade
 
 - Elemento decorativo leva `aria-hidden="true"`.
@@ -266,6 +332,9 @@ As ferramentas ficam no scratchpad da sessão e rodam contra o app de verdade:
 | `verify_css_parse.mjs` | todo CSS passa por um parser de verdade — navegador descarta regra malformada calado |
 | `test_*.py` | rotas, API, isolamento entre contas e limites, contra o banco local |
 | `test-*.mjs` | comportamento em jsdom, contra o HTML renderizado pelo Flask |
+| `verify_csp.mjs` | a CSP num Chrome de verdade, tela por tela: nada bloqueado, e o que tinha de passar passou |
+| `verify_confirmar.mjs` | o que saiu de `onsubmit`/`onload` continua funcionando — inclusive o caminho de ACEITAR, porque um ouvinte que sempre cancela "protege" impedindo a pessoa de excluir |
+| `auditar_kotlin.py` | o mesmo que o `audit.py`, para o app Android: sete categorias de código morto |
 
 Três lições que valem mais que as ferramentas:
 

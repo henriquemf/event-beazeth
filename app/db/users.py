@@ -112,8 +112,29 @@ def create_user(email: str, password: str, display_name: str):
     return user_id
 
 
+# Hash descartável, calculado uma vez na subida. Existe só para dar o que
+# comparar quando o e-mail não tem conta -- ver `password_matches`.
+_HASH_FALSO = generate_password_hash("nao-e-a-senha-de-ninguem")
+
+
 def password_matches(user_row, password: str) -> bool:
-    return bool(user_row) and check_password_hash(user_row["password_hash"], password or "")
+    """Confere a senha gastando o mesmo tempo com e-mail que existe e com o que não existe.
+
+    A resposta da API já é a mesma nos dois casos, de propósito: dizer qual dos
+    dois falhou entrega quais e-mails têm conta aqui. Mas o RELÓGIO entregava do
+    mesmo jeito. A versão curta era `bool(user_row) and check_password_hash(...)`
+    -- e o `and` faz curto-circuito: e-mail sem conta voltava na hora, e-mail com
+    conta pagava os ~200 ms do scrypt. Quem cronometrasse as respostas separava
+    as duas listas sem precisar acertar uma senha sequer.
+
+    Comparar contra um hash descartável no caminho de "não existe" custa
+    exatamente o mesmo scrypt e fecha o vazamento.
+    """
+    if not user_row:
+        check_password_hash(_HASH_FALSO, password or "")
+        return False
+
+    return check_password_hash(user_row["password_hash"], password or "")
 
 
 def list_user_ids():

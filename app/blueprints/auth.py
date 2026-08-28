@@ -12,6 +12,7 @@ from flask import (
 )
 
 from app.auth import log_in, log_out
+from app.ratelimit import espera_para_tentar, registrar_acerto, registrar_falha
 from app.db import (
     MIN_PASSWORD_LENGTH,
     create_user,
@@ -26,6 +27,8 @@ bp = Blueprint("auth", __name__)
 # Mensagem única para e-mail inexistente e senha errada: dizer qual dos dois
 # falhou entrega a quem tenta adivinhar a lista de quem tem conta aqui.
 BAD_CREDENTIALS = "E-mail ou senha incorretos."
+
+MUITAS_TENTATIVAS = "Tentativas demais. Espere alguns minutos e tente de novo."
 
 
 def safe_next(target: str) -> str:
@@ -50,11 +53,22 @@ def login():
         email = request.form.get("email", "")
         password = request.form.get("password", "")
 
+        # O mesmo freio da API. São duas portas para a mesma senha, e proteger
+        # só uma não protege nada: quem estivesse barrado aqui tentaria em
+        # `/api/auth/login`, e vice-versa. Por isso o contador é um só, no
+        # módulo, e não um por blueprint.
+        espera = espera_para_tentar(request, email)
+        if espera:
+            flash(MUITAS_TENTATIVAS, "error")
+            return redirect(url_for("auth.login", proxima=proxima or None))
+
         user = get_user_by_email(email)
         if not password_matches(user, password):
+            registrar_falha(request, email)
             flash(BAD_CREDENTIALS, "error")
             return redirect(url_for("auth.login", proxima=proxima or None))
 
+        registrar_acerto(request, email)
         log_in(user["id"])
         return redirect(safe_next(request.form.get("proxima", "")))
 
@@ -68,6 +82,10 @@ def signup():
         email = normalize_email(request.form.get("email", ""))
         password = request.form.get("password", "")
         confirmation = request.form.get("password_confirm", "")
+
+        if espera_para_tentar(request, email):
+            flash(MUITAS_TENTATIVAS, "error")
+            return redirect(url_for("auth.signup"))
 
         if not name:
             flash("Como podemos te chamar?", "error")
@@ -87,6 +105,7 @@ def signup():
 
         user_id = create_user(email, password, name)
         if user_id is None:
+            registrar_falha(request, email)
             flash("Já existe uma conta com esse e-mail. Tente entrar.", "error")
             return redirect(url_for("auth.login"))
 
