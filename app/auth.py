@@ -66,6 +66,15 @@ def register_auth_guard(app) -> None:
         if request.endpoint in USERLESS_ENDPOINTS:
             return None
 
+        # Caminho que nao casou com rota nenhuma chega aqui com `endpoint`
+        # None. Sem esta saida ele cai no 401 la embaixo e recebe "sessao
+        # expirada" -- uma mentira cara: manda a pessoa refazer o login por um
+        # erro que login nenhum resolve, e foi exatamente assim que uma rota
+        # ausente em producao passou por token vencido. Deixa o 404 ser 404.
+        # De quebra, um caminho inexistente para de custar uma ida ao banco.
+        if request.endpoint is None:
+            return None
+
         # Duas credenciais para a mesma conta: o cookie de sessão, que o
         # navegador manda sozinho, e o token do cabeçalho, que é como o app
         # Android se identifica. O token vem primeiro porque um cliente que se
