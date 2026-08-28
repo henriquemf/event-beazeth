@@ -319,6 +319,62 @@ poderia ter) uma regra própria escrita à mão.
 
 ---
 
+## 10b. O app Android
+
+O aparelho é **um só: o Galaxy Tab A9+**, deitado — 1920x1200 a 240 dpi, ou seja
+uma janela de **800x500 dp**. Não é "um app de celular que também roda em
+tablet"; é essa tela, e é por isso que a barra lateral do site cabe inteira. O
+emulador de trabalho é esse aparelho.
+
+### A fila de escrita é o coração, e é onde os bugs moram
+
+Escrita nenhuma espera a rede: entra no Room, a tela redesenha no mesmo quadro,
+e a subida acontece depois. O preço é a **linha provisória** — id negativo até o
+servidor emitir o de verdade — e quase todo defeito sério do app até hoje saiu
+dessa troca de identidade. As regras que sobraram dela:
+
+- **Drenar a fila lendo o banco, um item por vez.** Percorrer uma lista é
+  percorrer uma fotografia: quando a criação volta com o id verdadeiro e a fila
+  é reescrita, os itens que já estavam na mão continuam apontando para o id
+  negativo. Custou o texto de todo post-it novo, que subia para `/api/notes/-1`,
+  tomava 404 e era descartado em silêncio.
+- **Upsert ressuscita linha apagada.** Gravar por id não dá erro quando a linha
+  não existe mais — ela volta. Toda escrita pergunta antes se a linha ainda
+  está lá. Escrever em algo que foi apagado não é escrita nenhuma.
+- **"Obra única" do WorkManager é única POR NOME.** `sync-agora` e
+  `sync-periodico` rodam juntas sem nenhum impedimento, leem a mesma fila e
+  mandam o mesmo POST. Sincronização é uma de cada vez, com tranca de processo.
+- **Trocar id provisório por definitivo é escopo por entidade.** Cada tabela
+  conta os próprios negativos, então existe um post-it -1 E uma tarefa -1 ao
+  mesmo tempo.
+
+### Compose: o que morre sem avisar
+
+- **`Modifier.pointerInput(chave)` congela a lambda.** Ela é relembrada só
+  quando a chave muda, então valor de recomposição capturado ali dentro fica
+  velho para sempre. Estado (`var x by remember`) continua certo, porque o que
+  se captura é o acessor; valor derivado, não. Calcule no instante do gesto, não
+  antes.
+- **Trocar o id de um item mata o composable.** O `LaunchedEffect` que gravaria
+  ao fechar é CANCELADO, não executado — o que estava só na memória dele some. O
+  que a pessoa digitou desce para o banco enquanto ela digita, não só no fim.
+- **Campo de texto renascido volta com o cursor no zero.** Onde a identidade do
+  item pode trocar durante a edição, o campo guarda `TextFieldValue`, com o
+  intervalo junto do texto — senão a continuação entra de trás para a frente.
+
+### Sem conta é um modo, não um erro
+
+Dá para usar o app inteiro sem login e sem rede. Duas regras seguram isso de pé:
+
+- **A barreira da fila fica em um lugar só** — o único ponto por onde toda
+  escrita passa. Espalhada por cada método, uma seria esquecida.
+- **Entrar numa conta depois não pode perder nada.** Modo local sem caminho de
+  volta é armadilha: quem escreveu por um mês veria o próprio conteúdo ficar
+  para trás. A adoção enfileira uma criação por linha provisória e reusa a
+  máquina que já existia.
+
+---
+
 ## 11. Antes de dar por pronto
 
 As ferramentas ficam no scratchpad da sessão e rodam contra o app de verdade:
