@@ -48,6 +48,9 @@ ENDPOINTS = (
 
     # --- eventos e tags ----------------------------------------------------
     ("/api/events", "GET", True, ()),
+    ("/api/events", "POST", True, ("ok", "event")),
+    ("/api/events/<int:event_id>", "PATCH", True, ("ok", "event")),
+    ("/api/events/<int:event_id>", "DELETE", True, ("ok",)),
     ("/api/tags", "GET", True, ("ok", "tags", "usage", "reminderRules",
                                 "fallbackTag", "maxLabelLength")),
 

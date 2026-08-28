@@ -42,12 +42,19 @@ def insert_event(
     description: str,
     event_datetime: str,
     tag_type: str,
-) -> None:
+) -> int:
+    """Cria o evento e devolve o id.
+
+    O id importa para o app Android: ele cria a linha localmente com um id
+    provisorio negativo e precisa saber qual id o servidor emitiu para trocar a
+    linha e reescrever a fila de pendencias. A tela do site ignora o retorno.
+    """
     with get_connection() as conn:
-        conn.execute(
+        linha = conn.execute(
             """
             INSERT INTO events (user_id, title, description, event_datetime, tag_type, created_at)
             VALUES (%s, %s, %s, %s, %s, %s)
+            RETURNING id
             """,
             (
                 user_id,
@@ -57,7 +64,21 @@ def insert_event(
                 _existing_tag(conn, user_id, tag_type),
                 utc_now_iso(),
             ),
-        )
+        ).fetchone()
+    return linha["id"]
+
+
+def get_event(user_id: int, event_id: int):
+    """Um evento da conta, com a tag ja resolvida — ou `None`.
+
+    O `user_id` no WHERE nao e redundante com o `id`: sem ele, trocar o numero
+    na URL leria evento de outra conta.
+    """
+    with get_connection() as conn:
+        return conn.execute(
+            _EVENT_SELECT + " WHERE e.id = %s AND e.user_id = %s",
+            (event_id, user_id),
+        ).fetchone()
 
 
 def delete_event(user_id: int, event_id: int) -> bool:

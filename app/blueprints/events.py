@@ -10,13 +10,14 @@ from datetime import datetime
 from flask import (
     Blueprint,
     flash,
+    jsonify,
     redirect,
     request,
     url_for,
 )
 
 from app.auth import current_user
-from app.db import FALLBACK_TAG, delete_event, insert_event, update_event
+from app.db import FALLBACK_TAG, delete_event, get_event, insert_event, update_event
 
 
 bp = Blueprint("events", __name__)
@@ -136,3 +137,83 @@ def edit_event(event_id: int):
     else:
         flash("Evento não encontrado.", "error")
     return redirect(url_for("calendar.index"))
+
+
+# ---------------------------------------------------------------------- API
+#
+# As tres rotas abaixo existem para o app Android. Nao dava para ele reusar
+# `POST /events`: aquela rota le `request.form`, responde 302 e comunica erro
+# por `flash` -- tres coisas que um cliente JSON nao tem como consumir.
+#
+# O corpo aceita os dois estilos de nome (`eventDatetime` e `event_datetime`)
+# porque o proprio servidor e inconsistente: `/api/sync` entrega os eventos em
+# snake_case, vindos direto do SELECT, enquanto as rotas escritas a mao usam
+# camelCase. Aceitar os dois no PEDIDO custa uma linha e evita que o app tenha
+# de lembrar de qual lado esta.
+
+
+def _campos_do_json(payload):
+    """Os mesmos quatro campos de `read_event_form`, vindos de JSON."""
+    def pega(*nomes):
+        for nome in nomes:
+            if nome in payload:
+                return str(payload.get(nome) or "").strip()
+        return ""
+
+    titulo = pega("title")
+    descricao = pega("description")
+    quando = pega("eventDatetime", "event_datetime")
+    tag = pega("tagType", "tag_type").lower() or FALLBACK_TAG
+
+    if not titulo:
+        return None, "Informe o título do evento."
+    if not quando:
+        return None, "Informe a data do evento (horário é opcional)."
+
+    _, erro = parse_event_datetime(quando)
+    if erro:
+        return None, erro
+
+    return (titulo, descricao, quando, tag), None
+
+
+def _evento_em_json(user_id: int, event_id: int):
+    """O evento no MESMO formato que `/api/sync` entrega.
+
+    Igual de proposito: o app desserializa os dois com a mesma classe, e um
+    formato proprio aqui seria uma segunda forma de ler a mesma coisa.
+    """
+    linha = get_event(user_id, event_id)
+    if linha is None:
+        return None
+    return {k: v for k, v in linha.items() if k != "user_id"}
+
+
+@bp.post("/api/events")
+def api_create_event():
+    fields, error = _campos_do_json(request.get_json(silent=True) or {})
+    if error:
+        return jsonify({"ok": False, "message": error}), 400
+
+    user_id = current_user()["id"]
+    event_id = insert_event(user_id, *fields)
+    return jsonify({"ok": True, "event": _evento_em_json(user_id, event_id)}), 201
+
+
+@bp.patch("/api/events/<int:event_id>")
+def api_update_event(event_id: int):
+    fields, error = _campos_do_json(request.get_json(silent=True) or {})
+    if error:
+        return jsonify({"ok": False, "message": error}), 400
+
+    user_id = current_user()["id"]
+    if not update_event(user_id, event_id, *fields):
+        return jsonify({"ok": False, "message": "Evento não encontrado."}), 404
+    return jsonify({"ok": True, "event": _evento_em_json(user_id, event_id)})
+
+
+@bp.delete("/api/events/<int:event_id>")
+def api_delete_event(event_id: int):
+    if not delete_event(current_user()["id"], event_id):
+        return jsonify({"ok": False, "message": "Evento não encontrado."}), 404
+    return jsonify({"ok": True})
