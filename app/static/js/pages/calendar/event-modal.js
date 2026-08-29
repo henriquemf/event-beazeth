@@ -76,7 +76,10 @@ window.EN = window.EN || {};
                 dateFormat: withTime ? "Y-m-d\\TH:i" : "Y-m-d",
                 altInput: true,
                 altFormat: withTime ? "d/m/Y H:i" : "d/m/Y",
-                minuteIncrement: 5,
+                // 1, e nao 5: as setinhas andam de minuto em minuto e
+                // qualquer horario digitado fica como esta. Com 5, "12:22"
+                // voltava para 12:20 sozinho.
+                minuteIncrement: 1,
                 allowInput: false,
             });
             /* `clear()` explícito no caso vazio: `form.reset()` devolve o

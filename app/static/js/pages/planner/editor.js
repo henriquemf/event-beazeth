@@ -99,8 +99,13 @@ EN.planner = EN.planner || {};
                 title: title,
                 notes: els.notesInput.value.trim(),
                 dayOfWeek: Number(els.daySelect.value),
-                startMinute: time.snap(start),
-                endMinute: Math.max(time.snap(end), time.snap(start) + planner.MIN_DURATION),
+                // Sem `snap`: o que foi DIGITADO vale como foi digitado.
+                // A grade de 15 minutos existe para o ARRASTE, onde o dedo (ou
+                // o mouse) nao tem precisao de minuto -- ver `drag.js`. Aplicada
+                // tambem aqui, ela transformava 12:20 em 12:15 depois de alguem
+                // ter escrito 12:20, que e o oposto de ajudar.
+                startMinute: start,
+                endMinute: end,
                 color: colorInput ? colorInput.value : "rose",
                 isRoutine: els.routineInput.checked,
             };

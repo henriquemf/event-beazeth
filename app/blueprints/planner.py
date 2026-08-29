@@ -14,7 +14,6 @@ from app.db import (
 
 bp = Blueprint("planner", __name__)
 
-SNAP_MINUTES = 15
 DAY_MINUTES = 1440
 MAX_TITLE = 120
 MAX_NOTES = 500
@@ -49,9 +48,15 @@ def parse_block_payload(payload):
     if not is_routine and not 0 <= day_of_week <= 6:
         return None, "Dia da semana inválido."
 
-    # Grade de 15 minutos, mínimo de um slot, limite no fim do dia.
-    start_minute = max(0, min(start_minute, DAY_MINUTES - SNAP_MINUTES))
-    end_minute = max(start_minute + SNAP_MINUTES, min(end_minute, DAY_MINUTES))
+    # Qualquer minuto serve. O que se exige é só o que não pode deixar de
+    # valer: o bloco cabe no dia e termina depois de começar.
+    #
+    # Antes o piso aqui era um slot de 15 minutos, o mesmo do arraste. Isso
+    # tornava impossível um bloco das 12:20 às 12:25 -- ele voltava do servidor
+    # terminando 12:35, sem aviso nenhum. A grade é uma conveniência de gesto,
+    # e não uma regra do dado.
+    start_minute = max(0, min(start_minute, DAY_MINUTES - 1))
+    end_minute = max(start_minute + 1, min(end_minute, DAY_MINUTES))
 
     return (
         {
