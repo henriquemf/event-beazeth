@@ -525,3 +525,70 @@
         flex-direction: column;
     }
 }
+
+/* ---------------------------------------------------------------- os dias
+ *
+ * Sete botões que ligam e desligam, e não uma lista de escolha única: um
+ * bloco nasce em quantos dias forem marcados. O <fieldset> é o agrupador
+ * certo para caixas de seleção relacionadas -- é ele que faz o leitor de tela
+ * anunciar "Dias" antes de cada uma.
+ */
+.planner-days {
+    border: 0;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.planner-days legend {
+    padding: 0;
+    margin-bottom: 6px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--ink-soft);
+}
+
+.planner-day-chip {
+    cursor: pointer;
+    flex: 1 1 auto;
+}
+
+/* Fora da tela, mas ainda focável pelo teclado: `display: none` tiraria a
+   caixa da ordem de tabulação e o campo viraria exclusivo de mouse. */
+.planner-day-chip input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.planner-day-chip span {
+    display: block;
+    padding: 8px 4px;
+    border-radius: 12px;
+    border: 1px solid var(--stroke);
+    background: var(--input-bg);
+    color: var(--ink);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-align: center;
+    transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+}
+
+.planner-day-chip:hover span {
+    border-color: var(--accent);
+}
+
+.planner-day-chip input:checked + span {
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    border-color: var(--accent);
+    color: var(--accent-dark);
+}
+
+/* O anel de foco tem de aparecer no chip, já que a caixa em si é invisível. */
+.planner-day-chip input:focus-visible + span {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}

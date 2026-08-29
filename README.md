@@ -63,7 +63,9 @@ Grade semanal no estilo Morgen, em `/planner`:
 - Arraste numa coluna para criar um bloco; arraste o bloco para mover entre dias e horários
 - Arraste as bordas superior/inferior para redimensionar (grade de 15 minutos)
 - Clique num bloco para editar título, notas, horário, dia e cor; `Delete` remove o selecionado
-- Marque **Rotina** para o bloco se repetir em todos os dias da semana
+- **Os dias são caixas que ligam e desligam**: marque segunda, quarta e sexta e sai um bloco em cada uma. Antes só havia os extremos — um dia, ou "Rotina", que são os sete
+- Marque **Rotina** para o bloco se repetir em todos os dias da semana, numa linha só
+- **Horário livre**: qualquer minuto serve, digitado ou pelas setinhas. A grade de 15 minutos vale só para o arraste, onde o ponteiro não tem precisão de minuto
 - Zoom de altura da hora, linha de horário atual e destaque do dia de hoje
 - Preferências (fim de semana, zoom, faixa de horas) ficam no `localStorage`
 

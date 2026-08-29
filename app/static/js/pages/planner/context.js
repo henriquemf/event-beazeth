@@ -45,7 +45,7 @@ EN.planner = EN.planner || {};
             notesInput: document.getElementById("planner-notes"),
             startInput: document.getElementById("planner-start"),
             endInput: document.getElementById("planner-end"),
-            daySelect: document.getElementById("planner-day"),
+            dayInputs: document.querySelectorAll('input[name="planner-day"]'),
             dayField: document.getElementById("planner-day-field"),
             routineInput: document.getElementById("planner-routine"),
             deleteBtn: document.getElementById("planner-delete"),

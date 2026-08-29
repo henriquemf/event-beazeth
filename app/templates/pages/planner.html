@@ -74,18 +74,20 @@
                 </label>
             </div>
 
-            <label id="planner-day-field">
-                Dia
-                <select id="planner-day">
-                    <option value="0">Segunda</option>
-                    <option value="1">Terça</option>
-                    <option value="2">Quarta</option>
-                    <option value="3">Quinta</option>
-                    <option value="4">Sexta</option>
-                    <option value="5">Sábado</option>
-                    <option value="6">Domingo</option>
-                </select>
-            </label>
+            <fieldset id="planner-day-field" class="planner-days">
+                <legend>Dias</legend>
+                {#- Caixas de seleção, e não um <select>: um bloco pode nascer em
+                    vários dias de uma vez (aula de segunda, quarta e sexta), e
+                    com um <select> isso pedia criar o mesmo bloco três vezes.
+                    Cada dia marcado vira um bloco. -#}
+                <label class="planner-day-chip"><input type="checkbox" name="planner-day" value="0" /><span>SEG</span></label>
+                <label class="planner-day-chip"><input type="checkbox" name="planner-day" value="1" /><span>TER</span></label>
+                <label class="planner-day-chip"><input type="checkbox" name="planner-day" value="2" /><span>QUA</span></label>
+                <label class="planner-day-chip"><input type="checkbox" name="planner-day" value="3" /><span>QUI</span></label>
+                <label class="planner-day-chip"><input type="checkbox" name="planner-day" value="4" /><span>SEX</span></label>
+                <label class="planner-day-chip"><input type="checkbox" name="planner-day" value="5" /><span>SÁB</span></label>
+                <label class="planner-day-chip"><input type="checkbox" name="planner-day" value="6" /><span>DOM</span></label>
+            </fieldset>
 
             <label class="dark-toggle fancy" for="planner-routine">
                 <input id="planner-routine" type="checkbox" />

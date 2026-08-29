@@ -45,7 +45,13 @@ EN.planner = EN.planner || {};
                 ? "23:59"
                 : time.formatMinute(source.endMinute);
             els.routineInput.checked = Boolean(source.isRoutine);
-            els.daySelect.value = String(source.isRoutine ? 0 : source.dayOfWeek);
+
+            // Um bloco existente mora num dia só; o formulário abre com aquele
+            // marcado, e marcar outros ao lado é o que cria as cópias.
+            const diaInicial = source.isRoutine ? 0 : source.dayOfWeek;
+            els.dayInputs.forEach(function (input) {
+                input.checked = Number(input.value) === diaInicial;
+            });
 
             const swatch = els.form.querySelector(
                 'input[name="planner-color"][value="' + (source.color || "rose") + '"]'
@@ -94,11 +100,22 @@ EN.planner = EN.planner || {};
             }
 
             const colorInput = els.form.querySelector('input[name="planner-color"]:checked');
-            const payload = {
-                id: ctx.editingId,
+            const isRoutine = els.routineInput.checked;
+
+            const dias = [];
+            els.dayInputs.forEach(function (input) {
+                if (input.checked) {
+                    dias.push(Number(input.value));
+                }
+            });
+            if (!isRoutine && dias.length === 0) {
+                setError(ctx, "Escolha pelo menos um dia.");
+                return;
+            }
+
+            const base = {
                 title: title,
                 notes: els.notesInput.value.trim(),
-                dayOfWeek: Number(els.daySelect.value),
                 // Sem `snap`: o que foi DIGITADO vale como foi digitado.
                 // A grade de 15 minutos existe para o ARRASTE, onde o dedo (ou
                 // o mouse) nao tem precisao de minuto -- ver `drag.js`. Aplicada
@@ -107,11 +124,25 @@ EN.planner = EN.planner || {};
                 startMinute: start,
                 endMinute: end,
                 color: colorInput ? colorInput.value : "rose",
-                isRoutine: els.routineInput.checked,
+                isRoutine: isRoutine,
             };
 
+            // Rotina já é "todos os dias" numa linha só -- ver
+            // `parse_block_payload`, que ignora o dia quando ela está ligada.
+            // Espalhá-la pelos sete daria sete blocos dizendo a mesma coisa.
+            const alvos = isRoutine ? [0] : dias;
+
             try {
-                await planner.store.save(ctx, payload);
+                // Em série, e não em paralelo: o primeiro dia fica com o bloco
+                // que estava sendo editado e os outros nascem novos, então a
+                // ordem importa. Cada `save` também redesenha a grade, e duas
+                // renderizações disputando a mesma lista piscam.
+                for (let i = 0; i < alvos.length; i += 1) {
+                    await planner.store.save(ctx, Object.assign({}, base, {
+                        id: i === 0 ? ctx.editingId : null,
+                        dayOfWeek: alvos[i],
+                    }));
+                }
                 planner.editor.close(ctx);
             } catch (err) {
                 setError(ctx, err.message);
