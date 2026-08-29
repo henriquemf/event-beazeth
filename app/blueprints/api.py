@@ -18,9 +18,13 @@ from app.db.sync import coletar_mudancas
 from app.db import (
     MIN_PASSWORD_LENGTH,
     create_user,
+    get_user,
     get_user_by_email,
     normalize_email,
     password_matches,
+    update_display_name,
+    update_email,
+    update_password,
 )
 
 
@@ -139,3 +143,93 @@ def me():
     essa checagem, então aqui basta responder.
     """
     return jsonify({"ok": True, "user": _conta(current_user())})
+
+
+@bp.patch("/api/me")
+def atualizar_conta():
+    """Trocar nome de exibição, e-mail ou senha — a tela de perfil do app.
+
+    ## Por que os três numa rota só
+
+    São a mesma tabela e a mesma pergunta ("quem é você?"), e o app manda só o
+    que mudou. Três rotas dariam três vezes a mesma conferência de senha atual,
+    e a tela teria de sequenciar chamadas quando alguém mexesse em duas coisas
+    -- com a chance de a segunda falhar depois de a primeira já ter gravado.
+
+    ## Nome não pede senha; e-mail e senha pedem
+
+    O token já prova quem está falando, então trocar o nome de exibição não pede
+    nada além dele: é cosmético e reversível.
+
+    E-mail e senha são as CREDENCIAIS. Quem pegasse um aparelho destravado por
+    um minuto poderia, sem a senha atual, trocar as duas e ficar dono da conta.
+    Pedir a senha de novo é o que impede isso, e é o mesmo motivo pelo qual todo
+    site pede.
+
+    A troca de senha **não derruba** os outros aparelhos: o token é assinado e
+    carrega só o id da conta (ver `api_auth.py`). Está escrito em
+    `update_password`, e é uma limitação conhecida, não um esquecimento.
+    """
+    payload = request.get_json(silent=True) or {}
+    user = current_user()
+
+    nome = payload.get("displayName")
+    email_novo = payload.get("email")
+    senha_nova = payload.get("newPassword")
+
+    if nome is None and email_novo is None and senha_nova is None:
+        return jsonify({"ok": False, "message": "Nada para mudar."}), 400
+
+    # ------------------------------------------------ o que exige a senha atual
+    if email_novo is not None or senha_nova is not None:
+        # O mesmo freio do login, pela mesma razão: aqui também se acerta uma
+        # senha por tentativa. Sem ele, esta rota seria o caminho mais barato
+        # para adivinhar a senha de uma conta já aberta num aparelho roubado.
+        espera = espera_para_tentar(request, user["email"])
+        if espera:
+            return jsonify({"ok": False, "message": MUITAS_TENTATIVAS}), 429, {
+                "Retry-After": str(espera),
+            }
+
+        # A linha vem de novo do banco porque a do guarda não traz o
+        # `password_hash` -- `get_user` o deixa de fora de propósito.
+        if not password_matches(get_user_by_email(user["email"]),
+                                payload.get("currentPassword", "")):
+            registrar_falha(request, user["email"])
+            return jsonify({"ok": False, "message": "Senha atual incorreta."}), 401
+
+        registrar_acerto(request, user["email"])
+
+    # ------------------------------------------------------------- validações
+    #
+    # Todas antes de qualquer gravação: com a senha nova curta e o e-mail bom, o
+    # e-mail não pode entrar e a senha ficar para trás. Sem transação entre as
+    # três tabelas, a ordem é a única garantia de "ou tudo, ou nada".
+    if nome is not None and not nome.strip():
+        return jsonify({"ok": False, "message": "O nome não pode ficar vazio."}), 400
+
+    if email_novo is not None and "@" not in normalize_email(email_novo):
+        return jsonify({"ok": False, "message": "E-mail inválido."}), 400
+
+    if senha_nova is not None and len(senha_nova) < MIN_PASSWORD_LENGTH:
+        return jsonify({
+            "ok": False,
+            "message": f"A senha precisa de pelo menos {MIN_PASSWORD_LENGTH} caracteres.",
+        }), 400
+
+    # ------------------------------------------------------------- gravações
+    #
+    # O e-mail vem primeiro entre as duas credenciais porque é o único que pode
+    # falhar por culpa de outra conta (já existe). Falhando depois da senha, a
+    # pessoa ficaria com a senha nova e o e-mail antigo -- e teria de adivinhar
+    # qual das duas valeu.
+    if email_novo is not None and not update_email(user["id"], email_novo):
+        return jsonify({"ok": False, "message": "Já existe uma conta com este e-mail."}), 409
+
+    if senha_nova is not None:
+        update_password(user["id"], senha_nova)
+
+    if nome is not None:
+        update_display_name(user["id"], nome)
+
+    return jsonify({"ok": True, "user": _conta(get_user(user["id"]))})

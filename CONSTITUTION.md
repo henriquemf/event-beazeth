@@ -248,6 +248,19 @@ A seção 8b trata de quem pode ler o quê depois de entrar. Esta trata de entra
   que é tirar a força bruta da mesa — não para contar tentativas com precisão
   contábil.
 
+- **Trocar credencial pede a senha atual; trocar aparência não.** Nome de
+  exibição e foto são cosméticos e reversíveis: o token já prova quem está
+  falando. E-mail e senha SÃO a credencial — sem a senha atual, quem pegasse um
+  aparelho destravado por um minuto trocaria as duas e ficaria dono da conta.
+  Essa conferência entra no mesmo freio do login: é mais uma porta onde se
+  acerta uma senha por tentativa.
+
+- **Numa rota que grava várias coisas, valide TODAS antes de gravar UMA.** Em
+  `PATCH /api/me` a senha curta é recusada antes de o e-mail novo entrar; e
+  entre as duas credenciais o e-mail vai primeiro, por ser o único que pode
+  falhar por culpa de outra conta. Sem essa ordem, metade da mudança grava e a
+  pessoa fica sem saber qual metade.
+
 - **O `X-Forwarded-For` só vale o PRIMEIRO valor.** Atrás do proxy do Render, o
   cabeçalho é uma lista e os últimos valores são os proxies. Confiar no último
   entregaria sempre o mesmo IP, e o freio inteiro passaria a contar uma chave
@@ -361,6 +374,21 @@ dessa troca de identidade. As regras que sobraram dela:
 - **Campo de texto renascido volta com o cursor no zero.** Onde a identidade do
   item pode trocar durante a edição, o campo guarda `TextFieldValue`, com o
   intervalo junto do texto — senão a continuação entra de trás para a frente.
+
+### O que é da conta e o que é do aparelho
+
+A linha não é de gosto, é de custo e de verdade:
+
+- **Da conta**: o que identifica quem está falando e o que o site também mostra
+  — nome de exibição, e-mail, senha. Muda pela API, vale nos dois lados.
+- **Do aparelho**: tema, fonte, modo escuro, o estado do pomodoro, a foto de
+  perfil. O tema do computador nunca teve de mandar no do celular; a foto não
+  sobe porque o banco é cobrado por byte e o disco do Render some a cada deploy.
+  Guardá-la lá pediria uma coluna de bytes ou um serviço de arquivos novo, para
+  um app de duas pessoas.
+
+O preço de "do aparelho" é reinstalar e escolher de novo, e ele está escrito na
+tela. O preço de "da conta" seria infraestrutura nova — e é ele que se recusa.
 
 ### Sem conta é um modo, não um erro
 

@@ -6,6 +6,7 @@ padrão) e o sal ficam embutidos no próprio texto do hash, então trocar de
 algoritmo depois não invalida os hashes antigos.
 """
 
+from psycopg.errors import UniqueViolation
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.db.connection import get_connection, utc_now_iso
@@ -110,6 +111,56 @@ def create_user(email: str, password: str, display_name: str):
             )
 
     return user_id
+
+
+def update_display_name(user_id: int, display_name: str) -> str:
+    """Troca o nome de exibição. Devolve o nome como ficou gravado.
+
+    Devolve em vez de só gravar porque o corte de [MAX_NAME_LENGTH] acontece
+    aqui: quem chamou precisa responder ao cliente o nome REAL, e não o que foi
+    pedido, senão a tela mostra um nome que o banco não tem.
+    """
+    nome = (display_name or "").strip()[:MAX_NAME_LENGTH]
+    with get_connection() as conn:
+        conn.execute(
+            "UPDATE users SET display_name = %s WHERE id = %s",
+            (nome, user_id),
+        )
+    return nome
+
+
+def update_email(user_id: int, email: str) -> bool:
+    """Troca o e-mail de acesso. `False` se já houver conta com ele.
+
+    O `ON CONFLICT` não serve em UPDATE, então a colisão vem da própria restrição
+    UNIQUE da tabela -- e é ela que se confia, não um SELECT antes: entre o
+    SELECT e o UPDATE cabe outra requisição gravando o mesmo e-mail, e aí a
+    resposta seria "pronto" para uma troca que não aconteceu.
+    """
+    with get_connection() as conn:
+        try:
+            conn.execute(
+                "UPDATE users SET email = %s WHERE id = %s",
+                (normalize_email(email), user_id),
+            )
+        except UniqueViolation:
+            return False
+    return True
+
+
+def update_password(user_id: int, password: str) -> None:
+    """Troca a senha.
+
+    Os tokens já emitidos continuam valendo: eles são assinados com a
+    SECRET_KEY e carregam só o id da conta, sem nada da senha (ver
+    `api_auth.py`). Trocar a senha aqui não desconecta um aparelho perdido --
+    para isso o botão é trocar a SECRET_KEY, que derruba todo mundo.
+    """
+    with get_connection() as conn:
+        conn.execute(
+            "UPDATE users SET password_hash = %s WHERE id = %s",
+            (generate_password_hash(password), user_id),
+        )
 
 
 # Hash descartável, calculado uma vez na subida. Existe só para dar o que

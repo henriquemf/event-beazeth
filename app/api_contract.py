@@ -20,6 +20,9 @@ ENDPOINTS = (
     ("/api/auth/login", "POST", False, ("ok", "token", "expiresIn", "user")),
     ("/api/auth/signup", "POST", False, ("ok", "token", "expiresIn", "user")),
     ("/api/me", "GET", True, ("ok", "user")),
+    # A tela de perfil do app. Manda só o que mudou; devolve a conta como ficou,
+    # que é o que a lateral passa a mostrar.
+    ("/api/me", "PATCH", True, ("ok", "user")),
     # A espinha dorsal do app offline: o que mudou e o que sumiu.
     ("/api/sync", "GET", True, ("ok", "now", "changed", "deleted")),
 

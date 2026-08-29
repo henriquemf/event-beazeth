@@ -26,6 +26,9 @@ from app.db.users import (
     list_user_ids,
     normalize_email,
     password_matches,
+    update_display_name,
+    update_email,
+    update_password,
 )
 from app.db.events import (
     get_event,
@@ -113,6 +116,9 @@ __all__ = [
     "list_user_ids",
     "normalize_email",
     "password_matches",
+    "update_display_name",
+    "update_email",
+    "update_password",
     "delete_event",
     "get_event",
     "insert_event",
