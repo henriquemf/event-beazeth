@@ -1,38 +1,54 @@
 # Event Notifier (Python + Flask)
 
-Aplicativo simples para cadastrar eventos e enviar notificações em:
-- Web Push (notificação do navegador/Windows sem Python local)
-- Desktop local opcional (quando rodando no Windows)
+<https://events-beazeth.onrender.com/>
 
-Website:
-- https://events-beazeth.onrender.com/
+Um lugar só para o que o dia pede: os eventos com lembrete, a semana montada, a
+lista da semana, o quadro de post-its, o pomodoro e a água. Flask com Jinja e
+JavaScript puro — sem npm, sem build, sem framework de front — sobre um Postgres
+gerenciado.
+
+O lembrete de evento sai por **Web Push** (chega no navegador ou no Windows sem
+precisar de Python rodando na máquina) e, quando o servidor roda no próprio
+Windows, também como notificação nativa.
 
 **Cada pessoa tem a própria conta e o próprio espaço.** Nada é compartilhado, e
-os dados ficam num Postgres gerenciado — sobrevivem a build, deploy e restart.
+os dados ficam no banco gerenciado — sobrevivem a build, deploy e restart.
 Detalhes em [Contas e privacidade dos dados](#contas-e-privacidade-dos-dados).
 
-Recursos de interface:
-- Conta com e-mail e senha; o espaço já nasce com as tags padrão
-- Tags criadas por você: nome, cor e regra de lembrete próprios; `Evento` e `Curso` vêm prontas
-- Sidebar com menu de navegação
-- Calendário grande como tela única dos eventos: clique num dia para agendar naquela data
-- O dia sob o mouse acende e o dia clicado fica marcado enquanto o popup está aberto
-- “Próximos eventos” lista os 5 mais próximos; lado a lado com o mês em telas largas, embaixo dele nas demais
-- Aba **Weekly Planner**: grade semanal de 24 horas com blocos arrastáveis
-- Aba **To-do** ✅: lista da semana no formato de agenda de papel, com navegação por semana
-- Aba **Pomodoro** 🍎: temporizador com ampulheta que chacoalha de vez em quando e segue contando na barra lateral enquanto você navega
-- **Home** é o quadro de **post-its**: papel livre, arrastável, redimensionável e colorido
-- Cadastro e edição de evento em popup do calendário, com “Próximos eventos” na coluna ao lado
-- Aba de aparência com preview visual
-- 10 temas e 10 fontes selecionáveis
-- Seleção de tema e fonte por cards de preview (sem dropdown)
-- Dark mode no menu lateral, aplicado em toda a interface (inclusive fundo e calendário)
-- Aba **Beber água** 💧: copo que enche com a meta do dia, gole animado ao registrar, e widget na barra lateral
-- Microanimações suaves de interface e sons de clique baixos
-- Som próprio quando a notificação chega com a aba aberta, distinto do sino do pomodoro
-- Data com horário opcional no cadastro de evento
-- PWA (manifest + service worker com cache de estáticos)
-- Inscrição de notificações web direto no menu lateral
+Há também um aplicativo Android nativo, em repositório próprio
+(`../event-bezeth-mobile`), que conversa com este servidor pela
+[API para o app nativo](#api-para-o-app-nativo).
+
+## As sete telas
+
+O menu da esquerda é a lista inteira do que existe:
+
+| Tela | O que é |
+| --- | --- |
+| **Post-its** (`/`) | A home. Um quadro, não uma lista: cada papel tem posição, tamanho, inclinação e cor, e quatro categorias filtram o que aparece. |
+| **Calendário** (`/calendar`) | O mês inteiro como tela única dos eventos. Clicar num dia agenda naquela data; "Próximos eventos" fica ao lado em tela larga. |
+| **Weekly Planner** (`/planner`) | A semana em colunas de 24 horas, com blocos que se arrastam entre dias e horários e se esticam pelas bordas. |
+| **To-do** (`/todo`) | A semana no formato de agenda de papel. Cada semana tem URL própria, então o voltar do navegador funciona. |
+| **Pomodoro** (`/pomodoro`) | Temporizador com ampulheta, que vira widget na barra lateral e continua contando enquanto você navega. |
+| **Beber água** (`/hydration`) | Copo que enche até a meta do dia, com lembrete por intervalo e widget na lateral. |
+| **Aparência** (`/appearance`) | Dez temas e dez fontes, escolhidos por card de preview. Modo escuro fica no menu. |
+
+As que tiveram decisões difíceis — planner, post-its, pomodoro, to-do e água —
+têm seção própria mais abaixo, com o porquê de cada uma.
+
+**A conta é o espaço inteiro.** Eventos, tags, post-its, blocos, água e
+inscrições de push são todos por pessoa, e o espaço nasce montado — com as tags
+`Evento` e `Curso` e a linha de configuração de água — para a primeira visita
+não abrir num formulário sem opção nenhuma para marcar.
+
+**O que é do aparelho fica no aparelho.** Tema, fonte, modo escuro, filtro dos
+post-its, zoom do planner e o estado do pomodoro vivem no `localStorage`: são
+escolhas de quem está olhando aquela tela, e sincronizá-las faria o celular
+herdar o tema e o cronômetro do notebook.
+
+Além das telas: PWA com manifest e service worker, inscrição de Web Push pelo
+próprio menu, microanimações e sons curtos de interface — com um som próprio
+para a notificação que chega com a aba aberta, distinto do sino do pomodoro.
 
 Regras de lembrete (escolhidas por tag, ao criar a tag):
 - **Só no dia**: notificação na hora do evento
@@ -190,15 +206,39 @@ Uma duração não tem esse problema.
 
 ## Bibliotecas
 
-| Biblioteca | Situação | Decisão |
-| --- | --- | --- |
-| **flatpickr** | Upstream congelado (4.6.13, sem release há anos), mas estável, sem dependências e ~50 KB | Mantida e **fixada em `@4.6.13`**. Estava sem versão na URL do CDN, ou seja, o jsDelivr entregava sempre a última: um release quebrado derrubaria o seletor de data em produção sem aviso. As alternativas atuais são todas React. |
-| **FullCalendar** | Ativa (6.1.21) | Atualizada de 6.1.17 → 6.1.21. O `<link>` para `index.global.min.css` foi **removido**: o FullCalendar 6 não publica arquivo de CSS (o bundle JS injeta os estilos), então aquele link respondia 404 em toda visita à tela. |
-| **plyer** | Só usada por `send_desktop_notification`, que só funciona no Windows | Import movido para dentro da função e marcada como opcional (`; sys_platform == "win32"`). No container Linux ela era instalada e importada sem nunca poder ser usada. |
-| Flask, APScheduler, python-dotenv, pywebpush, gunicorn | Adequadas ao porte do projeto | Mantidas |
-| **cryptography 42.0.8** | De meados de 2024, arrastada pelo pywebpush | Vale atualizar num passo próprio, com teste do Web Push junto — é a dependência mais sensível a correções de segurança. |
+São cinco no servidor e duas no navegador. O critério para cada uma é o mesmo:
+ela precisa caber num projeto sem npm, sem build e mantido por uma pessoa.
 
-Nenhuma biblioteca nova foi adicionada.
+**flatpickr `@4.6.13`**, o seletor de data. O upstream está congelado há anos,
+mas é estável, não tem dependências e ocupa ~50 KB. A versão vai **cravada na
+URL do CDN**: sem ela o jsDelivr entrega sempre a última, e um release quebrado
+derrubaria o seletor em produção sem ninguém tocar em nada. As alternativas
+atuais são todas React.
+
+**FullCalendar 6**, a grade do mês. Não existe `<link>` de CSS para ele: a
+versão 6 não publica folha de estilo — o bundle JS injeta os estilos —, e o
+arquivo que costuma aparecer nos tutoriais responde 404 em toda visita.
+
+**Flask, APScheduler, python-dotenv, pywebpush e gunicorn** são o servidor, e
+estão no porte do projeto. **psycopg[binary,pool]** fala com o Postgres; o
+`binary` evita precisar de libpq e compilador na imagem, e o `pool` mantém as
+conexões abertas — sem ele cada requisição pagaria um handshake TLS com um banco
+que está em outro datacenter.
+
+**plyer** é a única opcional (`; sys_platform == "win32"`), e o import dela vive
+dentro da função que a usa. Ela só serve para a notificação nativa do Windows
+quando se roda localmente; no container Linux do deploy, o caminho é Web Push.
+
+A dependência para ficar de olho é **cryptography**, arrastada pelo pywebpush: é
+a mais sensível a correção de segurança, e atualizar pede testar o Web Push
+junto, num passo próprio.
+
+Sobre bibliotecas de componentes (Origin UI, Skiper UI, Cult UI e afins): são
+registries React + Tailwind + shadcn, e isto aqui é Flask + Jinja + JS puro.
+Instalar qualquer uma significaria trazer React, Tailwind e um bundler para um
+projeto que não tem nenhum dos três. Os padrões que valiam a pena — cartão com
+textura de papel, relevo em edição, dock de ações, grupo de swatches, molas de
+entrada e saída — estão reimplementados sobre os tokens de tema do próprio CSS.
 
 ## Performance
 
@@ -264,31 +304,47 @@ conexão (a thread do agendador é a segunda consumidora) e uma delas pode morre
 por queda de rede enquanto as outras seguem em uso — a conexão morta é entregue
 sem validação e vira erro 500. Trocar 180 ms por um 500 é um mau negócio.
 
-## Otimizações aplicadas
+## Onde o tempo é gasto, e o que segura cada ponta
 
-- Fontes: só as duas famílias do tema padrão bloqueiam a renderização; as outras 18 (usadas apenas nos previews) carregam de forma assíncrona
-- Estáticos servidos com `?v=<mtime>` e `Cache-Control: immutable` de 1 ano
-- Service worker com cache-first para `/static/` (seguro, pois as URLs são versionadas)
-- Scripts com `defer` e tema aplicado antes da primeira pintura (sem flash de tema errado)
-- Pool de conexões do Postgres aberto na subida, com verificação de conexão viva: o banco gerenciado suspende a instância ociosa e derruba o socket
-- O guarda de sessão sai antes de consultar o banco quando a resposta não depende de quem pede (estáticos, `/healthz`, service worker, favicon): são doze arquivos por página, e cada um custava duas idas ao banco só para descobrir um usuário que o CSS não usa
-- Gunicorn com threads: o worker síncrono atendia uma requisição por vez, e a dúzia de estáticos que o navegador pede em paralelo ficava em fila atrás de quem esperava o banco
-- Pool em `autocommit`: sem transação implícita, uma consulta é uma ida de rede em vez de três (`BEGIN`, consulta, `COMMIT`). Quem precisa de atomicidade pede com `with conn.transaction():`
-- `insert_todo_item` conta, calcula a posição e insere numa instrução só (`HAVING COUNT(*) < ...`): uma ida a menos numa escrita em que a tela fica esperando o id, e sem a corrida entre duas abas
-- Índices em `events(event_datetime)`, `reminder_dispatches` e `planner_blocks(day_of_week, start_minute)`
-- `preconnect`/`dns-prefetch` para os CDNs usados
-- Geometria dos blocos do planner derivada de CSS custom properties: o zoom vira recálculo de estilo, sem reconstruir DOM
-- `pointermove` do arraste agrupado em `requestAnimationFrame`, com o rect do canvas em cache (evita reflow síncrono por evento)
-- `contain: layout paint style` nas colunas do planner
-- Animações restritas a `transform`/`opacity` (rodam no compositor), respeitando `prefers-reduced-motion`
-- Post-its com geometria em custom properties e `transform`: arrastar não passa por layout, e as gravações são agrupadas por debounce (uma requisição por pausa, não por tecla ou pixel)
-- Ampulheta do pomodoro inteiramente em CSS: o giro é `@keyframes` e o nível da areia é `scaleY(var(--pomo-progress))`, então o JS escreve uma variável 4x por segundo e nada mais — nenhum trabalho por quadro
-- Proporções da tela do pomodoro por `clamp()`, `cqi` (container query) e `auto-fit`: o mostrador se dimensiona pela largura do cartão, não da janela, e sobrou um único media query (para mudança de layout, não de tamanho)
-- Um único `AudioContext` para toda a interface (`core/audio.js`): dois contextos no mesmo documento significariam dois desbloqueios independentes, e o som do fim do timer não sairia em metade das visitas
-- Modal de evento fora do CSS global: cinco das sete telas deixaram de baixá-lo
-- O widget da água viaja de carona na consulta do usuário (LEFT JOIN em `get_user`), que já acontece a cada requisição: um SELECT próprio dobraria as idas ao banco de cada página, e o banco é gerenciado — cada ida custa latência de rede
-- Nível do copo por `--water-level` escrita na raiz do documento: um `setProperty` só faz todos os copos da página subirem juntos, e o motor não precisa saber quantos existem
-- Contadores do to-do recontados do DOM em vez de incrementados, e barras de progresso por `scaleX` em vez de `width`
+As decisões abaixo não são avulsas: cada uma responde a um dos quatro lugares
+onde uma tela deste tipo perde tempo.
+
+**Chegar até a tela.** Só as duas famílias do tema em vigor bloqueiam a
+renderização; as outras dezoito existem para os previews de `/appearance` e
+carregam de forma assíncrona — 8 KB de CSS de fonte por página em vez de 102 KB.
+Os estáticos vão com `?v=<mtime>` e `Cache-Control: immutable` de um ano, o que
+permite o service worker responder cache-first sem risco de servir arquivo
+velho: a URL muda quando o arquivo muda. Os scripts têm `defer`, e o tema é
+aplicado antes da primeira pintura, senão a página nasceria clara e trocaria de
+cor na frente de quem olha.
+
+**Falar com o banco.** É o gasto que domina, porque o banco é gerenciado e fica
+fora do datacenter do app — cada ida custa um RTT inteiro, e elas acontecem em
+série. Daí o pool aberto na subida com validação de conexão viva, o `autocommit`
+(uma consulta é uma ida, não três), o guarda de sessão saindo antes do banco
+quando a resposta não depende de quem pede, e consultas que fazem numa
+instrução o que fariam em três — o widget de água viajando de carona no `SELECT`
+do usuário que já acontecia, o `insert_todo_item` contando e inserindo de uma
+vez. A seção **Latência até o banco** tem os números.
+
+**Atender em paralelo.** O gunicorn roda com threads: com o worker síncrono, a
+dúzia de estáticos que o navegador pede de uma vez ficava em fila atrás de quem
+estivesse esperando o banco.
+
+**Desenhar a cada quadro.** Tudo o que se move é `transform`/`opacity`, que
+rodam no compositor, e respeita `prefers-reduced-motion`. A geometria dos blocos
+do planner e dos post-its mora em CSS custom properties, então arrastar e dar
+zoom viram recálculo de estilo em vez de reconstrução de DOM; o `pointermove` é
+agrupado em `requestAnimationFrame` com o rect do canvas em cache. A ampulheta
+do pomodoro é inteiramente CSS — o JS escreve uma variável quatro vezes por
+segundo e nada mais. O nível do copo d'água é uma variável na raiz do documento,
+então um `setProperty` sobe todos os copos da página sem o motor precisar saber
+quantos existem. Um `AudioContext` só para a interface inteira: dois no mesmo
+documento seriam dois desbloqueios independentes, e o sino do fim do timer não
+sairia em metade das visitas.
+
+E o que **não** entra: o modal de evento ficou fora do CSS global, então cinco
+das sete telas deixaram de baixá-lo.
 
 ## Estrutura
 
@@ -644,14 +700,32 @@ viewport esticar — é a rede que impede isso de voltar.
 
 ## API para o app nativo
 
+O aplicativo Android é um projeto próprio, em `../event-bezeth-mobile` — Kotlin
+e Jetpack Compose, com banco no aparelho. Ele não abre este site: fala com ele.
+Como a tela dele é desenhada localmente e continua funcionando sem rede, o que
+ele precisa do servidor é dado, não HTML.
+
 O site recebe a tela pronta do servidor, então nunca precisou de rotas de
-leitura. O app Android precisa: ele pede os dados e monta a tela sozinho.
+leitura. O app precisa: ele pede os dados e monta a tela sozinho.
 
 | Rota | Para quê |
 | --- | --- |
 | `POST /api/auth/login`, `/api/auth/signup` | devolvem um token `Bearer` |
 | `GET /api/me` | o app confere na abertura se o token ainda vale |
+| `PATCH /api/me` | trocar nome de exibição, e-mail ou senha (a tela de perfil do app) |
 | `GET /api/sync?since=` | o que mudou e o que sumiu desde a última vez |
+
+O `PATCH` manda só o que mudou — campo ausente é campo que fica como está. **Nome
+não pede senha; e-mail e senha pedem** a `currentPassword`: o token prova quem
+está falando, mas quem pegasse um aparelho destravado por um minuto poderia,
+sem ela, trocar as duas credenciais e ficar dono da conta. Essa conferência
+entra no mesmo freio do login, pela mesma razão — aqui também se acerta uma
+senha por tentativa.
+
+As validações acontecem **todas antes de qualquer gravação**, e entre as duas
+credenciais o e-mail vai primeiro: é o único que pode falhar por culpa de outra
+conta (já existe). Falhando depois da senha, a pessoa ficaria com a senha nova e
+o e-mail antigo, sem saber qual das duas valeu.
 
 O token é **assinado, não guardado**: leva o id da conta e o instante de
 emissão, assinados com a mesma `SECRET_KEY` do cookie. Sem tabela, sem consulta
@@ -693,17 +767,30 @@ obrigatórios. Um teste falha quando o servidor diverge dele — inclusive quand
 uma rota `/api/` nova **não** entra no contrato, que é o jeito de uma
 funcionalidade existir no site e o app nunca ficar sabendo.
 
-## Gerando o .apk
+## Empacotando o site como .apk (TWA)
 
-O app Android é um **TWA** (Trusted Web Activity): um `.apk` de verdade que
-abre este mesmo site em tela cheia. Não é uma segunda versão do app — é a
-mesma, então conta, senha e dados são os do Neon, e o que é criado no celular
-aparece no navegador do computador na hora. Não existe banco no dispositivo e
-não existe sincronização para escrever: só há um banco.
+> O aplicativo Android **em uso** não é este. É o nativo, em
+> `../event-bezeth-mobile`, e o `.apk` dele sai de lá. O que está descrito aqui
+> é o caminho anterior, guardado porque continua válido, é muito mais barato de
+> manter, e é o que se usaria para pôr uma tela nova no celular no mesmo dia em
+> que ela nasce no site.
 
-O que isso **não** faz: deixar mais rápido. É a mesma rede e o mesmo banco. Vale
-migrar a região antes de empacotar, senão o resultado é um app lento em vez de
-um site lento.
+Um **TWA** (Trusted Web Activity) é um `.apk` de verdade que abre este mesmo
+site em tela cheia. Não é uma segunda versão do app — é a mesma, então conta,
+senha e dados são os do Neon, e o que é criado no celular aparece no navegador
+do computador na hora. Não existe banco no dispositivo e não existe
+sincronização para escrever: só há um banco.
+
+É também o oposto da escolha do app nativo, e a comparação é o que explica os
+dois. O TWA custa quase nada para manter e nunca fica atrás do site — mas
+depende da rede para desenhar qualquer tela, e num plano gratuito que dorme
+isso significa esperar o servidor acordar antes de ver um post-it. O nativo
+abre instantâneo e funciona no elevador, ao preço de um banco local, uma fila
+de escrita e uma tela escrita duas vezes.
+
+O que o TWA **não** faz: deixar mais rápido. É a mesma rede e o mesmo banco.
+Vale migrar a região antes de empacotar, senão o resultado é um app lento em vez
+de um site lento.
 
 ### 1. Ícones
 
