@@ -390,6 +390,43 @@ A linha não é de gosto, é de custo e de verdade:
 O preço de "do aparelho" é reinstalar e escolher de novo, e ele está escrito na
 tela. O preço de "da conta" seria infraestrutura nova — e é ele que se recusa.
 
+### O aviso é do aparelho; a regra é do servidor
+
+O site avisa por web push, com um agendador varrendo o banco de minuto em
+minuto. O app **não** repete isso: ele já tem no Room tudo o que precisa — a
+configuração de água, a agenda inteira — e o pomodoro nunca saiu de lá. Um
+alarme local acerta em modo avião; um push dependeria de rede justamente no
+minuto em que ela pode faltar. FCM entraria como projeto no Firebase, chave de
+servidor e uma dependência, para avisar sobre o que o celular já sabe.
+
+O que **não** se duplica é a regra. O cronograma de lembretes de evento vive em
+`_build_reminders`, em `scheduler_service.py`, e o app o copia — inclusive os
+nomes `event_now` / `course_15_days` / `course_7_days`. Duas definições seriam o
+mesmo evento avisando em horas diferentes no e-mail e no celular, sem ninguém
+saber qual está certa.
+
+Três regras que só aparecem quando um aviso não chega:
+
+- **Recalcule tudo do zero, sempre.** Nada é guardado sobre "o que já está
+  agendado" — cada rodada lê o banco e remarca. Manter uma lista do que foi
+  marcado seria um segundo estado para sair de sincronia com o primeiro, e um
+  evento apagado no site continuaria avisando no celular. O que impede a entrega
+  repetida é uma **marca d'água** (até que instante já foi resolvido), não uma
+  tabela de entregues.
+- **O Android apaga alarme sem avisar** — ao religar, ao instalar o `.apk` novo
+  por cima e ao parar o app à força. Os dois primeiros chegam como *broadcast*;
+  o terceiro só se resolve remarcando a cada volta para o app. Faltando qualquer
+  um dos três, o app fica mudo e **abre normalmente**, que é o que torna o
+  defeito invisível.
+- **Som e importância de um canal valem só na criação.** Depois disso quem manda
+  é a pessoa, nos ajustes, e o código é ignorado. Mudar o padrão de verdade pede
+  canais com ids novos — então a escolha inicial é para valer.
+
+E uma de gosto que é de engenharia: **avisar demais é como um app perde o
+direito de avisar.** Por isso o lembrete de água cala quando a meta do dia foi
+batida (o site não faz isso, e devia), o som é um arquivo do app com pico em 30%
+da escala em vez do toque padrão do sistema, e a água não vibra.
+
 ### Sem conta é um modo, não um erro
 
 Dá para usar o app inteiro sem login e sem rede. Duas regras seguram isso de pé:
