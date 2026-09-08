@@ -419,8 +419,15 @@ Três regras que só aparecem quando um aviso não chega:
   um dos três, o app fica mudo e **abre normalmente**, que é o que torna o
   defeito invisível.
 - **Som e importância de um canal valem só na criação.** Depois disso quem manda
-  é a pessoa, nos ajustes, e o código é ignorado. Mudar o padrão de verdade pede
-  canais com ids novos — então a escolha inicial é para valer.
+  é a pessoa, nos ajustes, e o código é ignorado. Apagar e recriar também não
+  resolve: o Android lembra dos ajustes de um canal apagado e os restaura quando
+  um com o *mesmo id* reaparece. Deixar a pessoa escolher o som exige que o id
+  CARREGUE a escolha (`pomodoro_gota`), criando o novo e apagando o velho.
+- **O `publicVersion` morreu na tela de bloqueio.** Do Android 15 em diante o
+  sistema ignora a versão reduzida que o app oferece e troca a linha inteira pelo
+  "conteúdo oculto" dele. Ou o aviso é legível na tela bloqueada, ou não há aviso
+  legível nenhum — e como essa é uma decisão de privacidade de quem usa, ela
+  virou uma chave no app em vez de um palpite no código.
 
 E uma de gosto que é de engenharia: **avisar demais é como um app perde o
 direito de avisar.** Por isso o lembrete de água cala quando a meta do dia foi
