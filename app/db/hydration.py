@@ -154,7 +154,32 @@ def get_hydration_today(user_id: int) -> int:
     return row["glasses"] if row else 0
 
 
-def change_hydration_glasses(user_id: int, delta: int, drank_at_iso: str) -> int:
+def dia_do_consumo(pedido) -> str:
+    """Em que dia o copo entra: o do CLIENTE, se ele disser e fizer sentido.
+
+    O servidor do deploy roda em UTC, e o dia dele vira às 21:00 de quem está
+    no Brasil. Um copo bebido às 22:00 caía no dia seguinte — e o contador do
+    celular, que sabe a data local de verdade, mostrava um dia que ainda não
+    começou com copos que já foram bebidos. O app manda `day`; o site não
+    manda, e continua no dia do servidor.
+
+    Aceita só o dia de ontem, hoje ou amanhã em relação ao servidor: é a maior
+    distância que dois fusos reais produzem, e evita que um payload adulterado
+    escreva consumo em 2019.
+    """
+    hoje = date.today()
+    try:
+        dia = date.fromisoformat(str(pedido))
+    except (TypeError, ValueError):
+        return hoje.isoformat()
+    if abs((dia - hoje).days) > 1:
+        return hoje.isoformat()
+    return dia.isoformat()
+
+
+def change_hydration_glasses(
+    user_id: int, delta: int, drank_at_iso: str, day: str | None = None
+) -> int:
     """Soma (ou desconta) copos do dia e devolve o total depois da mudança.
 
     Um `INSERT ... ON CONFLICT DO UPDATE` só, e não "ler, somar, gravar": dois
@@ -162,6 +187,8 @@ def change_hydration_glasses(user_id: int, delta: int, drank_at_iso: str) -> int
     um copo na leitura obsoleta entre as duas consultas.
 
     `GREATEST(..., 0)` porque desfazer no zero não pode virar total negativo.
+
+    `day` já validado por `dia_do_consumo`; sem ele, o dia do servidor.
     """
     step = 1 if delta > 0 else -1
 
@@ -177,7 +204,7 @@ def change_hydration_glasses(user_id: int, delta: int, drank_at_iso: str) -> int
             """,
             {
                 "user_id": user_id,
-                "day": today_iso(),
+                "day": day or today_iso(),
                 "step": step,
                 "at": drank_at_iso,
             },

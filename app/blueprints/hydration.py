@@ -21,6 +21,7 @@ from app.db import (
     MIN_GLASS_ML,
     MIN_GOAL,
     change_hydration_glasses,
+    dia_do_consumo,
     get_hydration_settings,
     get_hydration_today,
     list_push_subscriptions,
@@ -224,7 +225,8 @@ def drink():
     delta = -1 if str(payload.get("delta", 1)).lstrip().startswith("-") else 1
 
     now = datetime.now().isoformat(timespec="seconds")
-    glasses = change_hydration_glasses(user_id, delta, now)
+    # O app manda em que dia está (ver `dia_do_consumo`); o site não manda.
+    glasses = change_hydration_glasses(user_id, delta, now, dia_do_consumo(payload.get("day")))
 
     if delta > 0:
         update_hydration_last_sent(user_id, now)

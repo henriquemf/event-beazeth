@@ -25,9 +25,15 @@ from app.db.planner import _row_to_planner_dict
 from app.db.todo import _ITEM_COLUMNS, _row_to_item
 
 
-# O piso quando o aplicativo nunca sincronizou. Bate com o DEFAULT das colunas
-# criadas na migração, então a primeira conversa traz tudo o que já existia.
-INICIO_DOS_TEMPOS = "1970-01-01T00:00:00"
+# O piso quando o aplicativo nunca sincronizou.
+#
+# Um segundo ANTES do DEFAULT das colunas criadas na migração, e não igual a
+# ele: a comparação é estrita (`updated_at > since`), e com o piso igual ao
+# DEFAULT toda linha que existia antes da migração — e nunca foi tocada desde
+# então — ficava de fora da primeira conversa. Foi assim que a configuração de
+# água de uma conta antiga nunca chegou ao celular, e sem ela o app não tinha
+# de onde tirar o horário do lembrete.
+INICIO_DOS_TEMPOS = "1969-12-31T23:59:59"
 
 
 def _agora(conn) -> str:

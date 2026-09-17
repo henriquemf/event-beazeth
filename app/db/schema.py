@@ -296,7 +296,32 @@ def _gatilhos() -> list[str]:
     return comandos
 
 
-STATEMENTS = STATEMENTS + tuple(_gatilhos())
+def _carimbar_linhas_antigas() -> list[str]:
+    """Da um carimbo de agora as linhas que ainda tem o DEFAULT da migracao.
+
+    A coluna `updated_at` nasceu com DEFAULT `1970-01-01T00:00:00`, e a
+    sincronizacao compara com `>`: um aparelho que ja conversou uma vez guarda
+    um `since` recente, e uma linha carimbada em 1970 nunca mais e "mais nova"
+    que ele. Na pratica, tudo o que existia antes da migracao -- inclusive a
+    configuracao do lembrete de agua -- nunca chegava a um celular que ja tinha
+    sincronizado.
+
+    Carimbar com AGORA faz essas linhas entrarem na proxima conversa de todo
+    aparelho, uma vez. Depois disso o WHERE nao acha mais nada, e o comando
+    passa a custar uma varredura vazia por subida -- e por isso pode ficar na
+    lista de sempre em vez de virar uma migracao com controle de versao.
+
+    Roda DEPOIS dos gatilhos de proposito: o valor e explicito, mas assim o
+    resultado e o mesmo com ou sem gatilho.
+    """
+    return [
+        f"UPDATE {tabela} SET updated_at = to_char(now() AT TIME ZONE 'utc',"
+        f" 'YYYY-MM-DD\"T\"HH24:MI:SS') WHERE updated_at = '1970-01-01T00:00:00'"
+        for tabela, _ in TABELAS_SINCRONIZADAS
+    ]
+
+
+STATEMENTS = STATEMENTS + tuple(_gatilhos()) + tuple(_carimbar_linhas_antigas())
 
 
 def init_db() -> None:

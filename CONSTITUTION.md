@@ -429,10 +429,27 @@ Três regras que só aparecem quando um aviso não chega:
   legível nenhum — e como essa é uma decisão de privacidade de quem usa, ela
   virou uma chave no app em vez de um palpite no código.
 
+- **O dia de quem bebe é o do aparelho.** O servidor do deploy roda em UTC, e o
+  dia dele vira às 21:00 no Brasil. Enquanto o app mostrava "o dia mais recente
+  que o servidor mandou", o contador não zerava à meia-noite e um copo das 22:00
+  caía em amanhã. O app passou a olhar a linha de hoje pela data local e a mandar
+  `day` em `/api/hydration/drink`; o servidor (`dia_do_consumo`) aceita ontem,
+  hoje ou amanhã em relação a ele e ignora o resto. O site, que não manda,
+  continua no dia do servidor.
+- **A comparação da sincronização é estrita, e o piso não podia ser o DEFAULT.**
+  `updated_at > since` com `since = 1970-01-01T00:00:00` deixava de fora toda
+  linha que ainda tinha o DEFAULT da migração — a configuração de água de uma
+  conta antiga nunca chegou ao celular, e sem ela não havia lembrete nenhum. O
+  piso ficou um segundo antes, e `_carimbar_linhas_antigas` dá um carimbo de
+  agora ao que ainda estava em 1970, para entrar na próxima conversa de todo
+  aparelho que já sincronizou.
+
 E uma de gosto que é de engenharia: **avisar demais é como um app perde o
-direito de avisar.** Por isso o lembrete de água cala quando a meta do dia foi
-batida (o site não faz isso, e devia), o som é um arquivo do app com pico em 30%
-da escala em vez do toque padrão do sistema, e a água não vibra.
+direito de avisar.** Por isso o lembrete de água conta um intervalo a partir do
+último copo (como o `last_sent_at` do servidor, e não uma grade fixa que cobrava
+cinco minutos depois de beber), cala quando a meta do dia foi batida (o site não
+faz isso, e devia), o som é um arquivo do app com pico em 30% da escala em vez do
+toque padrão do sistema, e a água não vibra.
 
 ### Sem conta é um modo, não um erro
 
