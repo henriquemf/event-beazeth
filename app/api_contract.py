@@ -49,6 +49,13 @@ ENDPOINTS = (
                                      "intervalMinutes", "nextIn", "limits")),
     ("/api/hydration/drink", "POST", True, ("ok", "glasses", "goal", "glassMl", "nextIn")),
 
+    # --- diário ------------------------------------------------------------
+    #
+    # Uma rota só: humor e texto são editados juntos, e limpar os dois apaga a
+    # linha. `entry` vem `null` nesse caso — daí ele ser obrigatório na resposta
+    # mesmo quando não há mais dia nenhum para devolver.
+    ("/api/diary/<day>", "PUT", True, ("ok", "entry")),
+
     # --- eventos e tags ----------------------------------------------------
     ("/api/events", "GET", True, ()),
     ("/api/events", "POST", True, ("ok", "event")),

@@ -233,3 +233,52 @@
 .en-preload *::after {
     transition: none !important;
 }
+
+/* --- a festa do fim do pomodoro --------------------------------------- */
+
+/* Fica em components.css, e não numa folha da tela do pomodoro, porque o timer
+   corre em todas as telas: quem termina um pomodoro no calendário vê a festa
+   ali. Quem cria as peças é `core/festa.js`; ele escreve só a geometria de cada
+   uma em custom properties, e a animação inteira acontece aqui — `transform` e
+   `opacity`, as duas que o navegador resolve no compositor.
+
+   A cor sai daqui de propósito. O JS não escolhe tinta: `:nth-child` reparte as
+   seis famílias da paleta, as mesmas dos post-its. */
+
+.festa {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.festa-peca {
+    position: absolute;
+    top: -12vh;
+    left: var(--x);
+    width: 9px;
+    height: 14px;
+    border-radius: 2px;
+    background: var(--festa-tom);
+    opacity: 0;
+    animation: festaCair var(--tempo) cubic-bezier(0.25, 0.5, 0.45, 1) var(--atraso) forwards;
+}
+
+.festa-peca.tom-0 { --festa-tom: #ff9ec4; }
+.festa-peca.tom-1 { --festa-tom: #ffe066; }
+.festa-peca.tom-2 { --festa-tom: #7fe0c0; }
+.festa-peca.tom-3 { --festa-tom: #c0a8fb; }
+.festa-peca.tom-4 { --festa-tom: #8fcdff; }
+.festa-peca.tom-5 { --festa-tom: #ffb08a; }
+
+@keyframes festaCair {
+    from {
+        transform: translate3d(0, 0, 0) rotate(0) scale(var(--escala));
+        opacity: 1;
+    }
+    to {
+        transform: translate3d(var(--deriva), 118vh, 0) rotate(var(--girar)) scale(var(--escala));
+        opacity: 0.15;
+    }
+}

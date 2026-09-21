@@ -24,10 +24,26 @@ window.EN = window.EN || {};
     const MIN_MINUTES = 1;
     const MAX_MINUTES = 600;
 
+    /* Quanto dura o descanso que começa sozinho quando o foco acaba.
+       Espelhado em `avisos/Pomodoro.kt` no app Android: os dois têm de dar o
+       mesmo número, senão a mesma sessão descansa diferente em cada aparelho. */
+    const DESCANSOS = [
+        { ate: 30, minutos: 5 },
+        { ate: 59, minutos: 10 },
+    ];
+    const DESCANSO_LONGO = 15;
+
     let state = null;
     let ticker = 0;
     let chime = null;
     const listeners = [];
+
+    function descansoDe(minutos) {
+        const faixa = DESCANSOS.find(function (item) {
+            return minutos <= item.ate;
+        });
+        return faixa ? faixa.minutos : DESCANSO_LONGO;
+    }
 
     /* ------------------------------------------------------------ estado */
 
@@ -45,7 +61,13 @@ window.EN = window.EN || {};
                 return null;
             }
             const data = JSON.parse(raw);
-            return isValid(data) ? data : null;
+            if (!isValid(data)) {
+                return null;
+            }
+            /* Estado gravado antes de o descanso existir não tem `mode`. Foco
+               é o padrão: é o que ele era. */
+            data.mode = data.mode === "descanso" ? "descanso" : "foco";
+            return data;
         } catch (e) {
             return null;
         }
@@ -83,7 +105,7 @@ window.EN = window.EN || {};
 
     function snapshot() {
         if (!state) {
-            return { active: false, status: "idle", phase: "normal", leftMs: 0, totalMs: 0, progress: 0, label: "" };
+            return { active: false, status: "idle", phase: "normal", mode: "foco", leftMs: 0, totalMs: 0, progress: 0, label: "" };
         }
 
         const leftMs = leftOf(state);
@@ -93,6 +115,7 @@ window.EN = window.EN || {};
             active: true,
             status: done ? "done" : state.status,
             phase: done ? "done" : (leftMs <= warnAt(state.totalMs) ? "warning" : "normal"),
+            mode: state.mode,
             leftMs: done ? 0 : leftMs,
             totalMs: state.totalMs,
             progress: done ? 1 : 1 - leftMs / state.totalMs,
@@ -124,20 +147,57 @@ window.EN = window.EN || {};
         }
     }
 
+    /* O foco acabou: começa o descanso e comemora.
+
+       Começar sozinho é a regra do pomodoro — o descanso não é opcional, é
+       parte do ciclo, e um botão "agora descansar" seria só um jeito de esquecer
+       de apertá-lo. O contrário não vale: quando o descanso termina, nada
+       recomeça. Voltar a focar é decisão de quem está lá. */
+    function comecarDescanso() {
+        const total = descansoDe(state.minutes) * 60000;
+        state = {
+            status: "running",
+            mode: "descanso",
+            totalMs: total,
+            minutes: total / 60000,
+            endsAt: Date.now() + total,
+            leftMs: total,
+            label: state.label || "",
+        };
+        write();
+        armChime();
+        startTicker();
+    }
+
     function finish() {
-        /* Se o sino já estava agendado no relógio do WebAudio, ele está tocando
-           agora — soltar o handle sem cancelar. Só toca na mão quando o
+        /* Se o aviso já estava agendado no relógio do WebAudio, ele está
+           tocando agora — soltar o handle sem cancelar. Só toca na mão quando o
            agendamento não chegou a acontecer (aba nunca liberou o áudio). */
         const armed = chime && chime.armed;
+        const eraFoco = state.mode !== "descanso";
         chime = null;
 
-        state.status = "done";
-        state.leftMs = 0;
-        write();
-        stopTicker();
+        if (eraFoco) {
+            comecarDescanso();
+        } else {
+            state.status = "done";
+            state.leftMs = 0;
+            write();
+            stopTicker();
+        }
 
         if (!armed) {
-            EN.audio.chime();
+            if (eraFoco) {
+                EN.audio.palmas();
+            } else {
+                EN.audio.chime();
+            }
+        }
+        /* O confete não é agendável como o som: ele precisa de uma tela na
+           frente. Sai aqui, no instante em que a aba percebe o fim — que é
+           quando alguém está olhando. */
+        if (eraFoco) {
+            EN.festa.soltar();
         }
         emit();
     }
@@ -162,9 +222,14 @@ window.EN = window.EN || {};
 
     function armChime() {
         cancelChime();
-        if (state && state.status === "running") {
-            chime = EN.audio.chimeAt(state.endsAt);
+        if (!state || state.status !== "running") {
+            return;
         }
+        /* Palmas no fim do foco, sino no fim do descanso: são dois fins
+           diferentes, e o ouvido precisa saber qual deles chegou sem olhar. */
+        chime = state.mode === "descanso"
+            ? EN.audio.chimeAt(state.endsAt)
+            : EN.audio.palmasAt(state.endsAt);
     }
 
     /* ------------------------------------------------------------- ações */
@@ -200,6 +265,7 @@ window.EN = window.EN || {};
             const total = clampMinutes(minutes) * 60000;
             state = {
                 status: "running",
+                mode: "foco",
                 totalMs: total,
                 minutes: total / 60000,
                 endsAt: Date.now() + total,
@@ -305,6 +371,7 @@ window.EN = window.EN || {};
     "use strict";
 
     const LABELS = { done: "Tempo esgotado", paused: "Pausado" };
+    const DESCANSO = "Descanso";
 
     const widget = document.getElementById("pomo-widget");
     if (!widget) {
@@ -351,6 +418,7 @@ window.EN = window.EN || {};
         widget.style.setProperty("--pomo-progress", snap.progress.toFixed(4));
         widget.dataset.pomoStatus = snap.status;
         widget.dataset.pomoPhase = snap.phase;
+        widget.dataset.pomoMode = snap.mode;
 
         if (toggleBtn) {
             const paused = snap.status === "paused";
@@ -360,7 +428,12 @@ window.EN = window.EN || {};
         }
 
         if (labelEl) {
-            labelEl.textContent = LABELS[snap.status] || snap.label || snap.minutes + " min";
+            /* O descanso manda no rótulo antes do resto: ver "Foco" correndo
+               enquanto o que corre é o intervalo é o tipo de erro que faz
+               alguém voltar a trabalhar cedo demais. */
+            labelEl.textContent = snap.mode === "descanso"
+                ? DESCANSO
+                : (LABELS[snap.status] || snap.label || snap.minutes + " min");
         }
     });
 })(window.EN);

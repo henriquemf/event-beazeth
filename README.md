@@ -19,7 +19,7 @@ Há também um aplicativo Android nativo, em repositório próprio
 (`../event-bezeth-mobile`), que conversa com este servidor pela
 [API para o app nativo](#api-para-o-app-nativo).
 
-## As sete telas
+## As oito telas
 
 O menu da esquerda é a lista inteira do que existe:
 
@@ -31,6 +31,7 @@ O menu da esquerda é a lista inteira do que existe:
 | **To-do** (`/todo`) | A semana no formato de agenda de papel. Cada semana tem URL própria, então o voltar do navegador funciona. |
 | **Pomodoro** (`/pomodoro`) | Temporizador com ampulheta, que vira widget na barra lateral e continua contando enquanto você navega. |
 | **Beber água** (`/hydration`) | Copo que enche até a meta do dia, com lembrete por intervalo e widget na lateral. |
+| **Diário** (`/diary`) | O ano inteiro em quadradinhos, um por dia. Tocar num dia escolhe a cor do humor e abre o espaço de escrever. |
 | **Aparência** (`/appearance`) | Dez temas e dez fontes, escolhidos por card de preview. Modo escuro fica no menu. |
 
 As que tiveram decisões difíceis — planner, post-its, pomodoro, to-do e água —
@@ -138,9 +139,33 @@ Temporizador em `/pomodoro`, com widget que acompanha o usuário pelo site.
 - Faltando 5 minutos, tela e widget mudam para âmbar e ganham um pulso. Em timers
   de até 5 min a regra vira "últimos 20%", senão um pomodoro de 3 minutos nasceria
   em estado de alerta
-- No fim, um sino sintetizado (tríade dó–mi–sol em seno, pico de volume 0.075)
+- No fim do foco, **confete e uma salva de palmas**, e o descanso começa sozinho:
+  5 minutos até 30 de foco, 10 até 59, 15 daí para cima
+- No fim do descanso, aí sim o sino sintetizado (tríade dó–mi–sol em seno, pico
+  de volume 0.075). São dois fins diferentes, e o ouvido precisa saber qual
+  chegou sem olhar para a tela
 
-Três decisões que valem registro:
+Quatro decisões que valem registro:
+
+**O descanso começa sozinho; o foco seguinte, não.** O intervalo é parte do
+ciclo, e um botão "agora descansar" seria só um jeito de esquecer de apertá-lo.
+O contrário não vale: quando o descanso acaba, nada recomeça. Voltar a focar é
+decisão de quem está ali.
+
+**O confete é `@keyframes`, não um laço de quadro em JavaScript.** O JS cria as
+peças, escreve a geometria de cada uma em custom properties e sai; a animação
+inteira roda no compositor, com `transform` e `opacity` (seção 4 da constituição).
+Com `prefers-reduced-motion` a festa não acontece — e não acontece de verdade, as
+peças nem são criadas, senão ficariam paradas na tela até o temporizador
+removê-las.
+
+**As palmas são sintetizadas como todo o resto.** O projeto não tem um arquivo de
+áudio, e não foi para ganhar um: cada palma é um estouro de ruído filtrado
+(passa-baixa de um polo, diferenciação para devolver o estalo, queda
+exponencial), com corte e duração próprios, e a densidade caindo ao longo de 1,7
+s — que é o desenho de uma salva que começa junta e vai rareando. O buffer é
+montado uma vez, no primeiro uso.
+
 
 **O giro é em torno do eixo vertical, não uma virada de 180°.** Virar a ampulheta
 de cabeça para baixo é incompatível com mostrar o tempo: depois da virada o bulbo
@@ -345,8 +370,8 @@ quantos existem. Um `AudioContext` só para a interface inteira: dois no mesmo
 documento seriam dois desbloqueios independentes, e o sino do fim do timer não
 sairia em metade das visitas.
 
-E o que **não** entra: o modal de evento ficou fora do CSS global, então cinco
-das sete telas deixaram de baixá-lo.
+E o que **não** entra: o modal de evento ficou fora do CSS global, então seis
+das oito telas deixaram de baixá-lo.
 
 ## Estrutura
 
@@ -697,7 +722,7 @@ levam `min-width: 0` no celular. E por isso o calendário é contido no próprio
 cartão (`#events-calendar { min-width: 0; overflow-x: auto }`): o FullCalendar
 tem largura mínima própria e não é nosso para redimensionar.
 
-O teste `test-mobile.mjs` roda as sete telas num Chromium a 360px e falha se o
+O teste `test-mobile.mjs` roda as oito telas num Chromium a 360px e falha se o
 viewport esticar — é a rede que impede isso de voltar.
 
 ## API para o app nativo

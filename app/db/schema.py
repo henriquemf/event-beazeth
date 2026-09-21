@@ -145,6 +145,18 @@ STATEMENTS = (
         PRIMARY KEY (user_id, day)
     )
     """,
+    # Uma linha por conta e por DIA, como a de agua e pelo mesmo motivo: o dia
+    # e escolhido pela pessoa, entao ele E a chave. Linha vazia nao existe --
+    # ver `app/db/diary.py`.
+    """
+    CREATE TABLE IF NOT EXISTS diary_entries (
+        user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        day TEXT NOT NULL,
+        mood TEXT NOT NULL DEFAULT '',
+        note TEXT NOT NULL DEFAULT '',
+        PRIMARY KEY (user_id, day)
+    )
+    """,
     # Contas criadas antes da meta diaria existir. `IF NOT EXISTS` deixa isto
     # rodar em toda subida sem custo e sem quebrar em banco ja migrado -- e o
     # equivalente em Postgres das migracoes guardadas que o SQLite exigia.
@@ -168,6 +180,7 @@ STATEMENTS = (
     "ALTER TABLE events ADD COLUMN IF NOT EXISTS updated_at TEXT NOT NULL DEFAULT '1970-01-01T00:00:00'",
     "ALTER TABLE hydration_settings ADD COLUMN IF NOT EXISTS updated_at TEXT NOT NULL DEFAULT '1970-01-01T00:00:00'",
     "ALTER TABLE hydration_intake ADD COLUMN IF NOT EXISTS updated_at TEXT NOT NULL DEFAULT '1970-01-01T00:00:00'",
+    "ALTER TABLE diary_entries ADD COLUMN IF NOT EXISTS updated_at TEXT NOT NULL DEFAULT '1970-01-01T00:00:00'",
     "ALTER TABLE planner_blocks ADD COLUMN IF NOT EXISTS updated_at TEXT NOT NULL DEFAULT '1970-01-01T00:00:00'",
     "ALTER TABLE todo_items ADD COLUMN IF NOT EXISTS updated_at TEXT NOT NULL DEFAULT '1970-01-01T00:00:00'",
     # `sticky_notes` ja nascia com a coluna: e a unica tela cuja gravacao e por
@@ -271,6 +284,11 @@ TABELAS_SINCRONIZADAS = (
     ("event_tags", "slug"),
     ("hydration_settings", None),
     ("hydration_intake", None),
+    # Ganha lapide, ao contrario das duas de cima: limpar um dia no site tem de
+    # apagar a cor no celular, e uma linha que sumiu e indistinguivel de uma
+    # que nunca chegou. A chave da lapide e o DIA, que e o que identifica a
+    # linha dos dois lados.
+    ("diary_entries", "day"),
 )
 
 

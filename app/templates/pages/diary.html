@@ -1,0 +1,98 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %}Diário | Event Notifier{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ static_url('css/pages/diary.css') }}" />
+{% endblock %}
+
+{% block content %}
+<section class="hero-card diary-hero">
+    <div class="diary-hero-text">
+        <h2>Diário <span class="diary-year">{{ ano }}</span></h2>
+        <p>Uma cor para o humor do dia, e o espaço para contar o resto.</p>
+    </div>
+
+    {# Navegação por link, como a das semanas do to-do: cada ano tem URL
+       própria e o voltar do navegador funciona. #}
+    <nav class="diary-nav" aria-label="Trocar de ano">
+        {% if ano_anterior %}
+        <a class="diary-nav-btn" href="{{ url_for('diary.index', ano=ano_anterior) }}" aria-label="Ano anterior">‹</a>
+        {% endif %}
+        <a class="diary-nav-now" href="{{ url_for('diary.index') }}">Hoje</a>
+        {% if ano_seguinte %}
+        <a class="diary-nav-btn" href="{{ url_for('diary.index', ano=ano_seguinte) }}" aria-label="Próximo ano">›</a>
+        {% endif %}
+    </nav>
+
+    <p class="diary-count">{{ escritos }} {{ 'dia escrito' if escritos == 1 else 'dias escritos' }}</p>
+</section>
+
+<section class="panel-card diary-panel">
+    <h3>O ano inteiro</h3>
+
+    <div class="diary-grid" id="diary-grid">
+        <span class="diary-corner" aria-hidden="true"></span>
+        {% for mes in meses %}
+        <span class="diary-month" aria-hidden="true">{{ mes.nome }}</span>
+        {% endfor %}
+
+        {% for linha in linhas %}
+        <span class="diary-daynum" aria-hidden="true">{{ linha if linha % 5 == 0 or linha == 1 else '' }}</span>
+        {% for mes in meses %}
+        {% set dia = mes.dias[linha - 1] %}
+        {% if dia %}
+        <button type="button"
+                class="diary-cell{% if dia.mood %} mood-{{ dia.mood }}{% endif %}{% if dia.hoje %} is-today{% endif %}{% if dia.futuro %} is-future{% endif %}{% if dia.tem_nota %} has-note{% endif %}"
+                data-day="{{ dia.iso }}"
+                data-mood="{{ dia.mood }}"
+                data-note="{{ dia.note }}"
+                data-label="{{ dia.rotulo }}"
+                aria-label="{{ dia.rotulo }}{% if dia.mood %} — {{ moods | selectattr('slug', 'equalto', dia.mood) | map(attribute='rotulo') | first }}{% else %} — sem registro{% endif %}"
+></button>
+        {% else %}
+        <span class="diary-gap" aria-hidden="true"></span>
+        {% endif %}
+        {% endfor %}
+        {% endfor %}
+    </div>
+
+    <ul class="diary-legend">
+        {% for mood in moods %}
+        <li class="diary-legend-item">
+            <span class="diary-swatch mood-{{ mood.slug }}" aria-hidden="true"></span>
+            {{ mood.rotulo }}
+        </li>
+        {% endfor %}
+    </ul>
+</section>
+
+<section class="panel-card diary-editor" id="diary-editor" hidden>
+    <h3 id="diary-editor-title">Escolha um dia</h3>
+
+    <fieldset class="diary-moods">
+        <legend>Como foi o dia</legend>
+        {% for mood in moods %}
+        <button type="button" class="diary-mood mood-{{ mood.slug }}" data-mood="{{ mood.slug }}"
+                aria-pressed="false">
+            <span class="diary-swatch" aria-hidden="true"></span>{{ mood.rotulo }}
+        </button>
+        {% endfor %}
+    </fieldset>
+
+    <label class="diary-note-label" for="diary-note">Anotações</label>
+    <textarea id="diary-note" class="diary-note" rows="6" maxlength="{{ max_note }}"
+              placeholder="O que aconteceu hoje?"></textarea>
+
+    <div class="diary-actions">
+        <button type="button" class="btn-primary" id="diary-save">Guardar</button>
+        <button type="button" class="btn-secondary" id="diary-clear">Limpar o dia</button>
+    </div>
+
+    <p class="diary-status" id="diary-status" role="status" hidden></p>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script defer src="{{ static_url('js/pages/diary/main.js') }}"></script>
+{% endblock %}

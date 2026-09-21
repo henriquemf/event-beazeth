@@ -55,6 +55,14 @@ from app.db.reminders import (
     has_successful_dispatch,
     save_dispatch,
 )
+from app.db.diary import (
+    MAX_NOTE,
+    MOODS,
+    apagar_dia,
+    gravar_dia,
+    humor_valido,
+    listar_dias,
+)
 from app.db.hydration import (
     MAX_GLASS_ML,
     MAX_GOAL,
@@ -147,6 +155,12 @@ __all__ = [
     "MAX_GOAL",
     "MIN_GLASS_ML",
     "MIN_GOAL",
+    "MAX_NOTE",
+    "MOODS",
+    "apagar_dia",
+    "gravar_dia",
+    "humor_valido",
+    "listar_dias",
     "change_hydration_glasses",
     "dia_do_consumo",
     "get_hydration_today",

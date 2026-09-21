@@ -140,6 +140,11 @@
     }
 
     function describe(snap) {
+        if (snap.mode === "descanso") {
+            return snap.status === "paused"
+                ? "Descanso pausado em " + EN.pomodoro.format(snap.leftMs)
+                : "Descanso até às " + endsAtText(snap.leftMs);
+        }
         if (snap.status === "done") {
             return "Tempo esgotado! 🍎";
         }
@@ -190,6 +195,7 @@
     EN.pomodoro.subscribe(function (snap) {
         stage.dataset.pomoStatus = snap.status;
         stage.dataset.pomoPhase = snap.phase;
+        stage.dataset.pomoMode = snap.mode;
         els.primary.textContent = PRIMARY_LABEL[snap.status];
         els.reset.hidden = !snap.active;
 

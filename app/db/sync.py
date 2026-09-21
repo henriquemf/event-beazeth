@@ -19,6 +19,7 @@ este módulo — ver `schema.py`.
 """
 
 from app.db.connection import get_connection
+from app.db.diary import _COLUNAS_DO_DIA, _linha_para_dia
 from app.db.events import _EVENT_SELECT
 from app.db.notes import _NOTE_COLUMNS, _row_to_note_dict
 from app.db.planner import _row_to_planner_dict
@@ -91,6 +92,10 @@ def coletar_mudancas(user_id: int, since: str | None) -> dict:
             "SELECT day, glasses FROM hydration_intake"
             " WHERE user_id = %s AND updated_at > %s ORDER BY day"
         )
+        diario = mudou(
+            "SELECT " + _COLUNAS_DO_DIA + " FROM diary_entries"
+            " WHERE user_id = %s AND updated_at > %s ORDER BY day"
+        )
         config = conn.execute(
             "SELECT enabled, daily_goal, glass_ml, interval_minutes, start_time, end_time"
             " FROM hydration_settings WHERE user_id = %s AND updated_at > %s",
@@ -114,6 +119,7 @@ def coletar_mudancas(user_id: int, since: str | None) -> dict:
             "events": [{k: v for k, v in r.items() if k != "user_id"} for r in eventos],
             "tags": [dict(r) for r in tags],
             "hydrationIntake": [dict(r) for r in agua],
+            "diaryEntries": [_linha_para_dia(r) for r in diario],
             # Uma linha por conta, então vem como objeto ou `None` — e `None`
             # aqui significa "não mudou", não "não existe".
             "hydrationSettings": dict(config) if config else None,

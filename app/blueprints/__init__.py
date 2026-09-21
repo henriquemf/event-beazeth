@@ -8,6 +8,7 @@ from app.blueprints import (
     appearance,
     auth,
     calendar,
+    diary,
     events,
     home,
     hydration,
@@ -38,6 +39,7 @@ BLUEPRINTS = (
     notes.bp,
     appearance.bp,
     hydration.bp,
+    diary.bp,
     push.bp,
 )
 

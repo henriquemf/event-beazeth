@@ -1,0 +1,254 @@
+/* Tela do diário: o ano em quadradinhos, um por dia.
+
+   A grade é UMA `grid` só, com a calha dos números à esquerda e doze colunas de
+   mês. Fazer doze colunas independentes desalinharia as linhas assim que um mês
+   tivesse menos dias — e a leitura horizontal ("como foram todos os dias 12?")
+   é metade da razão de a tela existir.
+
+   O tamanho da célula sai de `cqi` e não de `vw`: o cartão tem a largura que a
+   barra lateral deixou, e a janela não sabe disso. */
+
+.diary-panel {
+    container-type: inline-size;
+}
+
+.diary-hero {
+    display: grid;
+    gap: var(--space-2);
+}
+
+.diary-year {
+    color: var(--ink-soft);
+}
+
+.diary-nav {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.diary-nav-btn,
+.diary-nav-now {
+    border: 1px solid var(--stroke);
+    border-radius: 999px;
+    padding: 4px 14px;
+    color: var(--ink);
+    text-decoration: none;
+    font-family: var(--font-display);
+}
+
+.diary-nav-btn {
+    padding: 4px 12px;
+}
+
+.diary-count {
+    color: var(--ink-soft);
+    margin: 0;
+}
+
+/* --- a grade ---------------------------------------------------------- */
+
+.diary-grid {
+    /* 12 colunas de mês mais a calha. O `clamp` prende a célula entre o que dá
+       para acertar com o dedo e o que não vira azulejo numa tela larga. */
+    --diary-cell: clamp(10px, 6.1cqi, 22px);
+    --diary-gap: 3px;
+
+    display: grid;
+    grid-template-columns: 2.4ch repeat(12, var(--diary-cell));
+    grid-auto-rows: var(--diary-cell);
+    gap: var(--diary-gap);
+    justify-content: start;
+    align-items: center;
+}
+
+.diary-month,
+.diary-daynum {
+    color: var(--ink-soft);
+    font-size: 0.68rem;
+    line-height: 1;
+}
+
+.diary-month {
+    text-align: center;
+}
+
+.diary-daynum {
+    text-align: right;
+    padding-right: 2px;
+}
+
+.diary-cell,
+.diary-gap {
+    width: var(--diary-cell);
+    height: var(--diary-cell);
+    border-radius: 4px;
+}
+
+.diary-gap {
+    /* O buraco de 31 de fevereiro: ocupa a casa para a linha não subir. */
+    background: none;
+}
+
+.diary-cell {
+    border: 1px solid var(--stroke);
+    background: color-mix(in srgb, var(--ink) 6%, transparent);
+    padding: 0;
+    cursor: pointer;
+    transition: transform 0.12s ease;
+}
+
+.diary-cell:hover {
+    transform: scale(1.18);
+}
+
+.diary-cell:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: 0 0 0 2px var(--accent);
+}
+
+/* Dia com humor: a cor é a do humor. Sem humor mas com texto, fica o ponto. */
+.diary-cell.mood-feliz,
+.diary-cell.mood-animada,
+.diary-cell.mood-calma,
+.diary-cell.mood-cansada,
+.diary-cell.mood-triste,
+.diary-cell.mood-brava {
+    background: var(--diary-tint);
+    border-color: color-mix(in srgb, var(--diary-tint) 70%, var(--ink));
+}
+
+.diary-cell.is-today {
+    box-shadow: 0 0 0 2px var(--accent);
+}
+
+.diary-cell.is-future {
+    opacity: 0.45;
+}
+
+/* Um ponto no canto para "tem texto aqui" — cor não pode ser o único sinal, e
+   um dia pode ter anotação sem humor escolhido. */
+.diary-cell.has-note {
+    background-image: radial-gradient(
+        circle at 78% 22%,
+        var(--ink) 0 1.4px,
+        transparent 1.6px
+    );
+}
+
+/* --- a paleta dos humores --------------------------------------------- */
+
+/* Os mesmos seis tons dos post-its (`pages/notes.css`), que são a versão
+   "papel" da paleta do planner. Ficam aqui, e não num token global, porque as
+   duas telas que já existiam escolheram tons DIFERENTES para os mesmos nomes —
+   não há uma paleta só para compartilhar, há duas, e esta é a terceira leitura
+   do mesmo tema. O servidor não guarda cor nenhuma: ver `app/db/diary.py`. */
+.mood-feliz { --diary-tint: #ff9ec4; }
+.mood-animada { --diary-tint: #ffe066; }
+.mood-calma { --diary-tint: #7fe0c0; }
+.mood-cansada { --diary-tint: #c0a8fb; }
+.mood-triste { --diary-tint: #8fcdff; }
+.mood-brava { --diary-tint: #ffb08a; }
+
+.diary-swatch {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    background: var(--diary-tint);
+    border: 1px solid color-mix(in srgb, var(--diary-tint) 70%, var(--ink));
+    vertical-align: -2px;
+}
+
+.diary-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-3);
+    list-style: none;
+    margin: var(--space-3) 0 0;
+    padding: 0;
+    color: var(--ink-soft);
+    font-size: 0.85rem;
+}
+
+.diary-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* --- o editor do dia --------------------------------------------------- */
+
+.diary-moods {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    border: 0;
+    margin: 0;
+    padding: 0;
+}
+
+.diary-moods legend {
+    color: var(--ink-soft);
+    font-size: 0.85rem;
+    padding: 0 0 var(--space-1);
+}
+
+.diary-mood {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--stroke);
+    border-radius: 999px;
+    padding: 6px 14px;
+    background: var(--input-bg);
+    color: var(--ink);
+    font-family: var(--font-display);
+    cursor: pointer;
+}
+
+.diary-mood[aria-pressed="true"] {
+    border-color: color-mix(in srgb, var(--diary-tint) 70%, var(--ink));
+    background: color-mix(in srgb, var(--diary-tint) 30%, var(--surface));
+}
+
+.diary-mood:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: 0 0 0 2px var(--accent);
+}
+
+.diary-note-label {
+    display: block;
+    margin-top: var(--space-3);
+    color: var(--ink-soft);
+    font-size: 0.85rem;
+}
+
+.diary-note {
+    width: 100%;
+    border: 1px solid var(--stroke);
+    border-radius: 14px;
+    background: var(--input-bg);
+    color: var(--ink);
+    font-family: var(--font-main);
+    font-size: 1rem;
+    padding: 10px 12px;
+    resize: vertical;
+}
+
+.diary-note:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: 0 0 0 2px var(--accent);
+}
+
+.diary-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+}
+
+.diary-status {
+    margin: var(--space-2) 0 0;
+    color: var(--ink-soft);
+}

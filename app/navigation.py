@@ -20,9 +20,14 @@ NAV_LINKS = (
     {"key": "todo", "endpoint": "todo.index", "icon": "✅",
      "label": "To-do", "short": "To-do", "bottom": True},
     {"key": "pomodoro", "endpoint": "pomodoro.index", "icon": "🍎",
-     "label": "Pomodoro", "short": "Pomodoro", "bottom": True},
+     # "Foco" e não "Pomodoro": com sete destinos a barra inferior dá ~51px por
+     # item, e o nome inteiro não cabe. É o nome da fase que o cronômetro conta
+     # — a outra é o descanso.
+     "label": "Pomodoro", "short": "Foco", "bottom": True},
     {"key": "hydration", "endpoint": "hydration.index", "icon": "💧",
      "label": "Beber água", "short": "Água", "bottom": True},
+    {"key": "diary", "endpoint": "diary.index", "icon": "📔",
+     "label": "Diário", "short": "Diário", "bottom": True},
     {"key": "appearance", "endpoint": "appearance.index", "icon": "🎨",
      "label": "Aparência", "short": "Tema", "bottom": False},
 )

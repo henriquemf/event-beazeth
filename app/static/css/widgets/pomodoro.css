@@ -197,6 +197,13 @@
     --pomo-tint: #3fb98a;
 }
 
+/* O descanso tem tom próprio, e vem DEPOIS das fases para vencê-las: durante o
+   intervalo o relógio também entra na reta final e ficaria laranja de alerta,
+   apressando justamente quem devia estar parada. */
+[data-pomo-mode="descanso"] {
+    --pomo-tint: #3fb98a;
+}
+
 [data-pomo-phase="warning"] .hourglass,
 [data-pomo-phase="done"] .hourglass {
     --hg-glass: color-mix(in srgb, var(--pomo-tint) 14%, rgba(255, 255, 255, 0.5));
