@@ -7,9 +7,6 @@
 (function (EN) {
     "use strict";
 
-    const CHOICE_KEY = "en_pomodoro_choice";
-    const DEFAULT_MINUTES = 25;
-
     const stage = document.getElementById("pomo-stage");
     if (!stage) {
         return;
@@ -36,7 +33,7 @@
         presetLabels[button.dataset.minutes] = small ? small.textContent.trim() : "";
     });
 
-    let choice = readChoice();
+    let choice = EN.pomodoro.escolha();
     let locked = false;
 
     /* ------------------------------------------------------------ escolha */
@@ -44,11 +41,6 @@
     function clampMinutes(value) {
         const minutes = Math.round(Number(value) || 0);
         return EN.utils.clamp(minutes, EN.pomodoro.MIN_MINUTES, EN.pomodoro.MAX_MINUTES);
-    }
-
-    function readChoice() {
-        const stored = parseInt(localStorage.getItem(CHOICE_KEY), 10);
-        return clampMinutes(stored > 0 ? stored : DEFAULT_MINUTES);
     }
 
     function labelFor(minutes) {
@@ -74,11 +66,7 @@
         els.output.textContent = String(choice);
 
         if (persist) {
-            try {
-                localStorage.setItem(CHOICE_KEY, String(choice));
-            } catch (e) {
-                /* Sem cota: a escolha vale só nesta visita. */
-            }
+            EN.pomodoro.definirEscolha(choice);
         }
     }
 
@@ -129,32 +117,6 @@
         }
         els.clock.textContent = EN.pomodoro.format(choice * 60000);
         stage.style.setProperty("--pomo-progress", "0");
-    }
-
-    function endsAtText(leftMs) {
-        const end = new Date(Date.now() + leftMs);
-        const pad = function (value) {
-            return value < 10 ? "0" + value : String(value);
-        };
-        return pad(end.getHours()) + ":" + pad(end.getMinutes());
-    }
-
-    function describe(snap) {
-        if (snap.mode === "descanso") {
-            return snap.status === "paused"
-                ? "Descanso pausado em " + EN.pomodoro.format(snap.leftMs)
-                : "Descanso até às " + endsAtText(snap.leftMs);
-        }
-        if (snap.status === "done") {
-            return "Tempo esgotado! 🍎";
-        }
-        if (snap.status === "paused") {
-            return "Pausado em " + EN.pomodoro.format(snap.leftMs);
-        }
-        if (snap.phase === "warning") {
-            return "Reta final — termina às " + endsAtText(snap.leftMs);
-        }
-        return "Focando até às " + endsAtText(snap.leftMs);
     }
 
     const PRIMARY_LABEL = {
@@ -210,7 +172,7 @@
                tela ou em outro dia) e zerá-lo deixava o mostrador no tempo
                daquele timer, enquanto o localStorage guardava outro — a próxima
                recarga pularia sozinha para um valor diferente. */
-            setChoice(readChoice(), false);
+            setChoice(EN.pomodoro.escolha(), false);
             paintIdle();
             return;
         }
@@ -222,7 +184,7 @@
         }
 
         els.clock.textContent = EN.pomodoro.format(snap.leftMs);
-        els.state.textContent = describe(snap);
+        els.state.textContent = EN.pomodoro.descrever(snap);
         stage.style.setProperty("--pomo-progress", snap.progress.toFixed(4));
     });
 

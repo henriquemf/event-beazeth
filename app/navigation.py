@@ -8,6 +8,11 @@ falta é sempre o do celular, que é o menos testado. Aqui elas são a mesma.
 destinos sobra menos ainda: "Beber água" não cabe, "Água" cabe. `bottom` marca
 quem merece o polegar: Aparência é tela de ajuste, se usa uma vez por mês e
 fica só na lateral.
+
+`badge` é um selo que o JS preenche em cima do link, nas duas barras. Só o
+pomodoro tem um, para dizer que existe sub-pomodoro contando fora da tela — o
+nome aqui é só o gancho; quem escreve o número é
+`static/js/core/pomodoro-widget.js`.
 """
 
 
@@ -24,7 +29,8 @@ NAV_LINKS = (
      # "Foco" e não "Pomodoro": com sete destinos a barra inferior dá ~51px por
      # item, e o nome inteiro não cabe. É o nome da fase que o cronômetro conta
      # — a outra é o descanso.
-     "label": "Pomodoro", "short": "Foco", "bottom": True},
+     "label": "Pomodoro", "short": "Foco", "bottom": True,
+     "badge": "pomo-subs"},
     {"key": "hydration", "endpoint": "hydration.index", "icon": "💧",
      "label": "Beber água", "short": "Água", "bottom": True},
     {"key": "diary", "endpoint": "diary.index", "icon": "📔",

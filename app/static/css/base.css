@@ -255,6 +255,39 @@ body.page-leaving {
     background: rgba(255, 120, 178, 0.18);
 }
 
+/* Selo de contagem no link do menu — hoje só o Pomodoro tem um, para avisar
+   que existe sub-pomodoro contando fora da tela.
+
+   É número e não bolinha colorida de propósito (§9): "2" diz quantos são, e
+   quem não distingue a cor do fundo continua sabendo que há algo ali. O
+   respiro leve existe para o canto do olho perceber que aquilo está vivo; é só
+   `transform`, então roda no compositor e some com `prefers-reduced-motion`. */
+.nav-badge {
+    margin-left: auto;
+    min-width: 23px;
+    padding: 1px 7px;
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--stroke));
+    border-radius: 999px;
+    font-family: var(--font-display);
+    font-size: 0.76rem;
+    font-weight: 700;
+    line-height: 1.5;
+    text-align: center;
+    color: var(--ink);
+    background: color-mix(in srgb, var(--accent) 20%, var(--input-bg));
+    animation: navBadgePulse 2.6s ease-in-out infinite;
+}
+
+@keyframes navBadgePulse {
+    0%,
+    100% {
+        transform: scale(1);
+    }
+    55% {
+        transform: scale(1.12);
+    }
+}
+
 .main-content {
     display: grid;
     gap: var(--space-4);

@@ -89,6 +89,7 @@ body {
     }
 
     .bottom-nav-link {
+        position: relative;
         display: grid;
         justify-items: center;
         align-content: center;
@@ -120,6 +121,21 @@ body {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+    }
+
+    /* Na lateral o selo fica no fim da linha; aqui não há linha — o item é uma
+       coluna de ícone e rótulo. Então ele sobe para o canto do ícone, como
+       contador de app de celular. */
+    .bottom-nav-link .nav-badge {
+        position: absolute;
+        top: 1px;
+        left: 50%;
+        margin-left: 6px;
+        min-width: 17px;
+        padding: 0 4px;
+        font-size: 0.6rem;
+        line-height: 1.55;
+        background: color-mix(in srgb, var(--accent) 30%, var(--surface-solid));
     }
 
     .bottom-nav-link.active {

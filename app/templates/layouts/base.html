@@ -56,6 +56,8 @@
     {# Antes do pomodoro: é ele quem solta a festa ao fim do foco. #}
     <script defer src="{{ static_url('js/core/festa.js') }}"></script>
     <script defer src="{{ static_url('js/core/pomodoro.js') }}"></script>
+    {# Depois do motor: o widget e o selo do menu são assinantes dele. #}
+    <script defer src="{{ static_url('js/core/pomodoro-widget.js') }}"></script>
     <script defer src="{{ static_url('js/core/hydration.js') }}"></script>
     {% block scripts %}{% endblock %}
     {# Pre-renderiza o destino enquanto o dedo ainda esta no link, para o toque

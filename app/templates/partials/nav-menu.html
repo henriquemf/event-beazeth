@@ -6,6 +6,9 @@
        {% if active_page == link.key %}aria-current="page"{% endif %}>
         <span aria-hidden="true">{{ link.icon }}</span>
         <span>{{ link.label }}</span>
+        {# Nasce escondido e sem número: quem conta é o JS, e o estado dele vive
+           no localStorage, que o servidor não enxerga. #}
+        {% if link.badge %}<span class="nav-badge" data-nav-badge="{{ link.badge }}" hidden></span>{% endif %}
     </a>
     {% endfor %}
 </nav>

@@ -144,6 +144,10 @@ Temporizador em `/pomodoro`, com widget que acompanha o usuário pelo site.
 - No fim do descanso, aí sim o sino sintetizado (tríade dó–mi–sol em seno, pico
   de volume 0.075). São dois fins diferentes, e o ouvido precisa saber qual
   chegou sem olhar para a tela
+- Até **10 outros pomodoros** na mesma tela, cada um com nome, tempo e contagem
+  próprios, em cartão aberto ou minimizado (só nome, relógio e barra). Com algum
+  deles contando, o link do Pomodoro no menu ganha um número — é o único lugar
+  da casca onde eles aparecem
 
 Quatro decisões que valem registro:
 
@@ -151,6 +155,20 @@ Quatro decisões que valem registro:
 ciclo, e um botão "agora descansar" seria só um jeito de esquecer de apertá-lo.
 O contrário não vale: quando o descanso acaba, nada recomeça. Voltar a focar é
 decisão de quem está ali.
+
+**Os sub-pomodoros são o mesmo motor, não uma cópia menor dele.** O motor virou
+uma fábrica: `criarMotor(porta)` devolve um temporizador inteiro, e a "porta"
+(`ler`/`gravar`) é quem sabe onde aquele estado mora — o principal em
+`en_pomodoro`, os subs numa lista só em `en_pomodoro_subs`. Por isso o sub tem o
+mesmo descanso automático, as mesmas palmas e o mesmo confete sem uma linha de
+lógica repetida. Uma chave só para os dez porque o evento `storage` entre abas
+chega uma vez por chave: com onze chaves seriam onze ouvintes fazendo o mesmo.
+
+**A barra lateral continua sendo do principal.** Dez widgets empilhados
+empurrariam o menu para fora da tela, e o que a casca precisa dizer é uma coisa
+só: "tem outro contando". Isso cabe num número em cima do link do Pomodoro — que
+fica no link, e não no widget, porque o widget só existe com o principal em
+andamento.
 
 **O confete é `@keyframes`, não um laço de quadro em JavaScript.** O JS cria as
 peças, escreve a geometria de cada uma em custom properties e sai; a animação
@@ -422,18 +440,21 @@ app/
         modal.css        modal de evento (calendário e planner)
       themes.css         10 temas, 10 fontes, dark mode, responsivo
       pages/             notes, planner, calendar, appearance, hydration,
-                         pomodoro, todo, auth
+                         pomodoro, todo, diary, auth
       vendor/            tema do flatpickr e do FullCalendar
     js/
       core/              shared (namespace + utils), theme, audio, ui-effects,
-                         push, pomodoro, hydration
+                         push, festa, pomodoro (motor + principal + subs),
+                         pomodoro-widget (widget da sidebar + selo do menu),
+                         hydration
       pages/
         notes/           constants, context, store, card, board, interactions, main
         planner/         constants, time, context, grid, blocks, store, drag, editor, main
         calendar/        event-modal, tags-modal, main
-        pomodoro/        main.js
+        pomodoro/        main, subs
         todo/            main.js
         hydration/       main.js
+        diary/           main.js
     sw.js  manifest.webmanifest  icon.svg
   templates/
     layouts/base.html    casca da página
@@ -441,7 +462,7 @@ app/
                          pomodoro, macro da ampulheta, macro da pílula de tag,
                          casca das telas de conta
     pages/               home, calendar, planner, pomodoro, appearance,
-                         hydration, login, signup
+                         hydration, diary, login, signup
 tools/                   geração de chaves VAPID
 Dockerfile  docker-compose.yml  render.yaml
 requirements.txt  run.py  wsgi.py  .env.example

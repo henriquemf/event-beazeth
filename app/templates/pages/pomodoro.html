@@ -70,8 +70,75 @@
         <p class="pomo-locked" id="pomo-locked" hidden>Zere o timer para trocar o tempo.</p>
     </section>
 </div>
+
+{# ------------------------------------------------------- sub-pomodoros #}
+
+{# O de cima é o principal: é dele o widget da barra lateral e é ele que
+   aparece no menu. Estes aqui são os outros — até dez, todos contando igual,
+   todos só nesta tela. #}
+<section class="panel-card pomo-subs">
+    <div class="pomo-subs-head">
+        <div class="pomo-subs-title">
+            <h3>Outros pomodoros</h3>
+            {# O texto é escrito pelo JS: ele muda conforme a lista esteja
+               vazia, com espaço ou cheia. #}
+            <p class="pomo-subs-hint" id="pomo-subs-hint"></p>
+        </div>
+
+        <button id="pomo-sub-add" class="pomo-sub-add" type="button"
+                aria-label="Adicionar outro pomodoro" title="Adicionar outro pomodoro">
+            <span aria-hidden="true">+</span>
+        </button>
+    </div>
+
+    <div class="pomo-sub-list" id="pomo-sub-list"></div>
+</section>
+
+{# O molde de um cartão. Fica no template e não em strings de JS: é markup, e
+   markup repetido mora onde mora todo o resto do markup. O servidor não pode
+   renderizar os cartões prontos porque a lista vive no localStorage, que ele
+   não enxerga. #}
+<template id="pomo-sub-template">
+    <article class="pomo-sub" data-aberto="true" data-pomo-status="idle" data-pomo-phase="normal" data-pomo-mode="foco">
+        <div class="pomo-sub-head">
+            <input class="pomo-sub-name" type="text" maxlength="24" placeholder="Sem nome"
+                   aria-label="Nome deste pomodoro" />
+            <strong class="pomo-sub-clock">00:00</strong>
+
+            <button class="pomo-sub-icon" type="button" data-sub-action="fold" aria-expanded="true">
+                <span class="pomo-sub-chevron" aria-hidden="true"></span>
+            </button>
+            <button class="pomo-sub-icon" type="button" data-sub-action="remove"
+                    aria-label="Remover este pomodoro">
+                <span aria-hidden="true">×</span>
+            </button>
+        </div>
+
+        {# A barra continua visível quando o cartão está minimizado: é ela que
+           faz o contador sozinho ainda dizer quanto falta. #}
+        <span class="pomo-sub-track"><span class="pomo-sub-fill"></span></span>
+
+        <div class="pomo-sub-body">
+            <p class="pomo-sub-state"></p>
+
+            <div class="pomo-sub-controls">
+                <label class="pomo-sub-minutes-label">
+                    <input class="pomo-minutes-field pomo-sub-minutes" type="number"
+                           min="{{ min_minutes }}" max="{{ max_minutes }}" step="1"
+                           aria-label="Minutos deste pomodoro" />
+                    <span>min</span>
+                </label>
+                <span class="pomo-sub-buttons">
+                    <button class="btn-primary pomo-sub-primary" type="button" data-sub-action="toggle">Começar</button>
+                    <button class="btn-secondary pomo-sub-reset" type="button" data-sub-action="stop" hidden>Zerar</button>
+                </span>
+            </div>
+        </div>
+    </article>
+</template>
 {% endblock %}
 
 {% block scripts %}
 <script defer src="{{ static_url('js/pages/pomodoro/main.js') }}"></script>
+<script defer src="{{ static_url('js/pages/pomodoro/subs.js') }}"></script>
 {% endblock %}

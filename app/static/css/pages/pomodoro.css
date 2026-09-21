@@ -321,6 +321,296 @@
     }
 }
 
+/* ------------------------------------------------------- sub-pomodoros */
+
+/* Os cartões dos outros pomodoros. São pequenos de propósito: o mostrador
+   grande é do principal, e dez ampulhetas chacoalhando ao mesmo tempo viraria
+   um circo — aqui o que conta o tempo é o número e a barrinha, como no widget
+   da barra lateral.
+
+   O tom (`--pomo-tint`) e as fases vêm de widgets/pomodoro.css pelos atributos
+   `data-pomo-phase`/`data-pomo-mode`, os mesmos que o mostrador usa: o cartão
+   não redeclara nada de cor. */
+
+.pomo-subs {
+    margin-top: 14px;
+}
+
+.pomo-subs-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.pomo-subs-title {
+    min-width: 0;
+}
+
+.pomo-subs-hint {
+    margin: 4px 0 0;
+    font-size: 0.86rem;
+    color: var(--ink-soft);
+}
+
+.pomo-sub-add {
+    flex: 0 0 auto;
+    width: 46px;
+    height: 46px;
+    border: 0;
+    border-radius: 50%;
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    line-height: 1;
+    color: #fff;
+    background: linear-gradient(110deg, var(--accent), #ff96c2);
+    box-shadow: 0 8px 20px -10px rgba(228, 90, 152, 0.7);
+    cursor: pointer;
+    transition: transform 0.16s cubic-bezier(0.34, 1.45, 0.64, 1), background 0.18s ease;
+}
+
+.pomo-sub-add:hover:not(:disabled) {
+    transform: translateY(-2px) scale(1.04);
+    background: linear-gradient(110deg, var(--accent-dark), #f37fb3);
+}
+
+.pomo-sub-add:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.pomo-sub-add:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* Sem breakpoint: cabem quantos couberem com 232px cada, e viram uma coluna só
+   quando não couber mais de um.
+
+   `auto-fill` e não `auto-fit`: com `auto-fit` as trilhas vazias somem e os dois
+   primeiros cartões esticavam para 640px cada num tablet deitado. Aqui eles são
+   fichas pequenas — o que sobra de largura fica sobrando.
+
+   Sem o `min(100%, ...)` que o resto do arquivo usa: dentro de `auto-fill` a
+   porcentagem não tem contra o que resolver na hora de contar as trilhas, e o
+   Chrome caía para o tamanho do conteúdo — três colunas gordas onde cabiam
+   cinco. O cartão não precisa da proteção: o painel nunca fica com menos de
+   220px por dentro, nem num celular estreito. */
+.pomo-sub-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(214px, 1fr));
+    align-items: start;
+    gap: 11px;
+    margin-top: 14px;
+}
+
+.pomo-sub-list:empty {
+    display: none;
+}
+
+.pomo-sub {
+    display: grid;
+    gap: 8px;
+    padding: 10px 11px;
+    border: 1px solid color-mix(in srgb, var(--pomo-tint) 28%, var(--stroke));
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--surface) 84%, transparent);
+    animation: pomoSubIn 0.32s cubic-bezier(0.22, 1.25, 0.42, 1) backwards;
+}
+
+@keyframes pomoSubIn {
+    from {
+        opacity: 0;
+        transform: scale(0.94);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* Parado, o cartão sai da frente: borda neutra e um fio de opacidade a menos.
+   Assim o olho encontra quem está contando sem precisar ler dez relógios. */
+.pomo-sub[data-pomo-status="idle"] {
+    border-color: var(--stroke);
+}
+
+.pomo-sub[data-pomo-status="running"] {
+    background: color-mix(in srgb, var(--pomo-tint) 9%, var(--surface));
+}
+
+.pomo-sub-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Campo sem cara de campo até receber o foco: no repouso ele é só o nome do
+   cartão, e dez caixinhas de texto empilhadas pesariam a tela inteira. */
+.pomo-sub-name {
+    min-width: 0;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    padding: 3px 6px;
+    font-family: var(--font-display);
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--ink);
+    background: transparent;
+    transition: border-color 0.18s ease, background 0.18s ease;
+}
+
+.pomo-sub-name::placeholder {
+    color: var(--ink-soft);
+    font-weight: 500;
+}
+
+.pomo-sub-name:hover,
+.pomo-sub-name:focus {
+    border-color: color-mix(in srgb, var(--accent) 40%, var(--stroke));
+    background: var(--input-bg);
+}
+
+.pomo-sub-name:focus {
+    outline: 2px solid transparent;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.pomo-sub-clock {
+    font-family: var(--font-display);
+    font-size: 1.12rem;
+    line-height: 1.2;
+    /* Sem largura tabular os dígitos trocam de largura e o relógio treme. */
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+}
+
+.pomo-sub[data-pomo-phase="warning"] .pomo-sub-clock,
+.pomo-sub[data-pomo-phase="done"] .pomo-sub-clock {
+    color: var(--pomo-tint);
+}
+
+.pomo-sub-icon {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    font-size: 1.05rem;
+    line-height: 1;
+    color: var(--ink-soft);
+    background: transparent;
+    cursor: pointer;
+    transition: background 0.18s ease, color 0.18s ease, transform 0.16s ease;
+}
+
+.pomo-sub-icon:hover {
+    color: var(--ink);
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.pomo-sub-icon:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+/* Chevron de dois traços em vez de SVG: aparece até dez vezes na mesma página,
+   e SVG com id colide consigo mesmo (§7). Gira por `transform`, então a virada
+   roda no compositor. */
+.pomo-sub-chevron {
+    width: 7px;
+    height: 7px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    /* Aponta para onde o cartão vai: aberto, a seta sobe (fechar para cima);
+       minimizado, ela desce (abrir para baixo). */
+    transform: translateY(1px) rotate(-135deg);
+    transition: transform 0.2s cubic-bezier(0.34, 1.45, 0.64, 1);
+}
+
+.pomo-sub[data-aberto="false"] .pomo-sub-chevron {
+    transform: translateY(-2px) rotate(45deg);
+}
+
+.pomo-sub-track {
+    height: 5px;
+    border-radius: 999px;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--pomo-tint) 18%, var(--stroke));
+}
+
+/* scaleX em vez de width: a barra anda no compositor, sem layout. A transição
+   costura os degraus de 250ms do contador. */
+.pomo-sub-fill {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--pomo-tint), color-mix(in srgb, var(--pomo-tint) 55%, #fff));
+    transform-origin: left;
+    transform: scaleX(var(--pomo-progress, 0));
+    transition: transform 0.3s linear;
+}
+
+/* Minimizado: sobra o cabeçalho e a barra — nome, relógio e quanto falta. */
+.pomo-sub[data-aberto="false"] .pomo-sub-body {
+    display: none;
+}
+
+.pomo-sub-body {
+    display: grid;
+    gap: 8px;
+}
+
+.pomo-sub-state {
+    margin: 0;
+    min-height: 1.3em;
+    font-size: 0.79rem;
+    font-weight: 700;
+    color: var(--ink-soft);
+}
+
+/* Duas colunas de grade, e não flex: em flex os botões cresciam por cima da
+   palavra "min", porque o campo e o rótulo são dois itens que encolhem e o
+   botão é um item que cresce. Trilha de grade não invade a vizinha. */
+.pomo-sub-controls {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+}
+
+.pomo-sub-minutes-label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: var(--ink-soft);
+}
+
+.pomo-sub-minutes {
+    flex: 0 0 auto;
+    width: 56px;
+    padding: 6px 4px;
+    font-size: 0.86rem;
+}
+
+.pomo-sub-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.pomo-sub-primary,
+.pomo-sub-reset {
+    flex: 1 1 70px;
+    min-width: 0;
+    padding: 7px 10px;
+    font-size: 0.86rem;
+}
+
 /* ---------------------------------------------------------- responsividade */
 
 /* Sobrou um único media query, e ele não trata de proporção: é uma decisão de

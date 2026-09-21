@@ -14,6 +14,7 @@
        {% if active_page == link.key %}aria-current="page"{% endif %}>
         <span class="bottom-nav-icon" aria-hidden="true">{{ link.icon }}</span>
         <span class="bottom-nav-label">{{ link.short }}</span>
+        {% if link.badge %}<span class="nav-badge" data-nav-badge="{{ link.badge }}" hidden></span>{% endif %}
     </a>
     {% endfor %}
 </nav>
