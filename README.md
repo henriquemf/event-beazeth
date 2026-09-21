@@ -27,7 +27,7 @@ O menu da esquerda é a lista inteira do que existe:
 | --- | --- |
 | **Post-its** (`/`) | A home. Um quadro, não uma lista: cada papel tem posição, tamanho, inclinação e cor, e quatro categorias filtram o que aparece. |
 | **Calendário** (`/calendar`) | O mês inteiro como tela única dos eventos. Clicar num dia agenda naquela data; "Próximos eventos" fica ao lado em tela larga. |
-| **Weekly Planner** (`/planner`) | A semana em colunas de 24 horas, com blocos que se arrastam entre dias e horários e se esticam pelas bordas. |
+| **Planner** (`/planner`) | A semana em colunas de 24 horas, com blocos que se arrastam entre dias e horários e se esticam pelas bordas. |
 | **To-do** (`/todo`) | A semana no formato de agenda de papel. Cada semana tem URL própria, então o voltar do navegador funciona. |
 | **Pomodoro** (`/pomodoro`) | Temporizador com ampulheta, que vira widget na barra lateral e continua contando enquanto você navega. |
 | **Beber água** (`/hydration`) | Copo que enche até a meta do dia, com lembrete por intervalo e widget na lateral. |
@@ -55,7 +55,7 @@ Regras de lembrete (escolhidas por tag, ao criar a tag):
 - **Só no dia**: notificação na hora do evento
 - **Com antecedência**: na hora, e também 15 e 7 dias antes
 
-## Weekly Planner
+## Planner
 
 Grade semanal no estilo Morgen, em `/planner`:
 

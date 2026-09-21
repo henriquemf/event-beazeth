@@ -4,9 +4,10 @@ A barra lateral (desktop) e a barra inferior (celular) levam aos mesmos lugares.
 Com duas listas, um destino novo entraria numa e faltaria na outra — e o que
 falta é sempre o do celular, que é o menos testado. Aqui elas são a mesma.
 
-`short` existe porque a barra inferior tem uns 60px por item: "Weekly Planner"
-não cabe, "Planner" cabe. `bottom` marca quem merece o polegar: Aparência é
-tela de ajuste, se usa uma vez por mês e fica só na lateral.
+`short` existe porque a barra inferior tem uns 60px por item, e com oito
+destinos sobra menos ainda: "Beber água" não cabe, "Água" cabe. `bottom` marca
+quem merece o polegar: Aparência é tela de ajuste, se usa uma vez por mês e
+fica só na lateral.
 """
 
 
@@ -16,7 +17,7 @@ NAV_LINKS = (
     {"key": "calendar", "endpoint": "calendar.index", "icon": "📅",
      "label": "Calendário", "short": "Agenda", "bottom": True},
     {"key": "planner", "endpoint": "planner.index", "icon": "🗓️",
-     "label": "Weekly Planner", "short": "Planner", "bottom": True},
+     "label": "Planner", "short": "Planner", "bottom": True},
     {"key": "todo", "endpoint": "todo.index", "icon": "✅",
      "label": "To-do", "short": "To-do", "bottom": True},
     {"key": "pomodoro", "endpoint": "pomodoro.index", "icon": "🍎",
