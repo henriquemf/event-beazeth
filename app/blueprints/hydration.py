@@ -207,6 +207,76 @@ def state():
     })
 
 
+def _hora_valida(texto):
+    """`"08:00"` virando `time`, ou `None` se o texto não servir."""
+    try:
+        return datetime.strptime(str(texto).strip(), "%H:%M").time()
+    except (TypeError, ValueError):
+        return None
+
+
+@bp.patch("/api/hydration/settings")
+def save_settings():
+    """Liga, desliga e ajusta o lembrete de água — a partir do app.
+
+    O site edita isto por um formulário (`POST /hydration`), que redireciona e
+    devolve HTML. O app precisa da mesma edição em JSON, e precisa dela por um
+    motivo concreto: **sem esta rota o lembrete só podia ser ligado no
+    computador.** Quem instalasse o app e nunca abrisse o site ficava com a
+    configuração no padrão do banco, que é `enabled = FALSE` — ou seja, o
+    lembrete de água simplesmente nunca existia, e não havia nada na tela
+    dizendo por quê.
+
+    `PATCH` e não `PUT`: aplica só as chaves presentes (seção 8 da
+    constituição). O app manda o interruptor sozinho quando é só ligar, e o
+    conjunto inteiro quando a pessoa mexe no resto.
+    """
+    user_id = current_user()["id"]
+    payload = request.get_json(silent=True) or {}
+    atual = get_hydration_settings(user_id)
+
+    enabled = payload.get("enabled", atual["enabled"])
+    interval = payload.get("intervalMinutes", atual["interval_minutes"])
+    goal = payload.get("dailyGoal", atual["daily_goal"])
+    glass_ml = payload.get("glassMl", atual["glass_ml"])
+    start_time = payload.get("startTime", atual["start_time"])
+    end_time = payload.get("endTime", atual["end_time"])
+
+    inicio = _hora_valida(start_time)
+    fim = _hora_valida(end_time)
+    if inicio is None or fim is None:
+        return jsonify({"ok": False, "error": "Horário inválido."}), 400
+    if inicio == fim:
+        return jsonify({"ok": False, "error": "Início e fim não podem ser iguais."}), 400
+
+    upsert_hydration_settings(
+        user_id,
+        bool(enabled),
+        min(max(int(interval), MIN_INTERVAL), MAX_INTERVAL),
+        inicio.strftime("%H:%M"),
+        fim.strftime("%H:%M"),
+        int(goal),
+        int(glass_ml),
+    )
+
+    # Devolve como ficou, e não um "ok" seco: os números passam por clamp no
+    # banco, e quem mandou 9999 copos precisa ver 30 de volta em vez de seguir
+    # mostrando 9999 até a próxima sincronização.
+    salvo = get_hydration_settings(user_id)
+    return jsonify(
+        {
+            "ok": True,
+            "enabled": bool(salvo["enabled"]),
+            "intervalMinutes": salvo["interval_minutes"],
+            "startTime": salvo["start_time"],
+            "endTime": salvo["end_time"],
+            "goal": salvo["daily_goal"],
+            "glassMl": salvo["glass_ml"],
+            "nextIn": next_reminder_seconds(salvo),
+        }
+    )
+
+
 @bp.post("/api/hydration/drink")
 def drink():
     """Registra (ou desfaz) um copo e devolve o dia recalculado.

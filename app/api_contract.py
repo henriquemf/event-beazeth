@@ -48,6 +48,11 @@ ENDPOINTS = (
     ("/api/hydration", "GET", True, ("ok", "glasses", "goal", "glassMl", "enabled",
                                      "intervalMinutes", "nextIn", "limits")),
     ("/api/hydration/drink", "POST", True, ("ok", "glasses", "goal", "glassMl", "nextIn")),
+    # Ligar e ajustar o lembrete a partir do app. O site faz isso por
+    # formulário; sem esta rota, quem só usa o celular nunca conseguia LIGAR o
+    # lembrete de água — o padrão do banco é desligado.
+    ("/api/hydration/settings", "PATCH", True,
+     ("ok", "enabled", "intervalMinutes", "startTime", "endTime", "goal", "glassMl", "nextIn")),
 
     # --- diário ------------------------------------------------------------
     #

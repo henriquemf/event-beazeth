@@ -240,6 +240,13 @@ que acompanha na barra lateral.
 - O lembrete em si continua igual: intervalo em minutos e janela do dia, que pode
   cruzar a meia-noite
 
+**O lembrete também se liga pelo celular.** `PATCH /api/hydration/settings` é a
+mesma edição do formulário desta tela, em JSON, e existe por um defeito concreto:
+o padrão do banco é `enabled = FALSE`, e o app Android só recebia a configuração
+pela sincronização — nunca a escrevia. Quem instalasse o app e não abrisse o site
+num computador nunca recebia lembrete de água nenhum, sem nada na tela dizendo
+por quê. Quem usa o app sem conta não tinha nem essa saída.
+
 **O consumo é guardado como total do dia**, e não como um registro por copo. A
 pergunta que a tela faz é sempre "quantos hoje?", e assim ela vira uma leitura de
 chave primária em vez de um `COUNT` sobre uma história que só cresce.
