@@ -7,16 +7,18 @@
 
        Sem aba aberta, ou com o áudio ainda travado por falta de gesto, fica só
        o som do próprio sistema — que é o que o navegador já faz sozinho. */
-    function playNotificationSound() {
+    function playNotificationSound(tag) {
         if (window.EN && EN.audio) {
-            EN.audio.notify();
+            EN.audio.notify(tag);
         }
     }
 
     if ("serviceWorker" in navigator) {
         navigator.serviceWorker.addEventListener("message", function (event) {
             if (event.data && event.data.type === "en-push") {
-                playNotificationSound();
+                /* A tag diz de que é o aviso — água ou agenda —, e cada um tem
+                   o seu som. Ver `EN.audio.notify`. */
+                playNotificationSound(event.data.tag);
             }
         });
     }

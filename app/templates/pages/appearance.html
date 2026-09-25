@@ -46,4 +46,52 @@
         <button type="button" class="font-preview font-dream" data-font="dream"><strong>Dream</strong><small>Eventos encantadores</small></button>
     </div>
 </section>
+
+{# Uma linha por momento, fechada: aberta, mostra as opções com "Ouvir" em
+   cada. `name` igual em todos faz o navegador fechar a aberta ao abrir outra
+   — uma escolha de cada vez, sem uma linha de JS para isso. Qual opção está
+   marcada é do JS, porque a escolha mora no localStorage deste aparelho. #}
+<section class="panel-card">
+    <h3>Sons</h3>
+    <p class="field-help">Toque num momento para escolher o som dele e ouvir cada opção. Vale para este aparelho.</p>
+
+    <div class="som-lista">
+        {% for momento in momentos %}
+        <details class="som-momento" name="sons" data-momento="{{ momento.chave }}">
+            <summary>
+                <span class="som-momento-texto">
+                    <strong>{{ momento.titulo }}</strong>
+                    <small>{{ momento.descricao }}</small>
+                </span>
+                <span class="som-atual" data-som-atual></span>
+                <span class="som-seta" aria-hidden="true"></span>
+            </summary>
+
+            <div class="som-opcoes" role="radiogroup" aria-label="Som de {{ momento.titulo }}">
+                {% for opcao in momento.opcoes %}
+                <div class="som-opcao">
+                    <label>
+                        <input type="radio" name="som-{{ momento.chave }}" value="{{ opcao.chave }}" />
+                        <span>
+                            <strong>{{ opcao.nome }}</strong>
+                            <small>{{ opcao.descricao }}</small>
+                        </span>
+                    </label>
+                    {% if opcao.chave != 'mudo' %}
+                    {# "ligados" dos cliques se ouve pelo próprio clique. #}
+                    <button type="button" class="som-ouvir" data-sem-clique
+                            data-ouvir="{{ 'clique' if opcao.chave == 'ligados' else opcao.chave }}"
+                            aria-label="Ouvir {{ opcao.nome }}">Ouvir</button>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </details>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script defer src="{{ static_url('js/pages/appearance/sons.js') }}"></script>
 {% endblock %}

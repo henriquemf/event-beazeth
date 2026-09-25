@@ -40,7 +40,9 @@
 
         document.addEventListener("click", function (event) {
             const clickable = event.target.closest("button, .btn-primary, .btn-danger, .theme-preview, .font-preview, .fc-button");
-            if (clickable) {
+            /* `data-sem-clique` é o botão que já toca o próprio som — o "Ouvir"
+               da Aparência. O clique por cima estragaria justamente a prévia. */
+            if (clickable && !clickable.hasAttribute("data-sem-clique")) {
                 EN.audio.blip("click");
             }
 

@@ -143,7 +143,7 @@ Temporizador em `/pomodoro`, com widget que acompanha o usuário pelo site.
   5 minutos até 30 de foco, 10 até 59, 15 daí para cima. A chave **Descanso
   automático**, embaixo dos botões, desliga isso: o foco termina parado em
   "Tempo esgotado", com a mesma festa, e o próximo passo é de quem está ali
-- No fim do descanso, uma nota de caixinha de música. São dois fins diferentes,
+- No fim do descanso, o vibrafone. São dois fins diferentes,
   e o ouvido precisa saber qual chegou sem olhar para a tela
 - Até **10 outros pomodoros** na mesma tela, cada um com nome, tempo e contagem
   próprios, em cartão aberto ou minimizado (só nome, relógio e barra). Com algum
@@ -183,26 +183,51 @@ Com `prefers-reduced-motion` a festa não acontece — e não acontece de verdad
 peças nem são criadas, senão ficariam paradas na tela até o temporizador
 removê-las.
 
-**Os sons são gravações, e não mais síntese.** Até a versão anterior tudo era
-gerado em `core/audio.js`: senos para os avisos e rajadas de ruído para as
-palmas. As palmas eram o problema — 87% da energia delas ficava acima de 6 kHz,
-e ruído agudo em estalos curtos soa como fone quebrado. Agora são gravações CC0
-(domínio público) do Freesound, em `static/sons/`, 87 KB ao todo:
+**Os sons são gravações sem perda, e sem chiado.** A primeira troca (senos e
+ruído sintético por gravações do Freesound) ainda chiava: as fontes eram
+prévias com compressão, e duas delas tinham ruído de sala audível — a harpa a
+−74 dB, a caixinha a −88. Agora só entra fonte **sem perda** ou feita
+digitalmente, e cada arquivo passa por um detector de chiado antes de entrar:
 
-| Arquivo | Onde toca | Original |
+| Arquivo | Toque | Original |
 |---|---|---|
-| `clique.mp3` | clique em botão | [UI Button Click](https://freesound.org/s/467951/), benzix2 |
-| `navegar.mp3` | troca de tela pelo menu | [bop sound effect button](https://freesound.org/s/686542/), Troube |
-| `kalimba.mp3` | notificação chegando com a aba aberta | [Kalimba C1](https://freesound.org/s/536551/), dvdfu |
-| `caixinha.mp3` | fim do descanso | [Music box note](https://freesound.org/s/218459/), thomasjaunism |
-| `aplausos.mp3` | fim do foco | [Small applause](https://freesound.org/s/462362/), Breviceps |
+| `marimba.flac` | três notas subindo | Marimba, baqueta de lã (C5, E5, G5) — [Univ. de Iowa MIS](https://theremin.music.uiowa.edu/MIS.html) |
+| `vibrafone.flac` | duas notas longas | Vibrafone (E5, C5) — Univ. de Iowa MIS |
+| `sininho.flac` | duas notas claras | Glockenspiel, baqueta de plástico (G6, C7) — Univ. de Iowa MIS |
+| `festa_marimba.flac` | "ta-dá" de quatro notas | Marimba (C5, E5, G5, C6) — Univ. de Iowa MIS |
+| `gotinha.flac` | plic-ploc | `drop_002` e `drop_003` do [Interface Sounds](https://kenney.nl/assets/interface-sounds), Kenney (CC0) |
+| `clique.flac` | clique em botão | `click_002`, Kenney (CC0) |
+| `navegar.flac` | troca de tela | `select_001`, Kenney (CC0) |
+| `aplausos.flac` | palmas (opcional) | [applause-2.wav](https://commons.wikimedia.org/wiki/File:277021_sandermotions_applause-2.wav), Sandermotions (CC0) |
 
-Cada um foi tratado uma vez, fora do projeto: silêncio da frente cortado,
-passa-alta entre 120 e 200 Hz (alto-falante de celular não reproduz esse grave e
-o devolve como zumbido), nada acima de 10 kHz, fade de saída em cosseno e volume
-nivelado pela janela mais forte de 300 ms, com pico máximo de −3 dBFS. O app
-Android usa os mesmos arquivos para o que os dois têm em comum (kalimba,
-caixinha, palmas), então o mesmo aviso soa igual nos dois.
+As gravações da Iowa são de estúdio, em AIFF, e "podem ser usadas em qualquer
+projeto, sem restrições" (dito na própria página). As da Kenney são feitas
+digitalmente: sem microfone, não há ruído de sala nenhum.
+
+O tratamento, feito uma vez fora do projeto: o chiado de cada gravação é medido
+no silêncio *antes* da nota e subtraído faixa por faixa do espectro; tudo o que
+cai 70 dB abaixo do pico vira **zero digital exato**; passa-alta de 120 Hz (o
+grave que o alto-falante do celular devolve como zumbido); volume nivelado; e
+saída em FLAC, sem perda em nenhuma etapa. O critério de aprovação é medido:
+a energia acima de 4 kHz nos quadros em que ela é ruído (espectro plano) tem de
+ficar abaixo de −90 dBFS. Os sons musicais ficaram entre −97 e −102; as fontes
+brutas da Iowa davam −84 a −90, e os da versão anterior chegavam a −74.
+
+As palmas são o caso à parte, e por isso não são mais o padrão: palmas *são*
+rajadas de ruído, e não existe palmas "sem chiado" no mesmo sentido de uma nota.
+Ficaram como opção da festa.
+
+**Cada momento tem o seu som, escolhido na tela de Aparência.** Beber água,
+agenda, fim do foco (a festa), fim do descanso e cliques: uma linha por momento,
+fechada, mostrando o som atual; aberta, as opções com **Ouvir** em cada. É um
+`<details name="sons">`, então abrir uma fecha a outra sem JS. A escolha é do
+aparelho, como o tema (`en_sons` no localStorage), e o padrão de cada momento
+mora em `core/audio.js` — quem toca é quem precisa saber o que tocar quando
+nada foi escolhido. São os mesmos padrões do app, um diferente para cada: água
+é gotinha, agenda é sininho, fim do foco é a marimba em festa, fim do descanso é
+o vibrafone. Água e agenda se separam pela `tag` do push (`hydration-reminder`
+contra `event-…`/`live-…`). Só os sons escolhidos são baixados; os outros descem
+quando alguém vai ouvi-los.
 
 As URLs chegam ao JS em `data-som-*` no próprio `<script>` do `audio.js`, já com
 o `?v=<mtime>` do `static_url` — trocar um som muda a URL, e o service worker,
@@ -485,11 +510,12 @@ app/
         planner/         constants, time, context, grid, blocks, store, drag, editor, main
         calendar/        event-modal, tags-modal, main
         pomodoro/        main, subs
+        appearance/      sons (o som de cada momento)
         todo/            main.js
         hydration/       main.js
         diary/           main.js
-    sons/                clique, navegar, kalimba, caixinha, aplausos (CC0, ver
-                         "Os sons são gravações")
+    sons/                os sons em FLAC, sem perda (ver "Os sons são gravações
+                         sem perda")
     sw.js  manifest.webmanifest  icon.svg
   templates/
     layouts/base.html    casca da página

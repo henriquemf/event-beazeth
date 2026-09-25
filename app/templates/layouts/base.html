@@ -53,11 +53,14 @@
     {# Os sons vão pelo próprio script, com a versão de cada arquivo na URL:
        trocar um som muda a URL, e ninguém fica ouvindo o antigo do cache. #}
     <script defer src="{{ static_url('js/core/audio.js') }}"
-        data-som-clique="{{ static_url('sons/clique.mp3') }}"
-        data-som-navegar="{{ static_url('sons/navegar.mp3') }}"
-        data-som-aviso="{{ static_url('sons/kalimba.mp3') }}"
-        data-som-sino="{{ static_url('sons/caixinha.mp3') }}"
-        data-som-aplausos="{{ static_url('sons/aplausos.mp3') }}"></script>
+        data-som-marimba="{{ static_url('sons/marimba.flac') }}"
+        data-som-vibrafone="{{ static_url('sons/vibrafone.flac') }}"
+        data-som-sininho="{{ static_url('sons/sininho.flac') }}"
+        data-som-gotinha="{{ static_url('sons/gotinha.flac') }}"
+        data-som-festa-marimba="{{ static_url('sons/festa_marimba.flac') }}"
+        data-som-aplausos="{{ static_url('sons/aplausos.flac') }}"
+        data-som-clique="{{ static_url('sons/clique.flac') }}"
+        data-som-navegar="{{ static_url('sons/navegar.flac') }}"></script>
     <script defer src="{{ static_url('js/core/ui-effects.js') }}"></script>
     <script defer src="{{ static_url('js/core/push.js') }}"></script>
     {# Antes do pomodoro: é ele quem solta a festa ao fim do foco. #}

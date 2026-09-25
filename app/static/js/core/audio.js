@@ -5,23 +5,27 @@
    independentes, e o navegador só libera o que recebeu o gesto do usuário — o
    som do fim do timer simplesmente não sairia em metade das visitas.
 
-   ## Por que gravações, e não mais síntese
+   ## Os sons são gravações sem perda, e sem chiado
 
-   Até aqui tudo era gerado na hora: senos para os avisos e rajadas de ruído
-   para as palmas. As palmas eram o problema — 87% da energia delas ficava
-   acima de 6 kHz, e ruído agudo em estalos curtos é exatamente o som de um
-   fone quebrado. Os senos não chiavam, mas soavam como aparelho de teste.
-
-   Agora são gravações de verdade, todas CC0 (domínio público) do Freesound, com
-   a origem de cada uma no README. Foram tratadas uma vez, fora daqui: silêncio
-   da frente cortado, grave abaixo de ~120 Hz tirado (alto-falante de celular
-   não o reproduz e o transforma em zumbido), nada acima de 10 kHz e volume
-   nivelado entre elas. São 87 KB no total, e o service worker as guarda como
-   qualquer outro estático.
+   Marimba, vibrafone e glockenspiel são notas gravadas em estúdio pela
+   Universidade de Iowa (AIFF, livres para qualquer uso); as gotas e os cliques
+   são da Kenney (CC0), feitos digitalmente; as palmas, um WAV CC0 do Commons.
+   Foram tratados uma vez, fora daqui: o chiado de gravação medido no silêncio
+   antes de cada nota e subtraído, tudo abaixo de −70 dB virando zero digital,
+   e saída em FLAC — sem perda nenhuma no caminho. Medido, o chiado de todos os
+   sons musicais ficou abaixo de −97 dBFS. A origem de cada um está no README.
 
    As URLs chegam pelo próprio `<script>` deste arquivo, em `data-som-*`, já
    com o `?v=<mtime>` que o Python põe — é por isso que trocar um som não
-   deixa ninguém ouvindo o antigo do cache. */
+   deixa ninguém ouvindo o antigo do cache.
+
+   ## Cada momento tem o seu som, e a escolha é deste aparelho
+
+   Água, agenda, fim do foco, fim do descanso e cliques: cada um toca o que
+   foi escolhido na tela de Aparência, guardado em `en_sons` no localStorage —
+   como o tema, é do aparelho, e não da conta. O padrão de cada um mora AQUI
+   (`PADRAO`), e não na tela: quem toca é quem precisa saber o que tocar quando
+   nada foi escolhido. É o mesmo padrão do app Android (`Canal.somPadrao`). */
 window.EN = window.EN || {};
 
 (function (EN) {
@@ -30,30 +34,79 @@ window.EN = window.EN || {};
     /* `currentScript` só existe enquanto o arquivo roda pela primeira vez;
        depois disso é null. Por isso é lido aqui, e não quando o som toca. */
     const eu = document.currentScript;
+    const dados = eu ? eu.dataset : {};
     const URLS = {
-        clique: eu && eu.dataset.somClique,
-        navegar: eu && eu.dataset.somNavegar,
-        aviso: eu && eu.dataset.somAviso,
-        sino: eu && eu.dataset.somSino,
-        aplausos: eu && eu.dataset.somAplausos,
+        marimba: dados.somMarimba,
+        vibrafone: dados.somVibrafone,
+        sininho: dados.somSininho,
+        gotinha: dados.somGotinha,
+        festa_marimba: dados.somFestaMarimba,
+        aplausos: dados.somAplausos,
+        clique: dados.somClique,
+        navegar: dados.somNavegar,
     };
 
-    /* O volume de cada uso. Os arquivos já saem nivelados entre si; isto é o
-       quanto cada MOMENTO pede. O clique acontece dezenas de vezes por visita
-       e tem de ficar quase abaixo da atenção — um quinto do volume de um aviso. */
+    /* O volume de cada arquivo. Os avisos já saem nivelados entre si; o clique
+       acontece dezenas de vezes por visita e tem de ficar quase abaixo da
+       atenção. */
     const VOLUME = {
-        clique: 0.14,
-        navegar: 0.3,
-        aviso: 0.7,
-        sino: 0.8,
+        marimba: 0.7,
+        vibrafone: 0.8,
+        sininho: 0.7,
+        gotinha: 0.7,
+        festa_marimba: 0.7,
         aplausos: 0.7,
+        clique: 0.5,
+        navegar: 0.3,
     };
+
+    /* O som de fábrica de cada momento. Espelha `Canal.somPadrao` e
+       `SomDaFesta.PADRAO` em avisos/ no app Android. Um diferente para cada de
+       propósito: dá para saber o que chegou sem olhar para a tela. */
+    const PADRAO = {
+        agua: "gotinha",
+        agenda: "sininho",
+        foco: "festa_marimba",
+        descanso: "vibrafone",
+        cliques: "ligados",
+    };
+    const SONS_KEY = "en_sons";
+    const MUDO = "mudo";
 
     let ctx = null;
     let pending = [];
     let listening = false;
     const buffers = {};
     const carregando = {};
+    let previa = null;
+
+    /* ----------------------------------------------------------- escolhas */
+
+    function escolhas() {
+        try {
+            const salvo = JSON.parse(localStorage.getItem(SONS_KEY));
+            return salvo && typeof salvo === "object" ? salvo : {};
+        } catch (e) {
+            return {};
+        }
+    }
+
+    /* O som de um momento: o escolhido, se ainda existir; senão o padrão. Uma
+       chave de um som que saiu da lista cai no padrão em vez de calar. */
+    function escolha(momento) {
+        const salvo = escolhas()[momento];
+        const valido = salvo === MUDO
+            || (momento === "cliques" ? salvo === "ligados" : !!URLS[salvo]);
+        return valido ? salvo : PADRAO[momento];
+    }
+
+    /* A chave de ARQUIVO a tocar num momento, ou null para silêncio. */
+    function arquivoDe(momento) {
+        const som = escolha(momento);
+        return som === MUDO || som === "ligados" ? null : som;
+    }
+
+    /* ------------------------------------------------------------- motor */
 
     function context() {
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -90,6 +143,9 @@ window.EN = window.EN || {};
        depende de gesto, o buffer já está pronto quando o primeiro clique
        libera o áudio. */
     function carregar(nome) {
+        if (!nome) {
+            return Promise.resolve(null);
+        }
         if (carregando[nome]) {
             return carregando[nome];
         }
@@ -191,25 +247,37 @@ window.EN = window.EN || {};
     }
 
     /* Toca agora, esperando o download se ainda não terminou. Para os avisos
-       que valem alguns segundos depois; o clique NÃO passa por aqui. */
+       que valem alguns segundos depois; o clique NÃO passa por aqui. Devolve a
+       promessa das fontes, para a prévia poder parar a anterior. */
     function tocarQuandoPuder(nome) {
-        whenReady(function () {
-            carregar(nome).then(function (buffer) {
-                const audio = context();
-                if (buffer && audio) {
-                    tocarBuffer(audio, nome, audio.currentTime);
-                }
+        return new Promise(function (resolve) {
+            if (!nome) {
+                resolve([]);
+                return;
+            }
+            whenReady(function () {
+                carregar(nome).then(function (buffer) {
+                    const audio = context();
+                    resolve(buffer && audio ? tocarBuffer(audio, nome, audio.currentTime) : []);
+                });
             });
         });
     }
 
     /* Agenda um som para um instante absoluto (epoch em ms) e devolve o cabo
        para cancelar. `armed` diz se o som já está garantido no relógio do
-       contexto; quem detecta o fim consulta isso para não tocar duas vezes. */
+       contexto; quem detecta o fim consulta isso para não tocar duas vezes.
+
+       O som é o escolhido NA HORA de agendar: trocar a escolha com um timer
+       já correndo vale para o próximo, não para este. */
     function agendar(epochMs, nome) {
         const handle = { armed: false, cancel: function () {} };
         let cancelled = false;
         let nodes = [];
+
+        if (!nome) {
+            return handle;
+        }
 
         whenReady(function () {
             carregar(nome).then(function (buffer) {
@@ -234,23 +302,56 @@ window.EN = window.EN || {};
         return handle;
     }
 
-    /* Os dois sons de clique são pedidos logo, porque o primeiro clique da
-       visita já quer ouvi-los; os avisos, só depois que a página assenta —
-       quase nenhuma visita chega ao fim de um pomodoro nos primeiros segundos. */
-    carregar("clique");
-    carregar("navegar");
+    /* Os sons de clique são pedidos logo, porque o primeiro clique da visita
+       já quer ouvi-los; os avisos, só depois que a página assenta — e só os
+       ESCOLHIDOS: os outros só descem se alguém for ouvi-los na Aparência. */
+    if (escolha("cliques") !== MUDO) {
+        carregar("clique");
+        carregar("navegar");
+    }
     window.addEventListener("load", function () {
         setTimeout(function () {
-            carregar("aviso");
-            carregar("sino");
-            carregar("aplausos");
+            ["agua", "agenda", "foco", "descanso"].forEach(function (momento) {
+                carregar(arquivoDe(momento));
+            });
         }, 1500);
     });
 
     EN.audio = {
+        MUDO: MUDO,
+
+        /* O som escolhido para um momento, já com o padrão aplicado. */
+        escolha: escolha,
+
+        /* Grava a escolha de um momento. Os outros momentos não mudam. */
+        escolher: function (momento, som) {
+            const todas = escolhas();
+            todas[momento] = som;
+            try {
+                localStorage.setItem(SONS_KEY, JSON.stringify(todas));
+            } catch (e) {
+                /* Modo privado sem cota: vale só até a página fechar. */
+            }
+            carregar(arquivoDe(momento));
+        },
+
+        /* A prévia da tela de Aparência: toca um arquivo agora, parando a
+           prévia anterior — duas de uma vez não deixam julgar nenhuma. */
+        ouvir: function (nome) {
+            if (previa) {
+                previa.then(function (fontes) {
+                    fontes.forEach(stopNode);
+                });
+            }
+            previa = tocarQuandoPuder(nome);
+        },
+
         /* Clique e navegação. Se o som ainda não chegou, esse clique fica mudo:
            um "tec" que tocasse meio segundo depois pareceria outra coisa. */
         blip: function (type) {
+            if (escolha("cliques") === MUDO) {
+                return;
+            }
             const nome = type === "nav" ? "navegar" : "clique";
             const audio = context();
             if (!audio || !buffers[nome]) {
@@ -262,13 +363,15 @@ window.EN = window.EN || {};
             tocarBuffer(audio, nome, audio.currentTime);
         },
 
-        /* Fim do descanso: a caixinha de música. Espera o áudio ser liberado se
-           ainda não foi: o aviso continua valendo alguns segundos depois. */
+        /* Fim do descanso, agora. Espera o áudio ser liberado se ainda não foi:
+           o aviso continua valendo alguns segundos depois. */
         chime: function () {
-            tocarQuandoPuder("sino");
+            tocarQuandoPuder(arquivoDe("descanso"));
         },
 
-        /* Notificação chegando: a kalimba, o mesmo toque padrão do app.
+        /* Notificação chegando com a aba aberta. A `tag` do push diz de que é:
+           `hydration-reminder` é a água, o resto (`event-…`, `live-…`) é a
+           agenda — ver `scheduler_service.py`.
 
            NÃO entra na fila de espera de propósito: se o áudio ainda estiver
            travado, um som que só tocasse no próximo clique chegaria fora de
@@ -276,24 +379,26 @@ window.EN = window.EN || {};
            é o que o navegador já toca sozinho.
 
            Devolve se chegou a tocar, que é o que o teste observa. */
-        notify: function () {
-            if (!isReady() || !buffers.aviso) {
+        notify: function (tag) {
+            const momento = /^hydration/.test(tag || "") ? "agua" : "agenda";
+            const nome = arquivoDe(momento);
+            if (!nome || !isReady() || !buffers[nome]) {
                 return false;
             }
-            tocarBuffer(context(), "aviso", context().currentTime);
+            tocarBuffer(context(), nome, context().currentTime);
             return true;
         },
 
-        /* A salva de palmas do fim do foco, agora. */
+        /* O som da festa do fim do foco, agora. */
         palmas: function () {
-            tocarQuandoPuder("aplausos");
+            tocarQuandoPuder(arquivoDe("foco"));
         },
 
-        /* As palmas num instante absoluto, pelo mesmo motivo de `chimeAt`: em
+        /* A festa num instante absoluto, pelo mesmo motivo de `chimeAt`: em
            aba escondida o `setTimeout` chega a disparar uma vez por minuto, e o
            relógio do WebAudio não é estrangulado. */
         palmasAt: function (epochMs) {
-            return agendar(epochMs, "aplausos");
+            return agendar(epochMs, arquivoDe("foco"));
         },
 
         /* Agenda o fim do descanso para um instante absoluto (epoch em ms).
@@ -303,7 +408,7 @@ window.EN = window.EN || {};
            setTimeout/setInterval, que em aba escondida chegam a disparar uma vez
            por minuto. Sem isto, o som do fim atrasaria minutos em aba oculta. */
         chimeAt: function (epochMs) {
-            return agendar(epochMs, "sino");
+            return agendar(epochMs, arquivoDe("descanso"));
         },
     };
 })(window.EN);
