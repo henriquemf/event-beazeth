@@ -35,6 +35,17 @@
             <button id="pomo-primary" class="btn-primary pomo-primary" type="button">Começar</button>
             <button id="pomo-reset" class="btn-secondary pomo-reset" type="button" hidden>Zerar</button>
         </div>
+
+        {# Vale para este e para os de baixo: são o mesmo motor. O `checked` é
+           do JS, porque a escolha mora no localStorage. #}
+        <div class="pomo-auto">
+            <label class="dark-toggle fancy" for="pomo-auto-descanso">
+                <input id="pomo-auto-descanso" type="checkbox" aria-describedby="pomo-auto-help" />
+                <span class="track"><span class="dot"></span></span>
+                <span class="text">Descanso automático</span>
+            </label>
+            <small class="field-help" id="pomo-auto-help">Desligado, o foco termina parado no fim e o próximo passo é seu.</small>
+        </div>
     </section>
 
     <section class="panel-card">

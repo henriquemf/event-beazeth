@@ -140,10 +140,11 @@ Temporizador em `/pomodoro`, com widget que acompanha o usuário pelo site.
   de até 5 min a regra vira "últimos 20%", senão um pomodoro de 3 minutos nasceria
   em estado de alerta
 - No fim do foco, **confete e uma salva de palmas**, e o descanso começa sozinho:
-  5 minutos até 30 de foco, 10 até 59, 15 daí para cima
-- No fim do descanso, aí sim o sino sintetizado (tríade dó–mi–sol em seno, pico
-  de volume 0.075). São dois fins diferentes, e o ouvido precisa saber qual
-  chegou sem olhar para a tela
+  5 minutos até 30 de foco, 10 até 59, 15 daí para cima. A chave **Descanso
+  automático**, embaixo dos botões, desliga isso: o foco termina parado em
+  "Tempo esgotado", com a mesma festa, e o próximo passo é de quem está ali
+- No fim do descanso, uma nota de caixinha de música. São dois fins diferentes,
+  e o ouvido precisa saber qual chegou sem olhar para a tela
 - Até **10 outros pomodoros** na mesma tela, cada um com nome, tempo e contagem
   próprios, em cartão aberto ou minimizado (só nome, relógio e barra). Com algum
   deles contando, o link do Pomodoro no menu ganha um número — é o único lugar
@@ -153,7 +154,12 @@ Quatro decisões que valem registro:
 
 **O descanso começa sozinho; o foco seguinte, não.** O intervalo é parte do
 ciclo, e um botão "agora descansar" seria só um jeito de esquecer de apertá-lo.
-O contrário não vale: quando o descanso acaba, nada recomeça. Voltar a focar é
+Por isso a chave nasce ligada. Ela existe para quem usa o timer fora do ciclo
+clássico — uma prova, um bloco de estudo emendado —, e vale para o principal e
+para os subs de uma vez, porque são o mesmo motor. A escolha é do aparelho
+(`en_pomodoro_auto_descanso`, como o próprio timer) e é lida no instante do fim,
+então mudar no meio de um foco vale para ele, inclusive vinda de outra aba. O
+contrário nunca vale: quando o descanso acaba, nada recomeça. Voltar a focar é
 decisão de quem está ali.
 
 **Os sub-pomodoros são o mesmo motor, não uma cópia menor dele.** O motor virou
@@ -177,12 +183,32 @@ Com `prefers-reduced-motion` a festa não acontece — e não acontece de verdad
 peças nem são criadas, senão ficariam paradas na tela até o temporizador
 removê-las.
 
-**As palmas são sintetizadas como todo o resto.** O projeto não tem um arquivo de
-áudio, e não foi para ganhar um: cada palma é um estouro de ruído filtrado
-(passa-baixa de um polo, diferenciação para devolver o estalo, queda
-exponencial), com corte e duração próprios, e a densidade caindo ao longo de 1,7
-s — que é o desenho de uma salva que começa junta e vai rareando. O buffer é
-montado uma vez, no primeiro uso.
+**Os sons são gravações, e não mais síntese.** Até a versão anterior tudo era
+gerado em `core/audio.js`: senos para os avisos e rajadas de ruído para as
+palmas. As palmas eram o problema — 87% da energia delas ficava acima de 6 kHz,
+e ruído agudo em estalos curtos soa como fone quebrado. Agora são gravações CC0
+(domínio público) do Freesound, em `static/sons/`, 87 KB ao todo:
+
+| Arquivo | Onde toca | Original |
+|---|---|---|
+| `clique.mp3` | clique em botão | [UI Button Click](https://freesound.org/s/467951/), benzix2 |
+| `navegar.mp3` | troca de tela pelo menu | [bop sound effect button](https://freesound.org/s/686542/), Troube |
+| `kalimba.mp3` | notificação chegando com a aba aberta | [Kalimba C1](https://freesound.org/s/536551/), dvdfu |
+| `caixinha.mp3` | fim do descanso | [Music box note](https://freesound.org/s/218459/), thomasjaunism |
+| `aplausos.mp3` | fim do foco | [Small applause](https://freesound.org/s/462362/), Breviceps |
+
+Cada um foi tratado uma vez, fora do projeto: silêncio da frente cortado,
+passa-alta entre 120 e 200 Hz (alto-falante de celular não reproduz esse grave e
+o devolve como zumbido), nada acima de 10 kHz, fade de saída em cosseno e volume
+nivelado pela janela mais forte de 300 ms, com pico máximo de −3 dBFS. O app
+Android usa os mesmos arquivos para o que os dois têm em comum (kalimba,
+caixinha, palmas), então o mesmo aviso soa igual nos dois.
+
+As URLs chegam ao JS em `data-som-*` no próprio `<script>` do `audio.js`, já com
+o `?v=<mtime>` do `static_url` — trocar um som muda a URL, e o service worker,
+que é cache-first, não fica servindo o antigo. A decodificação é feita num
+`OfflineAudioContext`, que não precisa de gesto: o buffer já está pronto quando o
+primeiro clique libera o áudio, e o navegador não reclama de autoplay no console.
 
 
 **O giro é em torno do eixo vertical, não uma virada de 180°.** Virar a ampulheta
@@ -462,6 +488,8 @@ app/
         todo/            main.js
         hydration/       main.js
         diary/           main.js
+    sons/                clique, navegar, kalimba, caixinha, aplausos (CC0, ver
+                         "Os sons são gravações")
     sw.js  manifest.webmanifest  icon.svg
   templates/
     layouts/base.html    casca da página

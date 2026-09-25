@@ -1,8 +1,8 @@
 /* Efeitos de interface: som de clique/navegação e a liberação das transições
    depois do primeiro quadro.
 
-   A síntese de áudio saiu daqui para core/audio.js quando o pomodoro passou a
-   precisar do mesmo AudioContext. */
+   O áudio saiu daqui para core/audio.js quando o pomodoro passou a precisar do
+   mesmo AudioContext. */
 (function () {
     function isPrimaryLeftClick(event) {
         return event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;

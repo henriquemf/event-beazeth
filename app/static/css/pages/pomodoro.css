@@ -141,6 +141,22 @@
     margin-top: 4px;
 }
 
+/* O interruptor do descanso: separado dos botões por um fio, porque não é uma
+   ação sobre o timer que está rodando, e sim sobre como os próximos terminam. */
+.pomo-auto {
+    display: grid;
+    justify-items: center;
+    gap: 4px;
+    width: min(100%, 340px);
+    margin-top: 6px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--stroke);
+}
+
+.pomo-auto .field-help {
+    margin: 0;
+}
+
 .pomo-primary {
     min-width: 156px;
     padding: 12px 22px;

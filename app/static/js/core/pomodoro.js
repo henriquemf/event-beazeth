@@ -34,6 +34,7 @@ window.EN = window.EN || {};
     const KEY = "en_pomodoro";
     const SUBS_KEY = "en_pomodoro_subs";
     const CHOICE_KEY = "en_pomodoro_choice";
+    const AUTO_KEY = "en_pomodoro_auto_descanso";
     const PADRAO_MINUTOS = 25;
     const MAX_SUBS = 10;
     const MAX_NOME = 24;
@@ -58,6 +59,16 @@ window.EN = window.EN || {};
             return minutos <= item.ate;
         });
         return faixa ? faixa.minutos : DESCANSO_LONGO;
+    }
+
+    /* Se o descanso começa sozinho quando o foco acaba. Ligado por padrão, que
+       é a regra do pomodoro e como o app sempre foi.
+
+       Lido do localStorage NA HORA do fim, e não guardado numa variável: assim
+       vale a escolha mais recente mesmo que ela tenha sido feita em outra aba
+       no meio do foco, sem precisar de ouvinte nenhum. */
+    function descansoAutomatico() {
+        return lerJson(AUTO_KEY) !== false;
     }
 
     function clampMinutes(minutes) {
@@ -192,12 +203,17 @@ window.EN = window.EN || {};
                 : EN.audio.palmasAt(state.endsAt);
         }
 
-        /* O foco acabou: começa o descanso e comemora.
+        /* O foco acabou: começa o descanso.
 
-           Começar sozinho é a regra do pomodoro — o descanso não é opcional, é
-           parte do ciclo, e um botão "agora descansar" seria só um jeito de
-           esquecer de apertá-lo. O contrário não vale: quando o descanso
-           termina, nada recomeça. Voltar a focar é decisão de quem está lá. */
+           Começar sozinho é a regra do pomodoro, e é o padrão: um botão "agora
+           descansar" seria só um jeito de esquecer de apertá-lo. Mas há quem
+           use o timer para outra coisa que não o ciclo clássico — uma prova,
+           um bloco de estudo que segue emendado —, e para essa pessoa o
+           descanso entrando sozinho atrapalha. Daí o interruptor da tela
+           (`descansoAutomatico`); desligado, o foco termina parado no fim.
+
+           O contrário não vale em caso nenhum: quando o descanso termina, nada
+           recomeça. Voltar a focar é decisão de quem está lá. */
         function comecarDescanso() {
             const total = descansoDe(state.minutes) * 60000;
             state = {
@@ -222,7 +238,10 @@ window.EN = window.EN || {};
             const eraFoco = state.mode !== "descanso";
             chime = null;
 
-            if (eraFoco) {
+            /* Sem descanso automático, o foco termina como o descanso termina:
+               parado em "Tempo esgotado", no modo foco. A comemoração abaixo
+               continua igual — o foco acabou do mesmo jeito. */
+            if (eraFoco && descansoAutomatico()) {
                 comecarDescanso();
             } else {
                 state.status = "done";
@@ -405,6 +424,15 @@ window.EN = window.EN || {};
 
     principal.definirEscolha = function (minutos) {
         gravarJson(CHOICE_KEY, clampMinutes(minutos));
+    };
+
+    /* Um interruptor para os onze: o principal e os subs são o mesmo motor, e
+       um sub que descansasse diferente do principal seria um "pomodoro igual"
+       só no nome. */
+    principal.AUTO_KEY = AUTO_KEY;
+    principal.descansoAutomatico = descansoAutomatico;
+    principal.definirDescansoAutomatico = function (ligado) {
+        gravarJson(AUTO_KEY, !!ligado);
     };
 
     /* A frase de estado, em português e por extenso. Fica no motor porque a

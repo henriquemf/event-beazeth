@@ -22,6 +22,7 @@
         field: document.getElementById("pomo-minutes-field"),
         output: document.getElementById("pomo-minutes-out"),
         locked: document.getElementById("pomo-locked"),
+        auto: document.getElementById("pomo-auto-descanso"),
     };
 
     /* Os tempos prontos chegam renderizados do servidor; o JS só lê o que já
@@ -152,6 +153,23 @@
 
     els.reset.addEventListener("click", function () {
         EN.pomodoro.stop();
+    });
+
+    /* ------------------------------------------------ descanso automático */
+
+    /* Mudar no meio de um foco vale para o fim DESTE foco: o motor lê a escolha
+       só no instante em que o tempo acaba. */
+    els.auto.checked = EN.pomodoro.descansoAutomatico();
+    els.auto.addEventListener("change", function () {
+        EN.pomodoro.definirDescansoAutomatico(els.auto.checked);
+    });
+
+    /* Outra aba mexeu: o interruptor desta acompanha, para as duas não
+       mostrarem escolhas diferentes. */
+    window.addEventListener("storage", function (event) {
+        if (event.key === EN.pomodoro.AUTO_KEY) {
+            els.auto.checked = EN.pomodoro.descansoAutomatico();
+        }
     });
 
     EN.pomodoro.subscribe(function (snap) {
