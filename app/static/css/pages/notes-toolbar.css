@@ -1,0 +1,106 @@
+/* A barra de formatação dos post-its: negrito, itálico, sublinhado, riscado e
+   link sobre o texto selecionado (ver js/pages/notes/toolbar.js).
+
+   Arquivo próprio porque é outro assunto que o cartão: notes.css é o papel na
+   mesa, isto é uma barra que flutua sobre a página — e juntos passavam do
+   teto de 700 linhas (constituição, seção 2). */
+
+/* Escura nos dois modos, como a do Notion: ela flutua sobre papel de seis
+   cores e sobre o fundo do tema, e precisa se destacar de todos. Os tons saem
+   do acento do tema para não ficar um cinza estranho à paleta. */
+.note-toolbar {
+    --tb-bg: color-mix(in srgb, var(--accent-dark) 14%, #1d1a21);
+    --tb-ink: #f7eef9;
+    --tb-x: 0px;
+    --tb-y: 0px;
+
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 100001;
+    display: grid;
+    gap: 6px;
+    padding: 6px;
+    border-radius: 12px;
+    background: var(--tb-bg);
+    color: var(--tb-ink);
+    box-shadow: 0 14px 30px -12px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.06);
+    /* Posição por transform, calculada em toolbar.js: a barra segue a
+       seleção sem mexer em layout (constituição, seção 4). */
+    transform: translate(var(--tb-x), var(--tb-y));
+}
+
+.note-toolbar[hidden] {
+    display: none;
+}
+
+.note-toolbar-row {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.note-toolbar-btn {
+    display: grid;
+    place-items: center;
+    min-width: 34px;
+    height: 34px;
+    padding: 0 8px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: inherit;
+    font-family: var(--font-main);
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.note-toolbar-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.note-toolbar-btn:focus-visible,
+.note-link-input:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: 0 0 0 2px var(--accent);
+}
+
+/* Ligado não é só cor (seção 9): o fundo muda, e o `aria-pressed` diz. */
+.note-toolbar-btn[aria-pressed="true"] {
+    background: color-mix(in srgb, var(--accent) 32%, transparent);
+    color: #fff;
+}
+
+.note-toolbar-sep {
+    width: 1px;
+    height: 20px;
+    margin: 0 4px;
+    background: rgba(255, 255, 255, 0.18);
+}
+
+.note-link-form {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.note-link-form[hidden] {
+    display: none;
+}
+
+.note-link-input {
+    width: min(240px, 60vw);
+    height: 32px;
+    padding: 0 10px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    color: inherit;
+    font-family: var(--font-main);
+    font-size: 0.88rem;
+}
+
+.note-link-input.is-invalid {
+    border-color: #ff8a8a;
+}

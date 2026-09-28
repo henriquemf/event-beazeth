@@ -96,6 +96,13 @@ então os cartões ficam soltos sobre a mesa em vez de presos a uma grade.
 - Os chips do topo filtram por categoria, e o filtro escolhido fica no `localStorage`
 - **Organizar** realinha os post-its visíveis em fileiras
 - `Esc` sai da edição
+- **Selecionar um trecho abre a barra de formatação**, como no Notion: negrito,
+  itálico, sublinhado, riscado e link. `Ctrl+B/I/U` também valem, e `Ctrl+K`
+  abre o link. Clicar num link dentro do papel põe o cursor nele (é um campo de
+  texto); `Ctrl+clique` abre
+- O botão ⧉ tira o post-it do site e o põe numa **janela flutuante**, por cima
+  de tudo — inclusive de outros programas. Existe no Chrome e no Edge de
+  computador; onde o navegador não oferece, o botão não aparece
 
 No desktop o cartão arrasta de qualquer ponto que não seja o texto ou um botão.
 No toque só a fita do topo e o canto de redimensionar arrastam, para o resto da
@@ -118,6 +125,46 @@ Endpoints:
 O `PATCH` é parcial de propósito: o arraste salva geometria e o editor salva
 texto, os dois com debounce. Um `PUT` completo faria um sobrescrever o campo do
 outro quando as duas gravações se cruzassem.
+
+**O texto é um HTML mínimo, e a leitura é tolerante.** O conteúdo guarda seis
+marcas — `<b> <i> <u> <s> <a href> <br>` — e nada mais. Markdown foi
+descartado porque um `*` digitado à toa viraria itálico, e os post-its
+existentes são cheios de texto livre. A mesma gramática está escrita três
+vezes, em `app/texto_rico.py`, `js/pages/notes/rich.js` e, no app,
+`data/TextoRico.kt`:
+
+- **Ler é tolerante.** Só as seis marcas e as entidades `&amp; &lt; &gt;
+  &quot; &#39; &nbsp;` são reconhecidas; todo o resto é texto. Um post-it
+  antigo como "pão & leite < 10" continua sendo exatamente isso, e por isso
+  não houve migração nenhuma.
+- **Escrever é canônico.** Marcas na ordem a > b > i > u > s, vizinhos de mesmo
+  estilo juntos, quebra de linha como `<br>`. As três escrevem a MESMA string,
+  e é isso que impede uma sincronização de achar mudança onde não houve.
+  Conferido com 4004 entradas sorteadas (marcas quebradas, aninhadas, entidades
+  soltas) nas três linguagens: zero diferenças.
+- **Link só com http, https ou mailto.** `javascript:` num `href` é a porta
+  clássica para rodar código num clique; a marca cai e o texto dela fica.
+- **Toda gravação passa pelo servidor** (`limpar`, em `db/notes.py`), e o editor
+  nunca recebe HTML por `innerHTML`: o que se pinta são nós montados um a um a
+  partir dos trechos. Nem um banco adulterado consegue pôr uma marca que o
+  navegador execute.
+- **O limite de 2000 conta texto**, e não marcação — é o que a pessoa escreve.
+
+O campo virou um `contenteditable` (só ele mostra negrito no próprio papel), e
+isso trouxe três detalhes: Enter cria `<div>` por padrão e aqui vira `<br>`;
+colar entra como texto puro, porque o que vem de outra página traz fonte e cor
+que o post-it não guarda; e o peso da fonte do papel baixou de 600 para 500 —
+o Chrome trata 600 ou mais como negrito, então com 600 o botão B *tirava* o
+negrito em vez de pôr.
+
+**A janela flutuante move o cartão, não o copia.** É a Document
+Picture-in-Picture API, que dá à página uma janela sempre-no-topo com o HTML
+que ela quiser. O elemento vai inteiro para a janela e volta quando ela fecha;
+estado, fila de gravação e tudo o mais continuam os mesmos. Uma cópia seriam
+dois editores do mesmo papel, cada um com o seu texto. No quadro fica um
+contorno com "Trazer de volta". Como os ouvintes do quadro são delegados nele e
+não enxergam outro documento, a janela ganha os dela — por isso ações, editor e
+barra de formatação se ligam a uma `raiz`, e não ao quadro.
 
 Sobre as bibliotecas de componentes pedidas: Origin UI, Skiper UI e Cult UI são
 registries React + Tailwind + shadcn, e este projeto é Flask + Jinja + JS puro,
@@ -459,6 +506,7 @@ app/
   __init__.py            fábrica da aplicação (só monta e agenda)
   config.py              variáveis de ambiente
   assets.py              versionamento de estáticos + headers de resposta
+  texto_rico.py          a gramática do texto formatado dos post-its (ler e limpar)
   auth.py                sessão do usuário e o guarda que protege toda rota
   extensions.py          scheduler compartilhado
   blueprints/            uma rota por tela/recurso
@@ -506,7 +554,9 @@ app/
                          pomodoro-widget (widget da sidebar + selo do menu),
                          hydration
       pages/
-        notes/           constants, context, store, card, board, interactions, main
+        notes/           constants, context, rich (a gramatica do texto), store,
+                         pip (janela flutuante), card, board, editor (o campo),
+                         toolbar (a barra de formatacao), interactions, main
         planner/         constants, time, context, grid, blocks, store, drag, editor, main
         calendar/        event-modal, tags-modal, main
         pomodoro/        main, subs

@@ -30,6 +30,7 @@ EN.notes = EN.notes || {};
             filter: notes.readFilter(),
             drag: null,
             offline: false,
+            pip: null,             // { id, win, el, ghost } da janela flutuante
         };
     };
 

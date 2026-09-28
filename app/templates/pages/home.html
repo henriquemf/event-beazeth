@@ -4,6 +4,7 @@
 
 {% block head_extra %}
 <link rel="stylesheet" href="{{ static_url('css/pages/notes.css') }}" />
+<link rel="stylesheet" href="{{ static_url('css/pages/notes-toolbar.css') }}" />
 {% endblock %}
 
 {% block content %}
@@ -11,7 +12,7 @@
     <header class="notes-header">
         <div class="notes-title">
             <h2>Post-its</h2>
-            <p>Solte aqui os lembretes do dia. Arraste pela fita do topo, escreva direto no papel.</p>
+            <p>Solte aqui os lembretes do dia. Arraste pela fita do topo, escreva direto no papel e selecione um trecho para formatar.</p>
         </div>
         <div class="notes-toolbar-right">
             <span id="notes-count" class="notes-count"></span>
@@ -32,14 +33,47 @@
         </div>
     </div>
 </section>
+
+{# A barra de formatação que aparece sobre o texto selecionado. Um molde, e não
+   uma barra montada: toolbar.js clona uma por documento — a página e, quando
+   houver, a janela flutuante. A ordem dos quatro primeiros botões é a de
+   `COMANDOS` em toolbar.js. #}
+<template id="note-toolbar-template">
+    <div class="note-toolbar" role="toolbar" aria-label="Formatar texto" hidden>
+        <div class="note-toolbar-row">
+            <button class="note-toolbar-btn" type="button" data-format="bold" aria-pressed="false" aria-label="Negrito" title="Negrito (Ctrl+B)"><b>B</b></button>
+            <button class="note-toolbar-btn" type="button" data-format="italic" aria-pressed="false" aria-label="Itálico" title="Itálico (Ctrl+I)"><i>I</i></button>
+            <button class="note-toolbar-btn" type="button" data-format="underline" aria-pressed="false" aria-label="Sublinhado" title="Sublinhado (Ctrl+U)"><u>U</u></button>
+            <button class="note-toolbar-btn" type="button" data-format="strikeThrough" aria-pressed="false" aria-label="Riscado" title="Riscado"><s>S</s></button>
+            <span class="note-toolbar-sep" aria-hidden="true"></span>
+            <button class="note-toolbar-btn" type="button" data-format="link" aria-pressed="false" aria-label="Link" title="Link (Ctrl+K)">
+                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.5 1.5" />
+                    <path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.5-1.5" />
+                </svg>
+            </button>
+        </div>
+        <form class="note-link-form" hidden>
+            <input class="note-link-input" type="text" inputmode="url" autocomplete="off" spellcheck="false"
+                   placeholder="Cole ou digite um link" aria-label="Endereço do link" />
+            <button class="note-toolbar-btn" type="submit" aria-label="Aplicar link" title="Aplicar">✓</button>
+            <button class="note-toolbar-btn" type="button" data-link="abrir" aria-label="Abrir link" title="Abrir" hidden>↗</button>
+            <button class="note-toolbar-btn" type="button" data-link="remover" aria-label="Remover link" title="Remover link" hidden>✕</button>
+        </form>
+    </div>
+</template>
 {% endblock %}
 
 {% block scripts %}
 <script defer src="{{ static_url('js/pages/notes/constants.js') }}"></script>
 <script defer src="{{ static_url('js/pages/notes/context.js') }}"></script>
+<script defer src="{{ static_url('js/pages/notes/rich.js') }}"></script>
 <script defer src="{{ static_url('js/pages/notes/store.js') }}"></script>
+<script defer src="{{ static_url('js/pages/notes/pip.js') }}"></script>
 <script defer src="{{ static_url('js/pages/notes/card.js') }}"></script>
 <script defer src="{{ static_url('js/pages/notes/board.js') }}"></script>
+<script defer src="{{ static_url('js/pages/notes/editor.js') }}"></script>
+<script defer src="{{ static_url('js/pages/notes/toolbar.js') }}"></script>
 <script defer src="{{ static_url('js/pages/notes/interactions.js') }}"></script>
 <script defer src="{{ static_url('js/pages/notes/main.js') }}"></script>
 {% endblock %}

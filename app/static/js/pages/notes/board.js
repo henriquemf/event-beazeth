@@ -87,8 +87,12 @@ EN.notes = EN.notes || {};
                 return note.id;
             }));
 
+            /* O cartão que está na janela flutuante fica lá mesmo que o filtro o
+               esconda do quadro: quem o pôs lá pediu para vê-lo por cima de
+               tudo, e não só enquanto a aba certa estiver escolhida. */
+            const naJanela = notes.pip.idAberto(ctx);
             ctx.elements.forEach(function (el, id) {
-                if (!keep.has(id)) {
+                if (!keep.has(id) && id !== naJanela) {
                     el.remove();
                     ctx.elements.delete(id);
                 }

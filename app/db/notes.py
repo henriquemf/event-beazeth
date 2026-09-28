@@ -1,6 +1,7 @@
 """Post-its do quadro da home."""
 
 from app.db.connection import get_connection, utc_now_iso
+from app.texto_rico import limpar
 
 
 NOTE_COLORS = ("sun", "rose", "mint", "blue", "peach", "lavender")
@@ -74,7 +75,9 @@ def list_sticky_notes(user_id: int):
 def insert_sticky_note(user_id: int, fields: dict) -> dict:
     now = utc_now_iso()
     data = {
-        "content": (fields.get("content") or "")[:2000],
+        # Toda gravacao passa pela forma canonica: e a unica porta por onde o
+        # HTML do post-it entra no banco. Ver `app/texto_rico.py`.
+        "content": limpar(fields.get("content") or ""),
         "bucket": _normalize_note_bucket(fields.get("bucket")),
         "pos_x": _clamp_note_int("pos_x", fields.get("x"), 24),
         "pos_y": _clamp_note_int("pos_y", fields.get("y"), 24),
@@ -122,7 +125,7 @@ def update_sticky_note(user_id: int, note_id: int, fields: dict):
 
         updates = {}
         if "content" in fields:
-            updates["content"] = str(fields.get("content") or "")[:2000]
+            updates["content"] = limpar(str(fields.get("content") or ""))
         if "bucket" in fields:
             updates["bucket"] = _normalize_note_bucket(fields.get("bucket"))
         if "color" in fields:

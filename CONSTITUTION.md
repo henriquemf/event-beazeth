@@ -298,6 +298,24 @@ de confirmar é pior do que um que parou de funcionar. Viraram `data-confirmar`
 e `data-ativar-ao-carregar`, com um ouvinte delegado em `core/shared.js` — uma
 regra em vez de três cópias.
 
+## 8e. Texto com formatação
+
+O texto do post-it tem negrito, link e afins, e é o único conteúdo do usuário
+que vira marcação na tela. Três regras seguram isso:
+
+- **Uma gramática, três cópias fiéis.** `app/texto_rico.py`,
+  `js/pages/notes/rich.js` e `data/TextoRico.kt` (no app) leem o mesmo formato
+  tolerante e escrevem a mesma string canônica. Mexeu num, mexe nos três — e
+  confere com as entradas sorteadas (`kt/comparar.py` e `kt/js.cjs` no
+  scratchpad): diferença de uma vírgula entre eles vira uma sincronização que
+  "muda" todo post-it formatado a cada ida e volta.
+- **Toda gravação passa por `limpar`.** O servidor é a porta: lista de
+  permissões de seis marcas, link só http/https/mailto. O cliente valida
+  também, mas é o servidor que garante.
+- **Nunca `innerHTML` com conteúdo do usuário.** O editor pinta nós montados um
+  a um a partir dos trechos; nada que chegue no campo vira elemento que o
+  navegador execute.
+
 ## 9. Acessibilidade
 
 - Elemento decorativo leva `aria-hidden="true"`.

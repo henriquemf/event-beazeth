@@ -5,6 +5,10 @@ EN.notes = EN.notes || {};
 (function (notes) {
     "use strict";
 
+    /* O último conteúdo pintado em cada campo. Comparar com ele evita repintar
+       — e repintar é o que perde cursor e seleção de quem está escrevendo. */
+    const pintado = new WeakMap();
+
     notes.card = {
         applyGeometry: function (el, note) {
             el.style.setProperty("--n-x", note.x);
@@ -14,6 +18,12 @@ EN.notes = EN.notes || {};
             el.style.setProperty("--n-z", note.z || 1);
         },
 
+        /* O campo acabou de ser editado: o que está nele é a versão atual, e
+           o próximo `sync` não tem o que repintar. */
+        marcarPintado: function (campo, conteudo) {
+            pintado.set(campo, conteudo);
+        },
+
         build: function (note) {
             const el = document.createElement("article");
             el.className = "note";
@@ -21,16 +31,22 @@ EN.notes = EN.notes || {};
             el.tabIndex = 0;
             el.style.setProperty("--n-tilt", notes.tiltFor(note.id));
 
+            /* O campo é um `contenteditable`, e não mais um <textarea>: só ele
+               mostra negrito e link no próprio papel. `role="textbox"` e
+               `aria-multiline` devolvem ao leitor de tela o que o textarea
+               dizia sozinho. */
             el.innerHTML =
                 '<div class="note-bar">' +
                     '<span class="note-grip" aria-hidden="true"></span>' +
                     '<div class="note-actions">' +
                         '<button class="note-btn note-bucket" type="button" data-act="bucket"></button>' +
                         '<button class="note-btn" type="button" data-act="palette" aria-label="Trocar cor" aria-expanded="false">🎨</button>' +
+                        '<button class="note-btn note-btn-pip" type="button" data-act="pip" aria-label="Abrir em janela flutuante" title="Janela flutuante"' + (notes.pip.suportado ? "" : " hidden") + '>⧉</button>' +
                         '<button class="note-btn note-btn-danger" type="button" data-act="delete" aria-label="Remover post-it">×</button>' +
                     '</div>' +
                 '</div>' +
-                '<textarea class="note-text" maxlength="2000" placeholder="Escreva seu lembrete..."></textarea>' +
+                '<div class="note-text" contenteditable="true" role="textbox" aria-multiline="true"' +
+                    ' aria-label="Texto do post-it" data-placeholder="Escreva seu lembrete..." spellcheck="true"></div>' +
                 '<div class="note-swatches" hidden>' +
                     notes.COLORS.map(function (color) {
                         return '<button class="note-swatch color-' + color + '" type="button" data-color="' + color + '" aria-label="Cor ' + color + '"></button>';
@@ -42,7 +58,7 @@ EN.notes = EN.notes || {};
             return el;
         },
 
-        /* Escreve no DOM só o que mudou: evita perder cursor/seleção do textarea. */
+        /* Escreve no DOM só o que mudou: evita perder cursor/seleção do campo. */
         sync: function (el, note) {
             if (el.dataset.color !== note.color) {
                 notes.COLORS.forEach(function (color) {
@@ -52,9 +68,11 @@ EN.notes = EN.notes || {};
                 el.dataset.color = note.color;
             }
 
-            const textarea = el.querySelector(".note-text");
-            if (document.activeElement !== textarea && textarea.value !== note.content) {
-                textarea.value = note.content;
+            const campo = el.querySelector(".note-text");
+            const emEdicao = campo.ownerDocument.activeElement === campo;
+            if (!emEdicao && pintado.get(campo) !== note.content) {
+                notes.rich.pintar(campo, notes.rich.ler(note.content));
+                pintado.set(campo, note.content);
             }
 
             const bucketBtn = el.querySelector('[data-act="bucket"]');

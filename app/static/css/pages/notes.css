@@ -366,20 +366,26 @@
     white-space: nowrap;
 }
 
-/* Edição inline: o textarea é o próprio corpo do post-it. */
+/* Edição inline: o campo é o próprio corpo do post-it. É um
+   `contenteditable` (e não mais um textarea) porque só ele mostra negrito e
+   link no papel; `pre-wrap` devolve o que o textarea fazia sozinho — espaços
+   seguidos e quebras de linha aparecem como foram digitados. */
 .note-text {
     flex: 1;
     min-height: 0;
     width: 100%;
     margin: 0;
     padding: 4px 14px 16px;
-    border: 0;
+    overflow-y: auto;
     outline: none;
-    resize: none;
-    background: transparent;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
     font-family: var(--font-main);
     font-size: 0.95rem;
-    font-weight: 600;
+    /* 500, e não os 600 de antes: o Chrome trata peso 600 ou mais como
+       negrito, então com 600 o texto inteiro já "era" negrito para ele, e o
+       botão B TIRAVA o negrito em vez de pôr. */
+    font-weight: 500;
     line-height: 1.5;
     color: inherit;
     cursor: text;
@@ -387,9 +393,23 @@
     scrollbar-color: color-mix(in srgb, #40203f 30%, transparent) transparent;
 }
 
-.note-text::placeholder {
+/* O placeholder do textarea não existe num `contenteditable`: é o atributo
+   escrito por cima enquanto o campo está vazio. */
+.note-text:empty::before {
+    content: attr(data-placeholder);
     color: color-mix(in srgb, #40203f 40%, transparent);
     font-weight: 500;
+    pointer-events: none;
+}
+
+.note-text b {
+    font-weight: 800;
+}
+
+.note-text a {
+    color: color-mix(in srgb, var(--accent-dark) 75%, #40203f);
+    text-decoration: underline;
+    text-underline-offset: 2px;
 }
 
 /* Origin UI: popover de swatches, dentro dos limites do cartão. */
@@ -501,8 +521,12 @@
     background: rgba(255, 255, 255, 0.24);
 }
 
-[data-dark="true"] .note-text::placeholder {
+[data-dark="true"] .note-text:empty::before {
     color: rgba(253, 241, 255, 0.45);
+}
+
+[data-dark="true"] .note-text a {
+    color: color-mix(in srgb, var(--accent) 70%, #fff);
 }
 
 [data-dark="true"] .note-swatches {
@@ -535,6 +559,63 @@
         opacity: 1;
         transform: none;
     }
+}
+
+/* ----------------------------------------------- a janela flutuante */
+
+/* O lugar do post-it que foi para a janela: um contorno, para ninguém achar
+   que ele sumiu, com o botão de trazer de volta. */
+.note-ghost {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: calc(var(--n-w) * 1px);
+    height: calc(var(--n-h) * 1px);
+    transform: translate3d(calc(var(--n-x) * 1px), calc(var(--n-y) * 1px), 0);
+    z-index: var(--n-z);
+    display: grid;
+    place-content: center;
+    gap: 8px;
+    padding: 12px;
+    border: 2px dashed var(--stroke);
+    border-radius: 2px 2px 14px 2px;
+    color: var(--ink-soft);
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+.notes-pip {
+    margin: 0;
+    overflow: hidden;
+}
+
+/* Na janela o papel é a janela inteira: sem geometria do quadro, sem
+   inclinação, sem arrastar nem redimensionar (quem redimensiona é a própria
+   janela). Apagar também sai — é ação de quadro, e ela fecharia a janela. */
+.note.is-pip {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    transform: none;
+    rotate: none;
+    border-radius: 0;
+    cursor: auto;
+    box-shadow: none;
+}
+
+.note.is-pip::before,
+.note.is-pip .note-grip,
+.note.is-pip .note-resize,
+.note.is-pip [data-act="pip"],
+.note.is-pip [data-act="delete"] {
+    display: none;
+}
+
+.note.is-pip .note-actions {
+    opacity: 1;
+    transform: none;
+    margin-left: auto;
 }
 
 /* O bloco global de prefers-reduced-motion usa `* { animation: none }` com

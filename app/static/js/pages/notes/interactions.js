@@ -1,4 +1,5 @@
-/* Arraste, redimensionamento e edição inline dos post-its. */
+/* Arraste, redimensionamento e as ações do cartão (cor, categoria, apagar,
+   janela flutuante). O texto de dentro é do editor.js. */
 window.EN = window.EN || {};
 EN.notes = EN.notes || {};
 
@@ -254,10 +255,22 @@ EN.notes = EN.notes || {};
                 notes.board.resize(ctx);
             }
 
-            /* ------------------------------------------------------- edição */
+            board.addEventListener("pointerdown", onPointerDown);
+
+            notes.interactions.ligar(ctx, board);
+            notes.editor.ligar(ctx, board);
+            notes.toolbar.ligar(document);
+        },
+
+        /* As ações do cartão, ligadas a uma raiz: o quadro ou a janela
+           flutuante (pip.js), que é outro documento e não enxerga os
+           ouvintes do quadro. O arraste fica de fora — na janela o papel
+           ocupa tudo e não há para onde arrastar. */
+        ligar: function (ctx, raiz) {
+            const doc = raiz.ownerDocument;
 
             function closeSwatches(except) {
-                board.querySelectorAll(".note-swatches:not([hidden])").forEach(function (panelEl) {
+                raiz.querySelectorAll(".note-swatches:not([hidden])").forEach(function (panelEl) {
                     if (panelEl === except) {
                         return;
                     }
@@ -269,7 +282,7 @@ EN.notes = EN.notes || {};
                 });
             }
 
-            board.addEventListener("click", function (event) {
+            raiz.addEventListener("click", function (event) {
                 const noteEl = event.target.closest(".note");
                 if (!noteEl) {
                     return;
@@ -307,25 +320,18 @@ EN.notes = EN.notes || {};
                     return;
                 }
 
+                if (action === "pip") {
+                    notes.pip.abrir(ctx, note.id);
+                    return;
+                }
+
                 if (action === "delete") {
                     notes.actions.remove(ctx, note.id);
                 }
             });
 
-            board.addEventListener("input", function (event) {
-                const textarea = event.target.closest(".note-text");
-                if (!textarea) {
-                    return;
-                }
-                const note = notes.find(ctx, Number(textarea.closest(".note").dataset.id));
-                if (note) {
-                    note.content = textarea.value;
-                    notes.store.queuePatch(ctx, note.id, { content: textarea.value });
-                }
-            });
-
             /* O cartão ganha relevo enquanto está em edição. */
-            board.addEventListener("focusin", function (event) {
+            raiz.addEventListener("focusin", function (event) {
                 const noteEl = event.target.closest(".note");
                 if (noteEl) {
                     noteEl.classList.add("is-editing");
@@ -336,7 +342,7 @@ EN.notes = EN.notes || {};
                 }
             });
 
-            board.addEventListener("focusout", function (event) {
+            raiz.addEventListener("focusout", function (event) {
                 const noteEl = event.target.closest(".note");
                 if (noteEl && !noteEl.contains(event.relatedTarget)) {
                     noteEl.classList.remove("is-editing");
@@ -344,19 +350,17 @@ EN.notes = EN.notes || {};
                 }
             });
 
-            board.addEventListener("pointerdown", onPointerDown);
-
-            document.addEventListener("click", function (event) {
+            doc.addEventListener("click", function (event) {
                 if (!event.target.closest(".note")) {
                     closeSwatches();
                 }
             });
 
-            document.addEventListener("keydown", function (event) {
+            doc.addEventListener("keydown", function (event) {
                 if (event.key !== "Escape") {
                     return;
                 }
-                const active = document.activeElement;
+                const active = doc.activeElement;
                 if (active && active.closest && active.closest(".note")) {
                     closeSwatches();
                     active.blur();
