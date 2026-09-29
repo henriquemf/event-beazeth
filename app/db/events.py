@@ -8,6 +8,11 @@ from app.db.tags import FALLBACK_TAG
 # ele, um título de megabytes ia para o banco e voltava em toda sincronização
 # e em todo carregamento do calendário. Os dois números passam longe de
 # qualquer título ou descrição de verdade.
+#
+# O teto NUNCA encurta o que já está gravado: evento criado antes dele existir
+# pode ter mais que isso, e editar só a data dele não pode cortar o título. Na
+# edição, o limite é o maior entre o teto e o tamanho que o texto já tinha
+# (`GREATEST` no UPDATE abaixo).
 MAX_TITLE = 200
 MAX_DESCRIPTION = 2000
 
@@ -112,15 +117,17 @@ def update_event(
         cursor = conn.execute(
             """
             UPDATE events
-            SET title = %s,
-                description = %s,
+            SET title = LEFT(%s, GREATEST(%s, length(title))),
+                description = LEFT(%s, GREATEST(%s, length(COALESCE(description, '')))),
                 event_datetime = %s,
                 tag_type = %s
             WHERE id = %s AND user_id = %s
             """,
             (
-                title.strip()[:MAX_TITLE],
-                description.strip()[:MAX_DESCRIPTION],
+                title.strip(),
+                MAX_TITLE,
+                description.strip(),
+                MAX_DESCRIPTION,
                 event_datetime,
                 _existing_tag(conn, user_id, tag_type),
                 event_id,

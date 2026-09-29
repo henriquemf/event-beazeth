@@ -671,7 +671,8 @@ são todos por conta.
   é objeto recebe `400`, e todo texto tem teto — o do evento (200 no título,
   2000 na descrição) era o único que faltava.
 - **Web Push só sai para os serviços dos navegadores** (Google, Mozilla,
-  Microsoft, Apple), com timeout de 10 s e no máximo 20 inscrições por conta.
+  Microsoft, Apple), com timeout de 10 s e no máximo 50 inscrições por conta
+  (a 51ª é recusada; nenhuma antiga é apagada).
   O endereço da inscrição vem do cliente, e sem essa lista quem cadastrasse
   `http://10.0.0.5/` faria o servidor bater na rede interna do provedor a cada
   lembrete; sem o timeout, um destino que segurasse a conexão pararia os

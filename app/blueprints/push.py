@@ -60,13 +60,18 @@ def subscribe():
     if not endpoint or not p256dh or not auth or not endpoint_aceito(endpoint):
         return jsonify({"ok": False, "message": "Inscrição inválida"}), 400
 
-    upsert_push_subscription(
+    gravou = upsert_push_subscription(
         current_user()["id"],
         endpoint,
         p256dh,
         auth,
         request.headers.get("User-Agent", "")[:MAX_USER_AGENT],
     )
+    if not gravou:
+        return jsonify({
+            "ok": False,
+            "message": "Esta conta já tem notificações ligadas em navegadores demais.",
+        }), 409
     return jsonify({"ok": True})
 
 

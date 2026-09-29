@@ -10,10 +10,15 @@ from app.db.connection import get_connection, utc_now_iso
 
 # Cada lembrete sai para TODAS as inscrições da conta, em série. Sem teto, uma
 # conta que se inscrevesse mil vezes faria cada lembrete dela custar mil
-# pedidos -- na mesma thread que atende os lembretes de todo mundo. Vinte cobre
-# com folga os navegadores e aparelhos de uma pessoa; a mais antiga sai
-# primeiro, que é quase sempre a de um navegador que nem existe mais.
-MAX_INSCRICOES_POR_CONTA = 20
+# pedidos -- na mesma thread que atende os lembretes de todo mundo.
+#
+# O teto RECUSA a inscrição nova; não apaga nenhuma antiga. Apagar "a mais
+# velha" parecia inofensivo, mas é tirar a notificação de um navegador que a
+# pessoa ainda usa sem ela saber. Cinquenta passa longe de qualquer pessoa, e
+# as inscrições mortas já saem sozinhas quando o serviço de push responde 404
+# ou 410 (ver `scheduler_service.py`). Reinscrever o mesmo navegador não conta:
+# é atualização da linha que já existe.
+MAX_INSCRICOES_POR_CONTA = 50
 
 
 def upsert_push_subscription(
@@ -22,8 +27,20 @@ def upsert_push_subscription(
     p256dh: str,
     auth: str,
     user_agent: str,
-) -> None:
+) -> bool:
+    """Grava a inscrição. `False` se a conta já está no teto e ela é nova."""
     with get_connection() as conn:
+        ja_existe = conn.execute(
+            "SELECT 1 FROM push_subscriptions WHERE user_id = %s AND endpoint = %s",
+            (user_id, endpoint.strip()),
+        ).fetchone()
+        if not ja_existe:
+            total = conn.execute(
+                "SELECT COUNT(*) AS n FROM push_subscriptions WHERE user_id = %s",
+                (user_id,),
+            ).fetchone()["n"]
+            if total >= MAX_INSCRICOES_POR_CONTA:
+                return False
         conn.execute(
             """
             INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth, user_agent, created_at)
@@ -42,16 +59,7 @@ def upsert_push_subscription(
                 utc_now_iso(),
             ),
         )
-        conn.execute(
-            """
-            DELETE FROM push_subscriptions
-            WHERE user_id = %s AND id NOT IN (
-                SELECT id FROM push_subscriptions
-                WHERE user_id = %s ORDER BY id DESC LIMIT %s
-            )
-            """,
-            (user_id, user_id, MAX_INSCRICOES_POR_CONTA),
-        )
+    return True
 
 
 def list_push_subscriptions(user_id: int):

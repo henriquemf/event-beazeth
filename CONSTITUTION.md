@@ -237,9 +237,12 @@ consulta escrita daqui em diante.
   A rádio (`services/radio.py`) lê o stream de endereços escritos no código --
   o cliente só escolhe a chave -- e guarda a leitura por 25 s, com trava por
   estação: o custo de mil pedidos é o mesmo de um.
-- **O que é por conta e cresce a cada pedido tem teto.** Vinte inscrições de
-  push por conta: cada lembrete sai para todas, em série, na thread que atende
-  todo mundo.
+- **O que é por conta e cresce a cada pedido tem teto -- e o teto recusa o
+  novo, nunca apaga o velho.** Cinquenta inscrições de push por conta: cada
+  lembrete sai para todas, em série, na thread que atende todo mundo. E todo
+  corte de tamanho vale para texto NOVO: editar um evento antigo mais longo
+  que o teto não o encurta (`GREATEST` em `update_event`). O que já está no
+  banco continua existindo, sempre.
 
 ---
 
@@ -424,14 +427,18 @@ dessa troca de identidade. As regras que sobraram dela:
   mesmo tempo. Vale para TODA operação por id provisório: `removerPendenciasDe`
   não filtrava, e apagar o post-it -1 offline levava junto a criação da tarefa
   -1, que nunca chegava ao servidor.
-- **Descartar é só para recusa, e recusa é 4xx.** Sem resposta, 5xx, 408 e 429
-  são "agora não" e a escrita espera. Decidir pelo código HTTP, nunca pelo texto
-  da mensagem: um 503 de deploy já apagou escrita por ser "outra coisa que não
+- **Descartar é só para recusa, e recusa é 4xx.** Sem resposta, 3xx, 5xx, 408
+  e 429 são "agora não" e a escrita espera -- sem prazo: um "desiste depois de
+  sete dias" chegou a entrar e saiu, porque é perder o que a pessoa escreveu
+  por culpa do servidor. Decidir pelo código HTTP, nunca pelo texto da
+  mensagem: um 503 de deploy já apagou escrita por ser "outra coisa que não
   rede fora".
 - **A fila é de uma conta.** Sessão que cai (401) apaga só o token e deixa
   anotada a conta dona dos dados; o login seguinte limpa tudo se a conta mudou.
   Drenar a fila de uma pessoa com o token de outra grava o conteúdo errado na
-  conta errada, para sempre.
+  conta errada, para sempre. E limpar com escrita pendente PERGUNTA antes, ao
+  trocar de conta e ao sair (`DialogoDePendentes`): o que está na fila não
+  existe em nenhum outro lugar.
 
 ### Compose: o que morre sem avisar
 
