@@ -24,18 +24,20 @@ def parse_block_payload(payload):
 
     Retorna (dados, None) em sucesso ou (None, mensagem de erro).
     """
-    title = (payload.get("title") or "").strip()
+    title = payload.get("title")
+    title = title.strip() if isinstance(title, str) else ""
     if not title:
         return None, "Informe o título do bloco."
     if len(title) > MAX_TITLE:
         title = title[:MAX_TITLE]
 
-    notes = (payload.get("notes") or "").strip()[:MAX_NOTES]
+    notes = payload.get("notes")
+    notes = notes.strip()[:MAX_NOTES] if isinstance(notes, str) else ""
 
     try:
         start_minute = int(payload.get("startMinute"))
         end_minute = int(payload.get("endMinute"))
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         return None, "Horário inválido."
 
     is_routine = bool(payload.get("isRoutine"))

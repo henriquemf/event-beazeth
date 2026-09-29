@@ -69,7 +69,7 @@ def list_todo_items(user_id: int, start: date, end: date) -> list[dict]:
 
 def insert_todo_item(user_id: int, day: date, content: str) -> dict | None:
     """Cria no fim do dia. Devolve `None` se o dia já estiver cheio."""
-    text = (content or "").strip()[:MAX_CONTENT]
+    text = content.strip()[:MAX_CONTENT] if isinstance(content, str) else ""
     if not text:
         return None
 

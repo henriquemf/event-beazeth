@@ -2,6 +2,8 @@ import platform
 from urllib.parse import urlparse
 
 from pywebpush import WebPushException, webpush
+from urllib3.exceptions import LocationParseError
+from urllib3.util import parse_url
 
 
 # Os serviços de push dos navegadores: Chrome, Edge (e os derivados do
@@ -25,15 +27,40 @@ SERVICOS_DE_PUSH = (
 PUSH_TIMEOUT_SECONDS = 10
 
 
+def _servico_conhecido(host: str | None) -> bool:
+    host = (host or "").lower()
+    return any(host == servico or host.endswith("." + servico) for servico in SERVICOS_DE_PUSH)
+
+
 def endpoint_aceito(endpoint: str) -> bool:
-    """`True` se o endereço é https num dos serviços de push conhecidos."""
-    try:
-        partes = urlparse(endpoint or "")
-    except ValueError:
+    """`True` se o endereço é https num dos serviços de push conhecidos.
+
+    Confere com os DOIS leitores de URL, o do Python e o do urllib3 -- que é
+    quem de fato conecta, por baixo do pywebpush. Os dois discordam em URL
+    torta: `https://127.0.0.1\\@fcm.googleapis.com/` é FCM para o `urlparse`
+    e 127.0.0.1 para o urllib3. Checar só um deixava o outro escolher o
+    destino. Por isso também cai de cara o que endereço de push de verdade
+    nunca tem: barra invertida, `@`, espaço e caractere de controle.
+    """
+    if not isinstance(endpoint, str) or any(
+        c in endpoint for c in "\\@ \t\r\n"
+    ) or any(ord(c) < 32 or ord(c) == 127 for c in endpoint):
         return False
-    host = (partes.hostname or "").lower()
-    return partes.scheme == "https" and partes.port in (None, 443) and any(
-        host == servico or host.endswith("." + servico) for servico in SERVICOS_DE_PUSH
+    try:
+        partes = urlparse(endpoint)
+        porta = partes.port
+        conexao = parse_url(endpoint)
+    except (ValueError, LocationParseError):
+        return False
+    return (
+        partes.scheme == "https"
+        and conexao.scheme == "https"
+        and porta in (None, 443)
+        and conexao.port in (None, 443)
+        and partes.username is None
+        and conexao.auth is None
+        and (partes.hostname or "").lower() == (conexao.host or "").lower()
+        and _servico_conhecido(partes.hostname)
     )
 
 

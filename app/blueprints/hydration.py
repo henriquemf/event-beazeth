@@ -253,7 +253,7 @@ def save_settings():
     # era um 500 em vez de dizer o que estava errado.
     try:
         interval, goal, glass_ml = int(interval), int(goal), int(glass_ml)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         return jsonify({"ok": False, "error": "Número inválido."}), 400
 
     upsert_hydration_settings(

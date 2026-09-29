@@ -69,6 +69,12 @@ def parse_event_datetime(value: str):
     except ValueError:
         return None, "Data/hora inválida."
 
+    # Com fuso (`Z`, `-03:00`) a comparação abaixo levanta TypeError -- data
+    # com fuso contra data sem. Nenhum cliente manda fuso: o horário do evento
+    # é o de parede, e é assim que o resto do app o lê.
+    if dt.tzinfo is not None:
+        return None, "Data/hora inválida."
+
     if dt < datetime.now():
         return None, "A data/hora precisa estar no futuro."
 

@@ -162,6 +162,10 @@ STATEMENTS = (
     # equivalente em Postgres das migracoes guardadas que o SQLite exigia.
     "ALTER TABLE hydration_settings ADD COLUMN IF NOT EXISTS daily_goal INTEGER NOT NULL DEFAULT 8",
     "ALTER TABLE hydration_settings ADD COLUMN IF NOT EXISTS glass_ml INTEGER NOT NULL DEFAULT 250",
+    # A "época" das credenciais da conta. Todo token e toda sessão levam a
+    # época em que nasceram, e trocar a senha a avança: o que foi emitido antes
+    # deixa de valer na hora, inclusive no celular perdido. Ver `auth.py`.
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_epoch INTEGER NOT NULL DEFAULT 0",
     # --- carimbo de tempo, para o app Android sincronizar por diferenca ------
     #
     # Sem saber QUANDO cada linha mudou, o aplicativo so teria duas opcoes:
@@ -176,10 +180,6 @@ STATEMENTS = (
     # NULL e o primeiro `since` do aplicativo as trataria como "nunca mudou",
     # deixando o celular sem o conteudo antigo. Com ele, tudo que existia entra
     # na primeira sincronizacao.
-    # A "época" das credenciais da conta. Todo token e toda sessão levam a
-    # época em que nasceram, e trocar a senha a avança: o que foi emitido antes
-    # deixa de valer na hora, inclusive no celular perdido. Ver `auth.py`.
-    "ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_epoch INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE event_tags ADD COLUMN IF NOT EXISTS updated_at TEXT NOT NULL DEFAULT '1970-01-01T00:00:00'",
     "ALTER TABLE events ADD COLUMN IF NOT EXISTS updated_at TEXT NOT NULL DEFAULT '1970-01-01T00:00:00'",
     "ALTER TABLE hydration_settings ADD COLUMN IF NOT EXISTS updated_at TEXT NOT NULL DEFAULT '1970-01-01T00:00:00'",

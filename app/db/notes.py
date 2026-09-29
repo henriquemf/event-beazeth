@@ -21,13 +21,15 @@ NOTE_BOUNDS = {
 }
 
 
-def _normalize_note_color(color: str) -> str:
-    color = (color or "").strip().lower()
+def _normalize_note_color(color) -> str:
+    # `isinstance`, e não `or ""`: uma lista no JSON passaria pelo `or` e
+    # quebraria no `.strip()` com um 500.
+    color = color.strip().lower() if isinstance(color, str) else ""
     return color if color in NOTE_COLORS else "sun"
 
 
-def _normalize_note_bucket(bucket: str) -> str:
-    bucket = (bucket or "").strip().lower()
+def _normalize_note_bucket(bucket) -> str:
+    bucket = bucket.strip().lower() if isinstance(bucket, str) else ""
     return bucket if bucket in NOTE_BUCKETS else "hoje"
 
 
@@ -35,7 +37,8 @@ def _clamp_note_int(field: str, value, fallback: int) -> int:
     low, high = NOTE_BOUNDS[field]
     try:
         number = int(round(float(value)))
-    except (TypeError, ValueError):
+    # OverflowError: `1e999` no JSON chega como infinito, e `round` dele levanta.
+    except (TypeError, ValueError, OverflowError):
         return fallback
     return min(max(number, low), high)
 
@@ -77,7 +80,7 @@ def insert_sticky_note(user_id: int, fields: dict) -> dict:
     data = {
         # Toda gravacao passa pela forma canonica: e a unica porta por onde o
         # HTML do post-it entra no banco. Ver `app/texto_rico.py`.
-        "content": limpar(fields.get("content") or ""),
+        "content": limpar(fields["content"] if isinstance(fields.get("content"), str) else ""),
         "bucket": _normalize_note_bucket(fields.get("bucket")),
         "pos_x": _clamp_note_int("pos_x", fields.get("x"), 24),
         "pos_y": _clamp_note_int("pos_y", fields.get("y"), 24),
