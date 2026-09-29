@@ -83,4 +83,6 @@ ENDPOINTS = (
 FORA_DO_CONTRATO = {
     "/api/push/test": "botão de diagnóstico do site; o app nativo usa o canal do Android",
     "/api/live/notifications": "polling do navegador, substituto do Web Push; o app usa FCM",
+    "/api/radio/<estacao>/agora": "o nome da música para o navegador, que não lê o ICY; "
+                                  "o player do app lê o metadado direto do stream",
 }

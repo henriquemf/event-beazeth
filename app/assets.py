@@ -32,7 +32,13 @@ from flask import g, request, url_for
 #   iconefonte embutido em base64. Sem isso o calendário abre sem as setas de
 #   mês, e o navegador só reclama no console;
 # - `connect-src 'self'` basta porque o service worker só toca em `/static/`
-#   da própria origem.
+#   da própria origem -- e o nome da música da rádio vem do nosso servidor
+#   (`/api/radio/...`), não da rádio;
+# - `media-src` são os streams da rádio lo-fi, e só eles (`services/radio.py`).
+#   O laut.fm redireciona para um subdomínio por estação, e a RauteMusik para
+#   um servidor `streamNN.radiohost.de` que muda -- daí os `*.`. O
+#   radiohost.de é a hospedagem de stream das duas rádios alemãs. Sem esta
+#   linha o `<audio>` cai no `default-src 'self'` e fica mudo sem erro na tela.
 _CSP = (
     "default-src 'self'; "
     "base-uri 'self'; "
@@ -44,6 +50,8 @@ _CSP = (
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; "
     "script-src 'self' 'nonce-{nonce}' https://cdn.jsdelivr.net; "
     "connect-src 'self'; "
+    "media-src 'self' https://stream.laut.fm https://*.stream.laut.fm "
+    "https://*.radiohost.de https://streaming.hotmixradio.com https://study-high.rautemusik.fm; "
     "manifest-src 'self'; "
     "worker-src 'self'"
 )

@@ -17,6 +17,7 @@ from app.blueprints import (
     pomodoro,
     todo,
     push,
+    radio,
     system,
     tags,
 )
@@ -41,6 +42,8 @@ BLUEPRINTS = (
     hydration.bp,
     diary.bp,
     push.bp,
+    # A rádio não é tela: é o player do canto, presente em todas.
+    radio.bp,
 )
 
 

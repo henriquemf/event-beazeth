@@ -30,6 +30,9 @@ USERLESS_ENDPOINTS = frozenset({
     "system.favicon",
     # Quem busca este é o Android, na instalação do .apk, sem cookie nenhum.
     "system.assetlinks",
+    # A música que toca na rádio: a mesma para todo mundo, perguntada a cada
+    # 25 s por quem está ouvindo. Ver `blueprints/radio.py`.
+    "radio.agora",
 })
 
 # O que responde sem sessão. Tudo o mais exige login.

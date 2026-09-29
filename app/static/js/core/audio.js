@@ -243,6 +243,16 @@ window.EN = window.EN || {};
         fonte.connect(volume);
         volume.connect(audio.destination);
         fonte.start(quando);
+        /* Aviso de verdade (não o "tec" do clique) abaixa a rádio enquanto
+           toca: sem isso o fim do foco some debaixo da música. Um evento, e
+           não uma chamada ao radio.js, para os dois não se conhecerem. */
+        if (nome !== "clique" && nome !== "navegar") {
+            /* A fonte vai junto: um som agendado (o fim do foco) pode ser
+               cancelado antes de tocar, e o `ended` dela avisa quem ouve. */
+            document.dispatchEvent(new CustomEvent("en:aviso-sonoro", {
+                detail: { emMs: Math.max(0, (quando - audio.currentTime) * 1000), fonte: fonte },
+            }));
+        }
         return [fonte];
     }
 

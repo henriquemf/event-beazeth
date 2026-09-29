@@ -30,6 +30,9 @@
                conteúdo logo em seguida e corrige se estiver inválido. */
             root.dataset.pomo = localStorage.getItem("en_pomodoro") ? "on" : "off";
 
+            /* O cartão da rádio aberto ou fechado, também antes da pintura. */
+            root.dataset.radioPainel = localStorage.getItem("en_radio_painel") === "aberto" ? "aberto" : "fechado";
+
             /* "sugar" já vem no CSS bloqueante; as demais só baixam se escolhidas. */
             if (FONT_FAMILIES[font]) {
                 var link = document.createElement("link");

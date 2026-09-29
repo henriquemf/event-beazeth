@@ -1,0 +1,404 @@
+/* A rádio lo-fi do canto da tela.
+
+   Global, como os widgets da barra lateral: o player está em todas as telas
+   logadas. Carrega DEPOIS de components.css e ANTES de themes.css, então pega
+   as cores de cada paleta e do modo escuro sem uma linha própria para isso.
+
+   Três formas, e só o CSS decide entre elas:
+   - parada: um botão redondo, para não tapar nada;
+   - tocando: a pílula com as ondas e o nome da música, como no lofi.town;
+   - aberta: o cartão com estações, volume e o link da rádio.
+
+   Toda animação é `transform`/`opacity` (seção 4 da constituição) e some com
+   `prefers-reduced-motion`. */
+
+.radio {
+    --radio-margem: 18px;
+    --radio-base: var(--radio-margem);
+    position: fixed;
+    right: var(--radio-margem);
+    bottom: var(--radio-base);
+    z-index: 45;
+    display: grid;
+    justify-items: end;
+    gap: 10px;
+    max-width: calc(100vw - 2 * var(--radio-margem));
+    font-family: var(--font-main);
+    color: var(--ink);
+}
+
+/* ------------------------------------------------------------ a pílula */
+
+.radio-mini {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px;
+    border-radius: 999px;
+    background: var(--surface-solid);
+    border: 1px solid var(--stroke);
+    box-shadow: 0 14px 34px -18px var(--shadow);
+}
+
+.radio-abrir {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    min-height: 40px;
+    padding: 0 8px 0 10px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.radio-abrir:focus-visible,
+.radio button:focus-visible,
+.radio input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.radio-mini-texto {
+    display: grid;
+    min-width: 0;
+    max-width: 210px;
+    line-height: 1.2;
+}
+
+.radio-titulo,
+.radio-artista {
+    margin: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.radio-mini .radio-titulo {
+    font-weight: 700;
+    font-size: 0.86rem;
+}
+
+.radio-mini .radio-artista {
+    font-size: 0.74rem;
+    color: var(--ink-soft);
+}
+
+/* Parada e recolhida, a pílula vira só o botão: nome de estação num canto
+   que ninguém está ouvindo é ruído. */
+.radio[data-tocando="nao"] .radio-mini-texto {
+    display: none;
+}
+
+.radio[data-tocando="nao"] .radio-abrir {
+    padding: 0 6px;
+}
+
+/* Parada, a pílula diz "rádio"; as ondas só aparecem com som saindo. */
+.radio-icone {
+    font-size: 1.2rem;
+    line-height: 1;
+}
+
+.radio[data-tocando="sim"] .radio-mini .radio-icone,
+.radio:not([data-tocando="sim"]) .radio-mini .radio-ondas {
+    display: none;
+}
+
+/* --------------------------------------------------------- as ondas */
+
+.radio-ondas {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 16px;
+    flex: 0 0 auto;
+}
+
+.radio-ondas i {
+    width: 3px;
+    height: 100%;
+    border-radius: 2px;
+    background: var(--accent);
+    transform: scaleY(0.3);
+    transform-origin: bottom;
+}
+
+.radio[data-tocando="sim"] .radio-ondas i {
+    animation: radio-onda 0.9s ease-in-out infinite alternate;
+}
+
+.radio-ondas i:nth-child(2) { animation-delay: -0.3s; }
+.radio-ondas i:nth-child(3) { animation-delay: -0.6s; }
+.radio-ondas i:nth-child(4) { animation-delay: -0.15s; }
+
+/* Conectando: as ondas param no meio, meio apagadas. */
+.radio[data-carregando="sim"] .radio-ondas i {
+    animation: none;
+    transform: scaleY(0.55);
+    opacity: 0.5;
+}
+
+@keyframes radio-onda {
+    from { transform: scaleY(0.25); }
+    to { transform: scaleY(1); }
+}
+
+/* ----------------------------------------------------------- os botões */
+
+.radio-play,
+.radio-pular,
+.radio-fechar {
+    display: inline-grid;
+    place-items: center;
+    border: 0;
+    border-radius: 999px;
+    font: inherit;
+    cursor: pointer;
+    transition: transform 0.15s ease;
+}
+
+.radio-play {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 auto;
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.95rem;
+    box-shadow: 0 8px 18px -10px var(--accent-dark);
+}
+
+.radio-play:active,
+.radio-pular:active {
+    transform: scale(0.94);
+}
+
+/* O navegador recusou tocar sem um clique: o play pede o toque. */
+.radio[data-bloqueado="sim"] .radio-play {
+    animation: radio-pulso 1.4s ease-in-out infinite;
+}
+
+@keyframes radio-pulso {
+    50% { transform: scale(1.08); }
+}
+
+.radio-pular,
+.radio-fechar {
+    width: 36px;
+    height: 36px;
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    color: var(--ink);
+}
+
+/* ------------------------------------------------------------ o cartão */
+
+.radio-painel {
+    width: min(330px, calc(100vw - 2 * var(--radio-margem)));
+    padding: 14px;
+    border-radius: 22px;
+    background: var(--surface-solid);
+    border: 1px solid var(--stroke);
+    box-shadow: 0 24px 50px -24px var(--shadow);
+    display: grid;
+    gap: 12px;
+    transform-origin: bottom right;
+    /* Escondido por `visibility`, e não `display`, para a abertura poder
+       animar; `visibility` também tira os botões do Tab enquanto fechado. */
+    visibility: hidden;
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+    transition: opacity 0.18s ease, transform 0.18s ease, visibility 0s linear 0.18s;
+}
+
+html[data-radio-painel="aberto"] .radio-painel {
+    visibility: visible;
+    opacity: 1;
+    transform: none;
+    transition: opacity 0.18s ease, transform 0.18s ease, visibility 0s;
+}
+
+/* O cartão fica ACIMA da pílula, que continua ali: é ela que o fecha. */
+.radio-painel {
+    order: -1;
+}
+
+.radio-topo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.radio-marca {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.05rem;
+}
+
+.radio-agora {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.radio-capa {
+    display: grid;
+    place-items: center;
+    width: 56px;
+    height: 56px;
+    flex: 0 0 auto;
+    border-radius: 16px;
+    background:
+        radial-gradient(circle at 30% 25%, color-mix(in srgb, #fff 55%, transparent), transparent 55%),
+        linear-gradient(135deg, var(--accent), var(--blue-soft));
+}
+
+.radio-capa .radio-ondas {
+    height: 24px;
+}
+
+.radio-capa .radio-ondas i {
+    width: 4px;
+    background: #fff;
+}
+
+.radio-agora-texto {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+}
+
+.radio-agora .radio-titulo {
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.radio-agora .radio-artista {
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+}
+
+.radio-fonte {
+    font-size: 0.75rem;
+    color: var(--accent-dark);
+    text-decoration: none;
+}
+
+.radio-fonte:hover {
+    text-decoration: underline;
+}
+
+.radio-controles {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.radio-volume {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+    margin-left: 4px;
+}
+
+.radio-volume input {
+    width: 100%;
+    accent-color: var(--accent);
+}
+
+.radio-estacoes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.radio-estacao {
+    display: grid;
+    gap: 2px;
+    width: 100%;
+    height: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--stroke);
+    border-radius: 14px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: transform 0.15s ease;
+}
+
+.radio-estacao:active {
+    transform: scale(0.97);
+}
+
+.radio-estacao[aria-pressed="true"] {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.radio-estacao-nome {
+    font-weight: 700;
+    font-size: 0.86rem;
+}
+
+.radio-estacao-desc {
+    font-size: 0.72rem;
+    color: var(--ink-soft);
+    line-height: 1.25;
+}
+
+.radio-status {
+    margin: 0;
+    font-size: 0.78rem;
+    color: var(--ink-soft);
+}
+
+.radio-status:empty {
+    display: none;
+}
+
+/* --------------------------------------------------------- no celular */
+
+/* Acima da barra de navegação inferior, que ocupa o rodapé. */
+@media (max-width: 860px) {
+    .radio {
+        --radio-margem: 12px;
+        --radio-base: calc(74px + env(safe-area-inset-bottom));
+    }
+
+    .radio-mini-texto {
+        max-width: 150px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .radio[data-tocando="sim"] .radio-ondas i,
+    .radio[data-bloqueado="sim"] .radio-play {
+        animation: none;
+    }
+
+    .radio-ondas i {
+        transform: scaleY(0.6);
+    }
+
+    .radio-painel,
+    html[data-radio-painel="aberto"] .radio-painel {
+        transition: none;
+    }
+}
+
+@media print {
+    .radio {
+        display: none;
+    }
+}

@@ -228,6 +228,15 @@ consulta escrita daqui em diante.
   (`notifier.endpoint_aceito`), conferido na inscrição E no envio — linha
   antiga no banco não escapa da regra nova. Sem isso é SSRF: o servidor batendo
   na rede interna do provedor em nome de quem cadastrou o endereço.
+- **Endereço de fora é conferido pelos dois leitores de URL.** O `urlparse`
+  do Python e o urllib3 (que é quem conecta, por baixo do pywebpush) leem URL
+  torta de jeitos diferentes: `https://127.0.0.1\@fcm.googleapis.com/` é FCM
+  para um e 127.0.0.1 para o outro. Checar só um deixa o outro escolher o
+  destino. `\`, `@`, espaço e caractere de controle caem antes de tudo.
+- **Pedido para fora com endereço FIXO não precisa de lista, precisa de cache.**
+  A rádio (`services/radio.py`) lê o stream de endereços escritos no código --
+  o cliente só escolhe a chave -- e guarda a leitura por 25 s, com trava por
+  estação: o custo de mil pedidos é o mesmo de um.
 - **O que é por conta e cresce a cada pedido tem teto.** Vinte inscrições de
   push por conta: cada lembrete sai para todas, em série, na thread que atende
   todo mundo.

@@ -1,0 +1,74 @@
+{# A rádio lo-fi, no canto da tela, em todas as telas logadas.
+
+   Nasce inteira no HTML, com as estações de `services/radio.py`: é dado fixo,
+   e o cartão não pode aparecer vazio esperando um fetch. Quem dá vida a ele é
+   `static/js/core/radio.js`; o CSS é `css/widgets/radio.css`.
+
+   Aberto ou fechado vem do `<html data-radio-painel>`, que o bootstrap do tema
+   define antes da primeira pintura -- o cartão não "abre sozinho" um quadro
+   depois de a página aparecer.
+
+   O `<audio>` NÃO está aqui: ele é criado no primeiro play. Quem nunca aperta
+   o play não abre conexão nenhuma com rádio nenhuma. #}
+<aside class="radio" id="radio" aria-label="Rádio lo-fi"
+       data-agora="{{ url_for('radio.agora', estacao='ESTACAO') }}">
+    <div class="radio-mini">
+        <button class="radio-abrir" type="button" data-radio="painel"
+                aria-controls="radio-painel" aria-expanded="false" title="Rádio lo-fi">
+            <span class="radio-icone" aria-hidden="true">📻</span>
+            <span class="radio-ondas" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+            <span class="radio-mini-texto">
+                <span class="radio-titulo" data-radio-campo="titulo">Rádio lo-fi</span>
+                <span class="radio-artista" data-radio-campo="artista">toque para ouvir</span>
+            </span>
+        </button>
+        <button class="radio-play radio-play-mini" type="button" data-radio="alternar" aria-label="Tocar a rádio">
+            <span aria-hidden="true">▶</span>
+        </button>
+    </div>
+
+    <section class="radio-painel" id="radio-painel" aria-label="Controles da rádio">
+        <header class="radio-topo">
+            <span class="radio-marca">📻 Rádio lo-fi</span>
+            <button class="radio-fechar" type="button" data-radio="painel" aria-label="Recolher a rádio">—</button>
+        </header>
+
+        <div class="radio-agora">
+            <span class="radio-capa" aria-hidden="true"><span class="radio-ondas"><i></i><i></i><i></i><i></i></span></span>
+            <div class="radio-agora-texto" aria-live="polite">
+                <p class="radio-titulo" data-radio-campo="titulo">Rádio lo-fi</p>
+                <p class="radio-artista" data-radio-campo="artista">escolha uma estação</p>
+                <a class="radio-fonte" data-radio-campo="fonte" href="{{ radio_estacoes[0].site }}"
+                   target="_blank" rel="noopener noreferrer">{{ radio_estacoes[0].nome }} · {{ radio_estacoes[0].fonte }} ↗</a>
+            </div>
+        </div>
+
+        <div class="radio-controles">
+            <button class="radio-pular" type="button" data-radio="anterior" aria-label="Estação anterior">⏮</button>
+            <button class="radio-play" type="button" data-radio="alternar" aria-label="Tocar a rádio">
+                <span aria-hidden="true">▶</span>
+            </button>
+            <button class="radio-pular" type="button" data-radio="proxima" aria-label="Próxima estação">⏭</button>
+            <label class="radio-volume">
+                <span aria-hidden="true">🔈</span>
+                <input type="range" min="0" max="100" step="1" value="70" data-radio="volume" aria-label="Volume" />
+            </label>
+        </div>
+
+        <ul class="radio-estacoes" role="list">
+            {% for estacao in radio_estacoes %}
+            <li>
+                <button class="radio-estacao" type="button" data-radio-estacao="{{ estacao.id }}"
+                        data-stream="{{ estacao.stream }}" data-site="{{ estacao.site }}"
+                        data-nome="{{ estacao.nome }}" data-fonte="{{ estacao.fonte }}"
+                        aria-pressed="{{ 'true' if loop.first else 'false' }}">
+                    <span class="radio-estacao-nome">{{ estacao.nome }}</span>
+                    <span class="radio-estacao-desc">{{ estacao.descricao }}</span>
+                </button>
+            </li>
+            {% endfor %}
+        </ul>
+
+        <p class="radio-status" data-radio-campo="status" role="status"></p>
+    </section>
+</aside>

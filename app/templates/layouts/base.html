@@ -25,6 +25,7 @@
     <link rel="stylesheet" href="{{ static_url('css/components.css') }}" />
     <link rel="stylesheet" href="{{ static_url('css/widgets/pomodoro.css') }}" />
     <link rel="stylesheet" href="{{ static_url('css/widgets/water.css') }}" />
+    <link rel="stylesheet" href="{{ static_url('css/widgets/radio.css') }}" />
     <link rel="stylesheet" href="{{ static_url('css/themes.css') }}" />
     <link rel="stylesheet" href="{{ static_url('css/app-shell.css') }}" />
     {% include 'partials/theme-bootstrap.html' %}
@@ -46,6 +47,7 @@
         </main>
     </div>
     {% include 'partials/bottom-nav.html' %}
+    {% include 'partials/radio.html' %}
     {% endblock %}
     <footer class="site-love-footer">EU TE AMO MOMO</footer>
     <script defer src="{{ static_url('js/core/shared.js') }}"></script>
@@ -61,6 +63,9 @@
         data-som-aplausos="{{ static_url('sons/aplausos.flac') }}"
         data-som-clique="{{ static_url('sons/clique.flac') }}"
         data-som-navegar="{{ static_url('sons/navegar.flac') }}"></script>
+    {# Depois do audio.js: é ele quem avisa quando um aviso vai tocar por
+       cima da música. Sem o cartão da rádio (telas de entrar), sai na hora. #}
+    <script defer src="{{ static_url('js/core/radio.js') }}"></script>
     <script defer src="{{ static_url('js/core/ui-effects.js') }}"></script>
     <script defer src="{{ static_url('js/core/push.js') }}"></script>
     {# Antes do pomodoro: é ele quem solta a festa ao fim do foco. #}

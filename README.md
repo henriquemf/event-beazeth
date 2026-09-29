@@ -354,6 +354,36 @@ servidor no deploy roda em UTC e o navegador está em outro fuso: um horário se
 fuso mandado ao cliente seria lido como hora local e a conta erraria por horas.
 Uma duração não tem esse problema.
 
+## Rádio lo-fi
+
+No canto de toda tela há uma rádio, como no lofi.town: um botão 📻 quando
+parada, uma pílula com ondas e o nome da música quando toca, e um cartão com
+quatro estações, volume e o link da rádio quando aberta. A música aparece
+também nos controles de mídia do sistema e na tela de bloqueio do celular.
+
+- **As estações** (`app/services/radio.py`) são públicas, de operadoras
+  estabelecidas: Lo-fi (laut.fm), Chillhop (I Love Music), Hotmix Lo-Fi
+  (Hotmix Radio) e Study (RauteMusik). Todas conferidas no stream de verdade:
+  HTTPS, nome da música dentro do stream (ICY) e aceitar tocar dentro de outro
+  site. O SomaFM chegou a entrar e saiu: responde 403 a pedido com `Referer`
+  de outro domínio, que é a regra deles contra embutir o stream -- e regra de
+  quem transmite não se contorna.
+- **O áudio vem direto da rádio.** O servidor só responde o nome da música
+  (`/api/radio/<estacao>/agora`), porque o `<audio>` descarta o ICY. A leitura
+  fica 25 s em cache por estação: dez pessoas ouvindo custam uma leitura do
+  stream a cada 25 s, não dez. A rota não lê sessão nem banco.
+- **Parada, não conecta em nada.** O `<audio>` nasce no primeiro play, e pausar
+  fecha o stream em vez de deixá-lo baixando para um buffer que ninguém ouve.
+- **Trocar de tela continua tocando.** Cada tela é uma página nova, então a
+  intenção (tocando, estação, volume) fica no localStorage e a página seguinte
+  retoma -- é ao vivo, então não há "de onde parou", só o instante de
+  reconectar. Página pré-renderizada espera ser aberta antes de tocar. Onde o
+  navegador exigir um clique, o play pulsa.
+- **Duas abas não tocam juntas.** A que toca manda um sinal de vida; a que
+  abre não retoma sozinha, e dar play numa aba cala a outra.
+- **Avisos abaixam a música.** O fim do foco, a água e a agenda baixam a rádio
+  para 25% enquanto tocam e devolvem o volume depois.
+
 ## Bibliotecas
 
 São cinco no servidor e duas no navegador. O critério para cada uma é o mesmo:
@@ -546,6 +576,7 @@ app/
                          sidebar é do layout base)
         pomodoro.css     ampulheta + widget do pomodoro
         water.css        copo + widget da água
+        radio.css        a rádio lo-fi do canto
       components/        componente de 2-3 telas, carregado só por elas
         modal.css        modal de evento (calendário e planner)
       themes.css         10 temas, 10 fontes, dark mode, responsivo
@@ -556,7 +587,7 @@ app/
       core/              shared (namespace + utils), theme, audio, ui-effects,
                          push, festa, pomodoro (motor + principal + subs),
                          pomodoro-widget (widget da sidebar + selo do menu),
-                         hydration
+                         hydration, radio (a radio lo-fi do canto)
       pages/
         notes/           constants, context, rich (a gramatica do texto), store,
                          pip (janela flutuante), card, board, editor (o campo),
