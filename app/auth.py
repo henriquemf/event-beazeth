@@ -6,13 +6,20 @@ vez só, então rota nova nasce protegida: esquecer o decorador é o jeito clás
 de vazar dado, e aqui não existe decorador para esquecer.
 """
 
+from urllib.parse import urlparse
+
 from flask import g, jsonify, redirect, request, session, url_for
 
-from app.api_auth import bearer_token_from_request, user_id_from_token
+from app.api_auth import bearer_token_from_request, credential_from_token
 from app.db import get_user
 
 
 SESSION_KEY = "user_id"
+# A época das credenciais em que a sessão nasceu -- ver `api_auth.py`. Sessão
+# de antes desta chave existir não a tem e conta como zero.
+SESSION_EPOCH_KEY = "epoch"
+
+METODOS_QUE_ESCREVEM = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 
 # Respostas que não mudam conforme quem pede: nem chegam a carregar a conta.
 # A separação aqui é de CUSTO, não de permissão — ver o guarda abaixo.
@@ -36,12 +43,28 @@ PUBLIC_ENDPOINTS = USERLESS_ENDPOINTS | frozenset({
 })
 
 
-def log_in(user_id: int) -> None:
+def log_in(user_id: int, epoch: int) -> None:
     # `permanent` faz o cookie durar o PERMANENT_SESSION_LIFETIME da config em
     # vez de morrer quando o navegador fecha.
     session.clear()
     session[SESSION_KEY] = user_id
+    session[SESSION_EPOCH_KEY] = epoch
     session.permanent = True
+
+
+def _origem_de_outro_site() -> bool:
+    """`True` quando o navegador diz que o pedido partiu de outro site.
+
+    O cookie já é `SameSite=Lax`, que por si só não vai junto num POST vindo de
+    fora. Isto é a segunda tranca, para o navegador que não entende SameSite e
+    para o dia em que alguém afrouxar a config: todo navegador atual manda
+    `Origin` num POST, e um POST com Origin de outro host não é desta página.
+    Sem `Origin` nenhum, passa -- é o navegador antigo, e aí vale o SameSite.
+    """
+    origem = request.headers.get("Origin")
+    if origem is None:
+        return False
+    return urlparse(origem).netloc != request.host
 
 
 def log_out() -> None:
@@ -80,16 +103,30 @@ def register_auth_guard(app) -> None:
         # Android se identifica. O token vem primeiro porque um cliente que se
         # deu ao trabalho de mandá-lo está dizendo qual conta quer — mesmo que
         # por acaso exista um cookie de outra pendurado na mesma requisição.
-        token_user_id = user_id_from_token(bearer_token_from_request())
+        credencial = credential_from_token(bearer_token_from_request())
 
-        if token_user_id is not None:
-            g.user = get_user(token_user_id)
+        if credencial is not None:
+            user_id, epoch = credencial
+            g.user = get_user(user_id)
+            # Token de antes da última troca de senha: não vale mais.
+            if g.user is not None and g.user["auth_epoch"] != epoch:
+                g.user = None
         else:
+            # Só a credencial que o navegador manda SOZINHO precisa desta
+            # tranca. Quem apresenta o token escolheu mandá-lo, e nenhum site
+            # de fora tem o token para mandar.
+            if request.method in METODOS_QUE_ESCREVEM and _origem_de_outro_site():
+                if request.path.startswith("/api/"):
+                    return jsonify({"ok": False, "message": "Origem recusada."}), 403
+                return "Origem recusada.", 403
+
             user_id = session.get(SESSION_KEY)
             if user_id is not None:
                 g.user = get_user(user_id)
-                if g.user is None:
-                    # Conta apagada com a sessão ainda válida no navegador.
+                if g.user is None or g.user["auth_epoch"] != session.get(SESSION_EPOCH_KEY, 0):
+                    # Conta apagada, ou senha trocada noutro aparelho, com a
+                    # sessão ainda assinada no navegador.
+                    g.user = None
                     session.clear()
 
         if g.user is not None or request.endpoint in PUBLIC_ENDPOINTS:

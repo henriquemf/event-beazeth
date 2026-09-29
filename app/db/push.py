@@ -8,6 +8,14 @@ inscrição para receber os próprios lembretes.
 from app.db.connection import get_connection, utc_now_iso
 
 
+# Cada lembrete sai para TODAS as inscrições da conta, em série. Sem teto, uma
+# conta que se inscrevesse mil vezes faria cada lembrete dela custar mil
+# pedidos -- na mesma thread que atende os lembretes de todo mundo. Vinte cobre
+# com folga os navegadores e aparelhos de uma pessoa; a mais antiga sai
+# primeiro, que é quase sempre a de um navegador que nem existe mais.
+MAX_INSCRICOES_POR_CONTA = 20
+
+
 def upsert_push_subscription(
     user_id: int,
     endpoint: str,
@@ -33,6 +41,16 @@ def upsert_push_subscription(
                 user_agent.strip(),
                 utc_now_iso(),
             ),
+        )
+        conn.execute(
+            """
+            DELETE FROM push_subscriptions
+            WHERE user_id = %s AND id NOT IN (
+                SELECT id FROM push_subscriptions
+                WHERE user_id = %s ORDER BY id DESC LIMIT %s
+            )
+            """,
+            (user_id, user_id, MAX_INSCRICOES_POR_CONTA),
         )
 
 

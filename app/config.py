@@ -31,6 +31,13 @@ class Config:
     # Trinta dias para não deslogar a cada fechada de navegador.
     PERMANENT_SESSION_LIFETIME = 60 * 60 * 24 * 30
 
+    # Teto do corpo de qualquer requisição. Nada aqui recebe arquivo: o maior
+    # corpo legítimo é um post-it de 2000 caracteres todo formatado, que não
+    # chega a 100 KB. Sem teto, o Werkzeug lê o que vier para a memória antes
+    # de a rota decidir qualquer coisa -- e uns poucos pedidos de centenas de
+    # megabytes derrubam um plano gratuito de 512 MB. Acima disto: 413.
+    MAX_CONTENT_LENGTH = 1024 * 1024
+
     ENABLE_DESKTOP_NOTIFICATIONS = os.getenv("ENABLE_DESKTOP_NOTIFICATIONS", "True").lower() == "true"
 
     VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY", "")

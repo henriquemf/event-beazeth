@@ -11,10 +11,16 @@ de emissão, tudo assinado com a mesma SECRET_KEY do cookie de sessão. Não há
 tabela de tokens, não há consulta ao banco para validar um: o servidor confere a
 assinatura e pronto.
 
-O preço dessa escolha é não conseguir revogar UM token antes de ele expirar. O
-botão de emergência é trocar a SECRET_KEY, que invalida todos os tokens e todas
-as sessões de uma vez. Para um app de duas pessoas isso é o suficiente; se um
-dia precisar revogar por aparelho, aí sim entra uma tabela.
+Junto com o id vai a **época** da conta (`users.auth_epoch`), e é ela que
+permite revogar sem tabela: trocar a senha avança a época, e todo token de
+época velha passa a ser recusado. O guarda já lê a conta do banco a cada
+requisição, então conferir a época não custa ida nenhuma a mais. Token de antes
+desta regra não tem época e conta como zero, que é a época de toda conta que
+nunca trocou a senha -- ninguém foi deslogado pela chegada dela.
+
+Revogar UM aparelho sem mexer nos outros continua fora de alcance (a época é da
+conta). O botão de emergência geral segue sendo trocar a SECRET_KEY, que
+invalida todos os tokens e todas as sessões de uma vez.
 """
 
 from flask import current_app, request
@@ -38,13 +44,13 @@ def _serializer() -> URLSafeTimedSerializer:
     return URLSafeTimedSerializer(current_app.config["SECRET_KEY"], salt=TOKEN_SALT)
 
 
-def issue_token(user_id: int) -> str:
+def issue_token(user_id: int, epoch: int) -> str:
     """Token de acesso para a conta. Devolve texto pronto para o cabeçalho."""
-    return _serializer().dumps({"uid": int(user_id)})
+    return _serializer().dumps({"uid": int(user_id), "ep": int(epoch)})
 
 
-def user_id_from_token(token: str) -> int | None:
-    """Id da conta, ou `None` se o token for inválido, adulterado ou vencido.
+def credential_from_token(token: str) -> tuple[int, int] | None:
+    """`(id da conta, época)`, ou `None` se o token for inválido, adulterado ou vencido.
 
     Devolve `None` em vez de levantar: quem chama é o guarda de requisição, e
     todo caminho de falha ali termina na mesma resposta 401.
@@ -57,8 +63,13 @@ def user_id_from_token(token: str) -> int | None:
     except (BadSignature, SignatureExpired):
         return None
 
-    uid = dados.get("uid") if isinstance(dados, dict) else None
-    return uid if isinstance(uid, int) else None
+    if not isinstance(dados, dict):
+        return None
+    uid = dados.get("uid")
+    epoch = dados.get("ep", 0)
+    if not isinstance(uid, int) or not isinstance(epoch, int):
+        return None
+    return uid, epoch
 
 
 def bearer_token_from_request() -> str | None:

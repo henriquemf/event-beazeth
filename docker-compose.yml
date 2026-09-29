@@ -16,8 +16,11 @@ services:
       POSTGRES_DB: event_beazeth
     # 5433 no host de propósito: 5432 costuma já estar tomada por um Postgres
     # instalado na máquina, e o container falharia em subir sem dizer por quê.
+    #
+    # Só no 127.0.0.1: sem o endereço, o Docker publica a porta em TODAS as
+    # interfaces, e qualquer um no mesmo Wi-Fi entraria com dev/dev.
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     # Volume nomeado: sem ele o `docker compose down` levaria o banco junto e o
     # problema que estamos resolvendo voltaria, só que na sua máquina.
     volumes:

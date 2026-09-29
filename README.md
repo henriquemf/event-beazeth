@@ -381,7 +381,11 @@ quando se roda localmente; no container Linux do deploy, o caminho é Web Push.
 
 A dependência para ficar de olho é **cryptography**, arrastada pelo pywebpush: é
 a mais sensível a correção de segurança, e atualizar pede testar o Web Push
-junto, num passo próprio.
+junto, num passo próprio. Foi o que aconteceu em setembro de 2026: o `pip-audit`
+achou 17 vulnerabilidades conhecidas (cryptography 42, Flask 3.1.0,
+python-dotenv 1.0.1), e subir a cryptography para a 50 quebrou o **py-vapid**
+1.9.2, que assina o push — por isso ele agora é fixado à parte, na 1.9.4. Para
+conferir de novo: `pip install pip-audit && pip-audit -r requirements.txt`.
 
 Sobre bibliotecas de componentes (Origin UI, Skiper UI, Cult UI e afins): são
 registries React + Tailwind + shadcn, e isto aqui é Flask + Jinja + JS puro.
@@ -625,6 +629,25 @@ são todos por conta.
   registro de outra conta trocando o id na URL — o id vem do cliente.
 - Marcar um evento com o slug de uma tag de outra conta não funciona: a tag é
   procurada por `(user_id, slug)` e, não existindo, o evento cai na tag padrão.
+- **Trocar a senha derruba todos os outros aparelhos e navegadores.** Toda
+  sessão e todo token levam a "época" da conta (`users.auth_epoch`), e a troca
+  a avança; o guarda já lê a conta a cada requisição, então conferir custa zero
+  idas a mais. Quem trocou recebe um token novo na mesma resposta.
+- Escrita pelo cookie com `Origin` de outro site recebe `403`. O `SameSite=Lax`
+  já barra isso; é a segunda tranca, para navegador antigo e para o dia em que
+  alguém afrouxar a config.
+- Nenhum corpo de requisição passa de 1 MB (`MAX_CONTENT_LENGTH`), JSON que não
+  é objeto recebe `400`, e todo texto tem teto — o do evento (200 no título,
+  2000 na descrição) era o único que faltava.
+- **Web Push só sai para os serviços dos navegadores** (Google, Mozilla,
+  Microsoft, Apple), com timeout de 10 s e no máximo 20 inscrições por conta.
+  O endereço da inscrição vem do cliente, e sem essa lista quem cadastrasse
+  `http://10.0.0.5/` faria o servidor bater na rede interna do provedor a cada
+  lembrete; sem o timeout, um destino que segurasse a conexão pararia os
+  lembretes de todas as contas.
+- Criar conta tem teto de 10 por hora por IP; no Render o IP é o
+  `True-Client-IP` do Cloudflare, porque o primeiro valor do `X-Forwarded-For`
+  é escrito pelo próprio cliente.
 
 ## Banco de dados
 
@@ -886,10 +909,13 @@ credenciais o e-mail vai primeiro: é o único que pode falhar por culpa de outr
 conta (já existe). Falhando depois da senha, a pessoa ficaria com a senha nova e
 o e-mail antigo, sem saber qual das duas valeu.
 
-O token é **assinado, não guardado**: leva o id da conta e o instante de
-emissão, assinados com a mesma `SECRET_KEY` do cookie. Sem tabela, sem consulta
-ao banco para validar. O preço é não poder revogar um token específico antes de
-vencer — o botão de emergência é trocar a `SECRET_KEY`, que derruba todos.
+O token é **assinado, não guardado**: leva o id da conta, a época das
+credenciais e o instante de emissão, assinados com a mesma `SECRET_KEY` do
+cookie. Sem tabela de tokens. Trocar a senha avança a época e derruba todo token
+anterior (o `PATCH /api/me` devolve um `token` novo para o aparelho que trocou);
+token de antes da época existir conta como época zero, então ninguém foi
+deslogado pela mudança. O que não dá é revogar UM aparelho sem os outros — o
+botão de emergência geral continua sendo trocar a `SECRET_KEY`.
 
 O guarda de sessão aceita as duas credenciais. O token vem primeiro: um cliente
 que se deu ao trabalho de mandá-lo está dizendo qual conta quer, mesmo que haja
@@ -1050,7 +1076,12 @@ Run:
 docker run -p 8000:8000 --env-file .env event-notifier
 ```
 
-Nota: o container usa `gunicorn -w 1` para evitar execução duplicada do scheduler de lembretes.
+Nota: o container usa `gunicorn -w 1` para evitar execução duplicada do scheduler de lembretes,
+e roda como o usuário `app` (uid 10001), não como root.
+
+O Postgres do `docker-compose.yml` publica a porta só em `127.0.0.1`. Sem o
+endereço, o Docker a abre em todas as interfaces, e qualquer um na mesma rede
+entraria com `dev/dev`.
 
 ## Limitação conhecida: quando os lembretes disparam
 

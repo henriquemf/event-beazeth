@@ -249,14 +249,21 @@ def save_settings():
     if inicio == fim:
         return jsonify({"ok": False, "error": "Início e fim não podem ser iguais."}), 400
 
+    # `int()` de um texto qualquer levanta: sem isto, "intervalMinutes": "x"
+    # era um 500 em vez de dizer o que estava errado.
+    try:
+        interval, goal, glass_ml = int(interval), int(goal), int(glass_ml)
+    except (TypeError, ValueError):
+        return jsonify({"ok": False, "error": "Número inválido."}), 400
+
     upsert_hydration_settings(
         user_id,
         bool(enabled),
-        min(max(int(interval), MIN_INTERVAL), MAX_INTERVAL),
+        min(max(interval, MIN_INTERVAL), MAX_INTERVAL),
         inicio.strftime("%H:%M"),
         fim.strftime("%H:%M"),
-        int(goal),
-        int(glass_ml),
+        goal,
+        glass_ml,
     )
 
     # Devolve como ficou, e não um "ok" seco: os números passam por clamp no

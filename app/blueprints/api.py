@@ -9,11 +9,17 @@ Toda resposta é JSON, inclusive as de erro — um app nativo não tem para onde
 redirecionar e não sabe ler HTML.
 """
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, session
 
 from app.api_auth import TOKEN_MAX_AGE_SECONDS, issue_token
-from app.auth import current_user
-from app.ratelimit import espera_para_tentar, registrar_acerto, registrar_falha
+from app.auth import SESSION_EPOCH_KEY, SESSION_KEY, current_user
+from app.ratelimit import (
+    espera_para_criar_conta,
+    espera_para_tentar,
+    registrar_acerto,
+    registrar_conta_criada,
+    registrar_falha,
+)
 from app.db.sync import coletar_mudancas
 from app.db import (
     MIN_PASSWORD_LENGTH,
@@ -38,6 +44,27 @@ CREDENCIAIS_INVALIDAS = "E-mail ou senha incorretos."
 MUITAS_TENTATIVAS = "Tentativas demais. Espere alguns minutos e tente de novo."
 
 
+@bp.before_app_request
+def recusar_corpo_que_nao_e_objeto():
+    """Toda rota que lê JSON espera um objeto, e usa `.get` nele.
+
+    Uma lista ou um número no corpo virava `AttributeError` dentro da rota --
+    um 500, e um 500 por rota que alguém esquecesse de proteger. Recusar aqui,
+    uma vez, cobre as que existem e as que ainda vão existir.
+    """
+    if request.method in ("POST", "PUT", "PATCH") and request.is_json:
+        corpo = request.get_json(silent=True)
+        if corpo is not None and not isinstance(corpo, dict):
+            return jsonify({"ok": False, "message": "O corpo precisa ser um objeto JSON."}), 400
+    return None
+
+
+def _texto(payload: dict, chave: str) -> str:
+    """O campo como texto. Número, lista ou nulo contam como vazio."""
+    valor = payload.get(chave)
+    return valor if isinstance(valor, str) else ""
+
+
 def _conta(user) -> dict:
     """O que o cliente pode saber sobre a própria conta.
 
@@ -54,7 +81,7 @@ def _conta(user) -> dict:
 @bp.post("/api/auth/login")
 def login():
     payload = request.get_json(silent=True) or {}
-    email = payload.get("email", "")
+    email = _texto(payload, "email")
 
     espera = espera_para_tentar(request, email)
     if espera:
@@ -64,7 +91,7 @@ def login():
 
     user = get_user_by_email(email)
 
-    if not password_matches(user, payload.get("password", "")):
+    if not password_matches(user, _texto(payload, "password")):
         registrar_falha(request, email)
         # Mesma mensagem para e-mail inexistente e senha errada: dizer qual dos
         # dois falhou entrega quais e-mails têm conta aqui. O tempo de resposta
@@ -74,7 +101,7 @@ def login():
     registrar_acerto(request, email)
     return jsonify({
         "ok": True,
-        "token": issue_token(user["id"]),
+        "token": issue_token(user["id"], user["auth_epoch"]),
         "expiresIn": TOKEN_MAX_AGE_SECONDS,
         "user": _conta(user),
     })
@@ -83,14 +110,14 @@ def login():
 @bp.post("/api/auth/signup")
 def signup():
     payload = request.get_json(silent=True) or {}
-    nome = (payload.get("displayName") or "").strip()
-    email = normalize_email(payload.get("email", ""))
-    senha = payload.get("password", "")
+    nome = _texto(payload, "displayName").strip()
+    email = normalize_email(_texto(payload, "email"))
+    senha = _texto(payload, "password")
 
     # Criar conta também entra no freio: sem isso, o caminho caro (um scrypt
     # NOVO por chamada) fica aberto para quem quiser ocupar a CPU do plano
     # gratuito, e nada impede encher o banco de contas.
-    espera = espera_para_tentar(request, email)
+    espera = max(espera_para_tentar(request, email), espera_para_criar_conta(request))
     if espera:
         return jsonify({"ok": False, "message": MUITAS_TENTATIVAS}), 429, {
             "Retry-After": str(espera),
@@ -109,9 +136,11 @@ def signup():
         registrar_falha(request, email)
         return jsonify({"ok": False, "message": "Já existe uma conta com este e-mail."}), 409
 
+    registrar_conta_criada(request)
     return jsonify({
         "ok": True,
-        "token": issue_token(user_id),
+        # Conta nova nasce na época zero -- o DEFAULT da coluna.
+        "token": issue_token(user_id, 0),
         "expiresIn": TOKEN_MAX_AGE_SECONDS,
         "user": {"id": user_id, "email": email, "displayName": nome},
     }), 201
@@ -166,9 +195,13 @@ def atualizar_conta():
     Pedir a senha de novo é o que impede isso, e é o mesmo motivo pelo qual todo
     site pede.
 
-    A troca de senha **não derruba** os outros aparelhos: o token é assinado e
-    carrega só o id da conta (ver `api_auth.py`). Está escrito em
-    `update_password`, e é uma limitação conhecida, não um esquecimento.
+    ## Trocar a senha derruba os OUTROS aparelhos
+
+    É para isso que se troca a senha depois de perder um celular. A época da
+    conta avança (ver `api_auth.py`) e todo token anterior deixa de valer --
+    inclusive o que fez este pedido. Por isso a resposta traz um `token` novo:
+    é ele que mantém ESTE aparelho entrando. Sem troca de senha não há `token`
+    na resposta, e o cliente segue com o que tem.
     """
     payload = request.get_json(silent=True) or {}
     user = current_user()
@@ -179,6 +212,8 @@ def atualizar_conta():
 
     if nome is None and email_novo is None and senha_nova is None:
         return jsonify({"ok": False, "message": "Nada para mudar."}), 400
+    if any(v is not None and not isinstance(v, str) for v in (nome, email_novo, senha_nova)):
+        return jsonify({"ok": False, "message": "Campo em formato inválido."}), 400
 
     # ------------------------------------------------ o que exige a senha atual
     if email_novo is not None or senha_nova is not None:
@@ -194,7 +229,7 @@ def atualizar_conta():
         # A linha vem de novo do banco porque a do guarda não traz o
         # `password_hash` -- `get_user` o deixa de fora de propósito.
         if not password_matches(get_user_by_email(user["email"]),
-                                payload.get("currentPassword", "")):
+                                _texto(payload, "currentPassword")):
             registrar_falha(request, user["email"])
             return jsonify({"ok": False, "message": "Senha atual incorreta."}), 401
 
@@ -226,10 +261,19 @@ def atualizar_conta():
     if email_novo is not None and not update_email(user["id"], email_novo):
         return jsonify({"ok": False, "message": "Já existe uma conta com este e-mail."}), 409
 
+    token_novo = None
     if senha_nova is not None:
-        update_password(user["id"], senha_nova)
+        epoch = update_password(user["id"], senha_nova)
+        token_novo = issue_token(user["id"], epoch)
+        # Pedido que veio pelo cookie do site: a sessão também é da época
+        # velha, e sem isto quem trocou a senha cairia no próximo clique.
+        if session.get(SESSION_KEY) == user["id"]:
+            session[SESSION_EPOCH_KEY] = epoch
 
     if nome is not None:
         update_display_name(user["id"], nome)
 
-    return jsonify({"ok": True, "user": _conta(get_user(user["id"]))})
+    resposta = {"ok": True, "user": _conta(get_user(user["id"]))}
+    if token_novo is not None:
+        resposta["token"] = token_novo
+    return jsonify(resposta)

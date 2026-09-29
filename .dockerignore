@@ -4,6 +4,10 @@ __pycache__/
 *.pyd
 .venv/
 .env
+.env.*
+*.db
+*.sqlite*
+*.log
 .git/
 .vscode/
 

@@ -216,6 +216,21 @@ consulta escrita daqui em diante.
 - **Quem roda fora de requisição não tem sessão.** O agendador varre o banco
   inteiro de propósito; o recorte por conta acontece na entrega, com o
   `user_id` que veio na linha do evento.
+- **Todo texto do usuário tem teto, e todo corpo também.** `MAX_CONTENT_LENGTH`
+  é 1 MB, e cada campo corta no próprio limite antes de gravar. Campo novo sem
+  teto é o evento de antes da varredura de 2026-09: um título de megabytes
+  voltando em toda sincronização.
+- **Formato errado é 400, nunca 500.** JSON que não é objeto é recusado num
+  lugar só (`api.recusar_corpo_que_nao_e_objeto`); campo lido de JSON confere
+  o tipo antes de `.strip()` ou `int()`.
+- **Endereço que vem do cliente não vira pedido que sai do servidor** sem lista
+  de destinos permitidos e timeout. Hoje o único caso é o Web Push
+  (`notifier.endpoint_aceito`), conferido na inscrição E no envio — linha
+  antiga no banco não escapa da regra nova. Sem isso é SSRF: o servidor batendo
+  na rede interna do provedor em nome de quem cadastrou o endereço.
+- **O que é por conta e cresce a cada pedido tem teto.** Vinte inscrições de
+  push por conta: cada lembrete sai para todas, em série, na thread que atende
+  todo mundo.
 
 ---
 
@@ -261,14 +276,34 @@ A seção 8b trata de quem pode ler o quê depois de entrar. Esta trata de entra
   falhar por culpa de outra conta. Sem essa ordem, metade da mudança grava e a
   pessoa fica sem saber qual metade.
 
-- **O `X-Forwarded-For` só vale o PRIMEIRO valor.** Atrás do proxy do Render, o
-  cabeçalho é uma lista e os últimos valores são os proxies. Confiar no último
-  entregaria sempre o mesmo IP, e o freio inteiro passaria a contar uma chave
-  só para o mundo todo.
+- **O IP vem de quem o proxy viu, não do que o cliente escreveu.** Esta regra
+  já disse "vale o primeiro valor do `X-Forwarded-For`", e estava errada: os
+  proxies do Render ACRESCENTAM ao cabeçalho que o cliente mandou, então o
+  primeiro valor é texto do atacante, e um número novo a cada palpite zerava o
+  freio por IP. No Render vale o `True-Client-IP`, que o Cloudflare sobrescreve;
+  fora dele, o endereço da conexão. E o último valor também não serve: é o
+  balanceador, o mesmo para o mundo todo.
+
+- **Trocar a senha derruba as outras credenciais.** Sessão e token levam a
+  época da conta (`users.auth_epoch`) e o guarda recusa época velha. Toda
+  credencial nova nasce com a época atual — um `log_in` ou `issue_token` sem
+  ela não compila na cabeça de ninguém, por isso os dois a pedem como
+  argumento obrigatório. Formato novo de credencial tem de aceitar o antigo
+  (aqui, "sem época" é zero): mudar a regra não pode deslogar todo mundo.
+
+- **Criar conta tem teto por IP, mesmo dando certo.** É a exceção ao "conta
+  falha": ali o acerto é o que custa (um scrypt e as linhas do espaço novo).
 
 ## 8d. Cabeçalhos de resposta
 
 Ficam todos em `app/assets.py`, num `after_request` só.
+
+- **Escrita pelo cookie confere o `Origin`** (`auth._origem_de_outro_site`).
+  O `SameSite=Lax` já barra o POST de outro site; esta é a segunda tranca. A
+  credencial por token não passa por ela: nenhum site de fora tem o token.
+- **Dependência se confere com `pip-audit -r requirements.txt`**, e subir a
+  `cryptography` pede testar o Web Push de ponta a ponta — da última vez ela
+  quebrou o `py-vapid`, que por isso é fixado à parte.
 
 - **A CSP usa nonce, não `'unsafe-inline'`.** São dois scripts inline no
   projeto (o bootstrap de tema e as speculation rules) e os dois recebem o
@@ -377,7 +412,17 @@ dessa troca de identidade. As regras que sobraram dela:
   mandam o mesmo POST. Sincronização é uma de cada vez, com tranca de processo.
 - **Trocar id provisório por definitivo é escopo por entidade.** Cada tabela
   conta os próprios negativos, então existe um post-it -1 E uma tarefa -1 ao
-  mesmo tempo.
+  mesmo tempo. Vale para TODA operação por id provisório: `removerPendenciasDe`
+  não filtrava, e apagar o post-it -1 offline levava junto a criação da tarefa
+  -1, que nunca chegava ao servidor.
+- **Descartar é só para recusa, e recusa é 4xx.** Sem resposta, 5xx, 408 e 429
+  são "agora não" e a escrita espera. Decidir pelo código HTTP, nunca pelo texto
+  da mensagem: um 503 de deploy já apagou escrita por ser "outra coisa que não
+  rede fora".
+- **A fila é de uma conta.** Sessão que cai (401) apaga só o token e deixa
+  anotada a conta dona dos dados; o login seguinte limpa tudo se a conta mudou.
+  Drenar a fila de uma pessoa com o token de outra grava o conteúdo errado na
+  conta errada, para sempre.
 
 ### Compose: o que morre sem avisar
 

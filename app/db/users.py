@@ -28,7 +28,7 @@ def normalize_email(email: str) -> str:
 def get_user_by_email(email: str):
     with get_connection() as conn:
         return conn.execute(
-            "SELECT id, email, password_hash, display_name FROM users WHERE email = %s",
+            "SELECT id, email, password_hash, display_name, auth_epoch FROM users WHERE email = %s",
             (normalize_email(email),),
         ).fetchone()
 
@@ -48,7 +48,7 @@ def get_user(user_id: int):
     with get_connection() as conn:
         return conn.execute(
             """
-            SELECT u.id, u.email, u.display_name,
+            SELECT u.id, u.email, u.display_name, u.auth_epoch,
                    COALESCE(h.enabled, FALSE)       AS water_enabled,
                    COALESCE(h.daily_goal, 8)        AS water_goal,
                    COALESCE(h.glass_ml, 250)        AS water_glass_ml,
@@ -148,19 +148,24 @@ def update_email(user_id: int, email: str) -> bool:
     return True
 
 
-def update_password(user_id: int, password: str) -> None:
-    """Troca a senha.
+def update_password(user_id: int, password: str) -> int:
+    """Troca a senha e avança a época da conta. Devolve a época nova.
 
-    Os tokens já emitidos continuam valendo: eles são assinados com a
-    SECRET_KEY e carregam só o id da conta, sem nada da senha (ver
-    `api_auth.py`). Trocar a senha aqui não desconecta um aparelho perdido --
-    para isso o botão é trocar a SECRET_KEY, que derruba todo mundo.
+    Avançar a época é o que desconecta os outros aparelhos: todo token e toda
+    sessão carregam a época em que nasceram, e o guarda recusa os de época
+    velha (ver `auth.py`). Sem isso, quem trocasse a senha por ter perdido o
+    celular continuaria com o celular logado por mais noventa dias.
+
+    Quem trocou precisa de uma credencial da época nova para continuar
+    entrando -- por isso a época volta para quem chamou.
     """
     with get_connection() as conn:
-        conn.execute(
-            "UPDATE users SET password_hash = %s WHERE id = %s",
+        row = conn.execute(
+            "UPDATE users SET password_hash = %s, auth_epoch = auth_epoch + 1"
+            " WHERE id = %s RETURNING auth_epoch",
             (generate_password_hash(password), user_id),
-        )
+        ).fetchone()
+    return row["auth_epoch"]
 
 
 # Hash descartável, calculado uma vez na subida. Existe só para dar o que

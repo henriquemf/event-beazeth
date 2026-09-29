@@ -10,6 +10,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+# Sem root dentro do container: uma falha que desse execução de código no app
+# ficaria presa a um usuário que não escreve em nada fora de /tmp. O app só
+# lê os próprios arquivos -- o banco é externo e o log vai para a saída.
+RUN useradd --create-home --uid 10001 app
+USER app
+
 EXPOSE 8000
 
 # Um worker só, e não é economia: o APScheduler roda dentro do processo, então

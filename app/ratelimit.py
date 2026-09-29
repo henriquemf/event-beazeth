@@ -24,6 +24,7 @@ serve para o que este freio existe, que é tirar a força bruta da mesa, não
 contar tentativas com precisão contábil.
 """
 
+import os
 import threading
 import time
 from collections import defaultdict, deque
@@ -98,17 +99,40 @@ class Freio:
 _por_ip = Freio(IP_MAX, IP_JANELA)
 _por_conta = Freio(CONTA_MAX, CONTA_JANELA)
 
+# Criar conta é a exceção ao "conta falha, não requisição": ali o ACERTO é o
+# que custa -- um scrypt e um punhado de linhas no banco a cada conta nova, e
+# nada impedia um script de criar milhares. Dez por hora por IP é mais do que
+# uma casa inteira cria num ano.
+CONTAS_NOVAS_MAX = 10
+CONTAS_NOVAS_JANELA = 60 * 60
+_contas_novas = Freio(CONTAS_NOVAS_MAX, CONTAS_NOVAS_JANELA)
+
 
 def _ip(request) -> str:
     """O IP de quem pediu, atrás do proxy do Render.
 
-    `X-Forwarded-For` é uma lista, e só o PRIMEIRO valor é o cliente real; os
-    seguintes são os proxies. Confiar no último entregaria sempre o próprio
-    proxy, e o freio inteiro passaria a contar uma chave só para o mundo todo.
+    NÃO é o primeiro valor do `X-Forwarded-For`. Os proxies do Render
+    (Cloudflare e o balanceador) ACRESCENTAM ao cabeçalho que o cliente mandou,
+    então quem escreve `X-Forwarded-For: 1.2.3.4` no próprio pedido escolhe o
+    primeiro valor -- e com um número novo a cada palpite o freio por IP nunca
+    enchia. O Cloudflare põe o IP de quem se conectou a ele em
+    `True-Client-IP`, por cima do que viesse; é esse que vale lá.
+
+    Fora do Render (desenvolvimento, `docker run` na mão) não há proxy nenhum,
+    e qualquer um desses cabeçalhos seria só texto do cliente: vale o endereço
+    da conexão.
     """
-    encaminhado = request.headers.get("X-Forwarded-For", "")
-    if encaminhado:
-        return encaminhado.split(",")[0].strip()
+    if os.getenv("RENDER"):
+        real = request.headers.get("True-Client-IP", "").strip()
+        if real:
+            return real
+        # Sem o cabeçalho do Cloudflare, o último valor seria o balanceador --
+        # o mesmo para o mundo todo, e vinte senhas erradas de qualquer um
+        # barrariam o login de todos. Fica o primeiro: forjável, mas o freio
+        # por conta, que não depende de IP, continua segurando cada conta.
+        encaminhado = request.headers.get("X-Forwarded-For", "")
+        if encaminhado:
+            return encaminhado.split(",")[0].strip()
     return request.remote_addr or "desconhecido"
 
 
@@ -129,7 +153,17 @@ def registrar_acerto(request, email: str) -> None:
     _por_conta.limpar_chave(f"conta:{(email or '').strip().lower()}")
 
 
+def espera_para_criar_conta(request) -> int:
+    """Segundos até este IP poder criar outra conta. Zero = pode."""
+    return _contas_novas.espera(f"ip:{_ip(request)}")
+
+
+def registrar_conta_criada(request) -> None:
+    _contas_novas.registrar_falha(f"ip:{_ip(request)}")
+
+
 def zerar_tudo() -> None:
     """Só para teste."""
     _por_ip.zerar()
     _por_conta.zerar()
+    _contas_novas.zerar()

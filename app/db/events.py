@@ -4,6 +4,14 @@ from app.db.connection import get_connection, utc_now_iso
 from app.db.tags import FALLBACK_TAG
 
 
+# O resto do app já tinha teto em todo texto; o evento era o único sem. Sem
+# ele, um título de megabytes ia para o banco e voltava em toda sincronização
+# e em todo carregamento do calendário. Os dois números passam longe de
+# qualquer título ou descrição de verdade.
+MAX_TITLE = 200
+MAX_DESCRIPTION = 2000
+
+
 # Toda leitura de evento sai com o rótulo e a cor da tag junto. O LEFT JOIN é
 # por (user_id, slug) e cobre o evento cuja tag foi apagada entre a escrita e a
 # leitura: `COALESCE` devolve o padrão em vez de deixar a tela sem cor nenhuma.
@@ -58,8 +66,8 @@ def insert_event(
             """,
             (
                 user_id,
-                title.strip(),
-                description.strip(),
+                title.strip()[:MAX_TITLE],
+                description.strip()[:MAX_DESCRIPTION],
                 event_datetime,
                 _existing_tag(conn, user_id, tag_type),
                 utc_now_iso(),
@@ -111,8 +119,8 @@ def update_event(
             WHERE id = %s AND user_id = %s
             """,
             (
-                title.strip(),
-                description.strip(),
+                title.strip()[:MAX_TITLE],
+                description.strip()[:MAX_DESCRIPTION],
                 event_datetime,
                 _existing_tag(conn, user_id, tag_type),
                 event_id,

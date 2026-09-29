@@ -104,12 +104,12 @@
               data-create-action="{{ url_for('events.create_event') }}">
             <label>
                 Título
-                <input type="text" id="event-title" name="title" placeholder="Ex: Workshop de maquiagem" required />
+                <input type="text" id="event-title" name="title" maxlength="{{ max_event_title }}" placeholder="Ex: Workshop de maquiagem" required />
             </label>
 
             <label>
                 Descrição
-                <textarea id="event-description" name="description" rows="3" placeholder="Detalhes do evento..."></textarea>
+                <textarea id="event-description" name="description" rows="3" maxlength="{{ max_event_description }}" placeholder="Detalhes do evento..."></textarea>
             </label>
 
             <div class="event-when">

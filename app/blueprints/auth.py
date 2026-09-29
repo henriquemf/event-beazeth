@@ -12,7 +12,13 @@ from flask import (
 )
 
 from app.auth import log_in, log_out
-from app.ratelimit import espera_para_tentar, registrar_acerto, registrar_falha
+from app.ratelimit import (
+    espera_para_criar_conta,
+    espera_para_tentar,
+    registrar_acerto,
+    registrar_conta_criada,
+    registrar_falha,
+)
 from app.db import (
     MIN_PASSWORD_LENGTH,
     create_user,
@@ -36,11 +42,18 @@ def safe_next(target: str) -> str:
 
     Sem isto, `/entrar?proxima=https://site-falso` mandaria a pessoa para fora
     logo depois de digitar a senha, com a aparência de que o app a levou lá.
+
+    Barra invertida e caractere de controle caem junto: `/\\site-falso` passa
+    pelo `urlparse` como caminho, mas o navegador lê `\\` como `/` e vai para
+    `//site-falso` -- outro domínio. Um TAB ou quebra no meio ele simplesmente
+    apaga, e `/<TAB>/site-falso` vira a mesma coisa.
     """
     if not target:
         return url_for("calendar.index")
     parsed = urlparse(target)
-    if parsed.scheme or parsed.netloc or not target.startswith("/"):
+    if (parsed.scheme or parsed.netloc or not target.startswith("/")
+            or target.startswith("//") or "\\" in target
+            or any(ord(c) < 32 or ord(c) == 127 for c in target)):
         return url_for("calendar.index")
     return target
 
@@ -69,7 +82,7 @@ def login():
             return redirect(url_for("auth.login", proxima=proxima or None))
 
         registrar_acerto(request, email)
-        log_in(user["id"])
+        log_in(user["id"], user["auth_epoch"])
         return redirect(safe_next(request.form.get("proxima", "")))
 
     return render_template("pages/login.html", proxima=proxima)
@@ -83,7 +96,7 @@ def signup():
         password = request.form.get("password", "")
         confirmation = request.form.get("password_confirm", "")
 
-        if espera_para_tentar(request, email):
+        if espera_para_tentar(request, email) or espera_para_criar_conta(request):
             flash(MUITAS_TENTATIVAS, "error")
             return redirect(url_for("auth.signup"))
 
@@ -109,7 +122,9 @@ def signup():
             flash("Já existe uma conta com esse e-mail. Tente entrar.", "error")
             return redirect(url_for("auth.login"))
 
-        log_in(user_id)
+        registrar_conta_criada(request)
+        # Conta nova nasce na época zero -- o DEFAULT da coluna.
+        log_in(user_id, 0)
         flash(f"Bem-vinda, {name}! Seu espaço está pronto.", "success")
         return redirect(url_for("calendar.index"))
 

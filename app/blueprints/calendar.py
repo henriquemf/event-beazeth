@@ -12,6 +12,7 @@ from flask import Blueprint, jsonify, render_template
 from app.auth import current_user
 
 from app.blueprints.events import as_card
+from app.db.events import MAX_DESCRIPTION, MAX_TITLE
 from app.db import (
     FALLBACK_TAG,
     MAX_LABEL_LENGTH,
@@ -66,6 +67,8 @@ def index():
         reminder_rules=REMINDER_RULES,
         fallback_tag=FALLBACK_TAG,
         max_label_length=MAX_LABEL_LENGTH,
+        max_event_title=MAX_TITLE,
+        max_event_description=MAX_DESCRIPTION,
         swatches=SUGGESTED_COLORS,
     )
 

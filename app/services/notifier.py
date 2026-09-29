@@ -1,6 +1,40 @@
 import platform
+from urllib.parse import urlparse
 
 from pywebpush import WebPushException, webpush
+
+
+# Os serviços de push dos navegadores: Chrome, Edge (e os derivados do
+# Chromium), Firefox e Safari. O endereço de uma inscrição vem do CLIENTE, e é
+# para ele que o servidor faz um POST -- sem esta lista, quem cadastrasse
+# `http://10.0.0.5/admin` como "inscrição" faria o servidor bater na rede
+# interna do provedor em nome dele, a cada lembrete. Navegador que não use um
+# destes não recebe push, mas continua recebendo o aviso pela aba aberta.
+SERVICOS_DE_PUSH = (
+    "fcm.googleapis.com",
+    "android.googleapis.com",
+    "push.services.mozilla.com",
+    "notify.windows.com",
+    "push.apple.com",
+)
+
+# Um serviço de push responde em milissegundos. Sem teto, a biblioteca espera
+# para sempre -- e quem espera é a thread do agendador, que é uma só: um
+# destino que segurasse a conexão aberta pararia os lembretes de todas as
+# contas.
+PUSH_TIMEOUT_SECONDS = 10
+
+
+def endpoint_aceito(endpoint: str) -> bool:
+    """`True` se o endereço é https num dos serviços de push conhecidos."""
+    try:
+        partes = urlparse(endpoint or "")
+    except ValueError:
+        return False
+    host = (partes.hostname or "").lower()
+    return partes.scheme == "https" and partes.port in (None, 443) and any(
+        host == servico or host.endswith("." + servico) for servico in SERVICOS_DE_PUSH
+    )
 
 
 def send_desktop_notification(title: str, message: str, exact_title: bool = False):
@@ -52,6 +86,11 @@ def send_web_push(config, subscription: dict, payload: str):
     if not vapid_private_key:
         return False, "VAPID_PRIVATE_KEY não configurada", None
 
+    # Conferido de novo aqui, e não só na inscrição: uma linha gravada antes da
+    # regra existir não pode virar pedido para fora.
+    if not endpoint_aceito(subscription.get("endpoint", "")):
+        return False, "Endereço de push fora dos serviços conhecidos", None
+
     try:
         webpush(
             subscription_info=subscription,
@@ -59,6 +98,7 @@ def send_web_push(config, subscription: dict, payload: str):
             vapid_private_key=vapid_private_key,
             vapid_claims=vapid_claims,
             ttl=120,
+            timeout=PUSH_TIMEOUT_SECONDS,
         )
         return True, "Web push enviado", 201
     except WebPushException as exc:

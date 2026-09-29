@@ -8,11 +8,15 @@ from app.db import (
     list_push_subscriptions,
     upsert_push_subscription,
 )
-from app.services.notifier import send_web_push
+from app.services.notifier import endpoint_aceito, send_web_push
 from app.services.scheduler_service import collect_due_live_event_notifications
 
 
 bp = Blueprint("push", __name__)
+
+MAX_ENDPOINT = 2048
+MAX_CHAVE = 256
+MAX_USER_AGENT = 300
 
 TEST_PAYLOAD = (
     '{"title":"Teste Web Push 💗","body":"Tudo certo! Notificação web funcionando.",'
@@ -36,15 +40,24 @@ def public_key():
     return jsonify({"publicKey": current_app.config.get("VAPID_PUBLIC_KEY", "")})
 
 
+def _texto(valor, limite: int) -> str:
+    """O campo como texto, ou vazio se não for texto ou passar do tamanho.
+
+    Uma inscrição de verdade tem endereço de poucas centenas de caracteres e
+    chaves de algumas dezenas; o que foge disso não veio de um navegador.
+    """
+    return valor.strip() if isinstance(valor, str) and len(valor) <= limite else ""
+
+
 @bp.post("/api/push/subscribe")
 def subscribe():
     payload = request.get_json(silent=True) or {}
-    endpoint = (payload.get("endpoint") or "").strip()
-    keys = payload.get("keys") or {}
-    p256dh = (keys.get("p256dh") or "").strip()
-    auth = (keys.get("auth") or "").strip()
+    endpoint = _texto(payload.get("endpoint"), MAX_ENDPOINT)
+    keys = payload.get("keys") if isinstance(payload.get("keys"), dict) else {}
+    p256dh = _texto(keys.get("p256dh"), MAX_CHAVE)
+    auth = _texto(keys.get("auth"), MAX_CHAVE)
 
-    if not endpoint or not p256dh or not auth:
+    if not endpoint or not p256dh or not auth or not endpoint_aceito(endpoint):
         return jsonify({"ok": False, "message": "Inscrição inválida"}), 400
 
     upsert_push_subscription(
@@ -52,7 +65,7 @@ def subscribe():
         endpoint,
         p256dh,
         auth,
-        request.headers.get("User-Agent", ""),
+        request.headers.get("User-Agent", "")[:MAX_USER_AGENT],
     )
     return jsonify({"ok": True})
 
@@ -60,7 +73,7 @@ def subscribe():
 @bp.post("/api/push/unsubscribe")
 def unsubscribe():
     payload = request.get_json(silent=True) or {}
-    endpoint = (payload.get("endpoint") or "").strip()
+    endpoint = _texto(payload.get("endpoint"), MAX_ENDPOINT)
     if endpoint:
         delete_push_subscription(current_user()["id"], endpoint)
     return jsonify({"ok": True})
