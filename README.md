@@ -356,9 +356,10 @@ Uma duração não tem esse problema.
 
 ## Rádio lo-fi
 
-No canto de toda tela há uma rádio, como no lofi.town: um botão 📻 quando
-parada, uma pílula com ondas e o nome da música quando toca, e um cartão com
-quatro estações, volume e o link da rádio quando aberta. A música aparece
+No canto de toda tela há uma rádio, como no lofi.town: uma barra sempre à
+vista com a estação (ou, tocando, as ondas e o nome da música), o volume e o
+play, e, ao clicar nela, um cartão com quatro estações, volume e o link da
+rádio. No celular o volume da barra fica só no cartão, para ela caber. A música aparece
 também nos controles de mídia do sistema e na tela de bloqueio do celular.
 
 - **As estações** (`app/services/radio.py`) são públicas, de operadoras

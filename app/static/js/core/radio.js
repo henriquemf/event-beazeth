@@ -67,7 +67,8 @@ window.EN = window.EN || {};
     );
     const botoesPlay = raiz.querySelectorAll('[data-radio="alternar"]');
     const abrir = raiz.querySelector(".radio-abrir");
-    const volumeEl = raiz.querySelector('[data-radio="volume"]');
+    /* Dois controles de volume, o da barra e o do cartão: um só volume. */
+    const volumeEls = raiz.querySelectorAll('[data-radio="volume"]');
     const fonteEl = raiz.querySelector('[data-radio-campo="fonte"]');
 
     const aba = (function () {
@@ -149,7 +150,9 @@ window.EN = window.EN || {};
 
         fonteEl.href = estacao.site;
         fonteEl.textContent = estacao.nome + " · " + estacao.fonte + " ↗";
-        volumeEl.value = String(Math.round(estado.volume * 100));
+        volumeEls.forEach(function (el) {
+            el.value = String(Math.round(estado.volume * 100));
+        });
 
         if (tocando && musica.titulo) {
             campo("titulo", musica.titulo);
@@ -523,13 +526,20 @@ window.EN = window.EN || {};
         }
     });
 
-    volumeEl.addEventListener("input", function () {
-        estado.volume = Number(volumeEl.value) / 100;
-        if (audio) {
-            cancelAnimationFrame(rampa);
-            audio.volume = volumeAlvo();
-        }
-        gravar();
+    volumeEls.forEach(function (volumeEl) {
+        volumeEl.addEventListener("input", function () {
+            estado.volume = Number(volumeEl.value) / 100;
+            volumeEls.forEach(function (el) {
+                if (el !== volumeEl) {
+                    el.value = volumeEl.value;
+                }
+            });
+            if (audio) {
+                cancelAnimationFrame(rampa);
+                audio.volume = volumeAlvo();
+            }
+            gravar();
+        });
     });
 
     raiz.addEventListener("keydown", function (evento) {
