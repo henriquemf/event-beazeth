@@ -928,7 +928,33 @@ leitura. O app precisa: ele pede os dados e monta a tela sozinho.
 | `POST /api/auth/login`, `/api/auth/signup` | devolvem um token `Bearer` |
 | `GET /api/me` | o app confere na abertura se o token ainda vale |
 | `PATCH /api/me` | trocar nome de exibição, e-mail ou senha (a tela de perfil do app) |
-| `GET /api/sync?since=` | o que mudou e o que sumiu desde a última vez |
+| `GET /api/sync?since=` | o que mudou e o que sumiu desde a última vez, e o nome e o e-mail de agora |
+| `GET /api/sync/versao` | o contador de mudanças da conta: a pergunta barata, a cada 2 s |
+| `POST /api/hydration/historico` | a água do modo local ao entrar numa conta: cada dia fica com o maior total |
+
+### Site e app ao vivo
+
+O que se grava num lado aparece no outro em um ou dois segundos, sem recarregar
+— medido: 0,7 s em média do celular até o PC, 2 s no pior caso.
+
+- **O contador.** `users.sync_versao` sobe a cada escrita em qualquer tabela
+  sincronizada, por gatilho, e a cada troca de nome ou e-mail. O site
+  (`core/ao-vivo.js`) e o app (`sync/AoVivo.kt`) o consultam a cada 2 s com a
+  tela à vista. A consulta não custa ida ao banco além da que o login já faz.
+  Só quando ele muda vem `/api/sync`. Aba escondida e app em segundo plano não
+  perguntam nada.
+- **Cada tela do site se atualiza sozinha**, sem passar por cima de ninguém.
+  Post-its e Planner releem a API. To-do, Diário e "Próximos eventos" trocam o
+  miolo pelo HTML novo do servidor. Água atualiza o widget e a tela juntos. Com
+  alguém digitando, arrastando, popup aberto ou gravação no ar, a mudança
+  espera.
+- **A folga.** `/api/sync` volta dois minutos atrás do `since`. Antes, uma
+  escrita feita no mesmo segundo da última sincronização ganhava um carimbo
+  igual ao `since` e nunca chegava ao outro lado.
+- **Post-it que não subiu não some.** Sem rede, a escrita volta para a fila e
+  vai para o `localStorage`, e a próxima carga a reenvia. Se o celular mudou o
+  mesmo post-it nesse meio tempo, a versão do navegador vira um post-it novo ao
+  lado, e nenhuma das duas se perde.
 
 O `PATCH` manda só o que mudou — campo ausente é campo que fica como está. **Nome
 não pede senha; e-mail e senha pedem** a `currentPassword`: o token prova quem

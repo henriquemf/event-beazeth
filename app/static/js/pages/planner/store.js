@@ -26,13 +26,17 @@ EN.planner = EN.planner || {};
     planner.store = {
         toPayload: toPayload,
 
+        /* `true` quando os blocos vieram do servidor. */
         load: async function (ctx) {
             try {
                 const data = await request(ctx.api, { headers: { Accept: "application/json" } });
                 ctx.blocks = data.blocks || [];
+                ctx.els.panel.classList.remove("has-error");
                 planner.blocks.render(ctx);
+                return true;
             } catch (err) {
                 ctx.els.panel.classList.add("has-error");
+                return false;
             }
         },
 

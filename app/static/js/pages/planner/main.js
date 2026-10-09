@@ -72,6 +72,17 @@
     planner.grid.build(ctx);
     planner.store.load(ctx);
 
+    /* O que muda no celular ou noutra aba. Nunca no meio de um arrasto nem com
+       o bloco aberto para editar: a mudança espera a próxima volta. */
+    if (EN.aoVivo) {
+        EN.aoVivo.quando(["plannerBlocks"], function () {
+            if (ctx.drag || els.modal.classList.contains("show")) {
+                return false;
+            }
+            return planner.store.load(ctx);
+        });
+    }
+
     if (els.scroller) {
         const focusMinute = time.clamp(
             new Date().getHours() * 60 - 60,

@@ -33,7 +33,12 @@ window.EN = window.EN || {};
                 return {};
             });
             if (!response.ok || data.ok === false) {
-                throw new Error(data.message || fallbackMessage || "Não foi possível concluir a ação.");
+                const erro = new Error(data.message || fallbackMessage || "Não foi possível concluir a ação.");
+                /* Quem guarda escrita para reenviar precisa separar "o servidor
+                   recusou" (4xx: repetir não muda nada) de "agora não deu".
+                   Sem rede, o `fetch` lança antes e não há `status`. */
+                erro.status = response.status;
+                throw erro;
             }
             return data;
         },

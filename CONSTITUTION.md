@@ -469,6 +469,31 @@ A linha não é de gosto, é de custo e de verdade:
 O preço de "do aparelho" é reinstalar e escolher de novo, e ele está escrito na
 tela. O preço de "da conta" seria infraestrutura nova — e é ele que se recusa.
 
+### O que é da conta aparece nos dois lados, em segundos
+
+Tudo o que é da conta tem de aparecer no site e no app, sem disparidade e sem
+recarregar. Três peças garantem isso, e um dado novo precisa das três:
+
+1. **A tabela entra em `TABELAS_SINCRONIZADAS`** (`schema.py`). É o que dá
+   carimbo, lápide e o gatilho do **contador de mudanças** da conta
+   (`users.sync_versao`).
+2. **O app grava pela fila e baixa por `/api/sync`**. A descida não grava por
+   cima de linha que ainda tem escrita na fila (`Sincronizador.aplicar`).
+3. **A tela do site se inscreve no ao vivo** (`EN.aoVivo.quando`, em
+   `core/ao-vivo.js`). Ela devolve `false` quando não dá para trocar agora, com
+   alguém digitando, arrastando, popup aberto ou escrita no ar.
+
+Os dois lados olham o contador a cada 2 s com a tela aberta e só então
+perguntam o que mudou. Conexão aberta por tela (WebSocket, SSE) foi recusada: o
+servidor tem um processo com oito threads, e meia dúzia de telas o travariam.
+
+A sincronização volta dois minutos atrás do `since` (`FOLGA` em `sync.py`).
+Repetir é inofensivo; perder a escrita feita no mesmo segundo do `since`, que
+era o que acontecia, não é.
+
+"Hoje" é o dia de quem está na frente da tela, nos dois lados: o servidor roda
+em UTC, e das 21:00 à meia-noite já está no dia seguinte.
+
 ### O aviso é do aparelho; a regra é do servidor
 
 O site avisa por web push, com um agendador varrendo o banco de minuto em

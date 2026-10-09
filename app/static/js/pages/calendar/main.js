@@ -149,5 +149,27 @@
         });
 
         calendar.render();
+
+        /* O que muda no celular ou noutra aba: os eventos da grade e o painel
+           "Próximos eventos", que nasce pronto do servidor e é trocado pela
+           versão de agora. Com um popup aberto, espera: ele está segurando um
+           evento ou uma tag que a troca deixaria para trás. */
+        const painel = document.querySelector(".upcoming-panel");
+        if (EN.aoVivo) {
+            EN.aoVivo.quando(["events", "tags"], async function () {
+                const aberto = popups.some(function (popup) {
+                    return popup.element.classList.contains("show");
+                });
+                if (aberto) {
+                    return false;
+                }
+                calendar.refetchEvents();
+                const novo = painel && (await EN.aoVivo.buscarTela()).querySelector(".upcoming-panel");
+                if (novo) {
+                    painel.innerHTML = novo.innerHTML;
+                }
+                return true;
+            });
+        }
     });
 })(window.EN);

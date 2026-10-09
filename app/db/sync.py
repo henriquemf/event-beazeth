@@ -18,6 +18,8 @@ Quem preenche `updated_at` e escreve a lápide são gatilhos do Postgres, não
 este módulo — ver `schema.py`.
 """
 
+from datetime import datetime, timedelta
+
 from app.db.connection import get_connection
 from app.db.diary import _COLUNAS_DO_DIA, _linha_para_dia
 from app.db.events import _EVENT_SELECT
@@ -35,6 +37,38 @@ from app.db.todo import _ITEM_COLUMNS, _row_to_item
 # água de uma conta antiga nunca chegou ao celular, e sem ela o app não tinha
 # de onde tirar o horário do lembrete.
 INICIO_DOS_TEMPOS = "1969-12-31T23:59:59"
+
+# Quanto a janela de cada pergunta volta para trás do `since` recebido.
+#
+# O `since` é o `now` de uma resposta anterior, e o carimbo tem resolução de
+# SEGUNDO. Uma escrita feita logo depois daquela resposta, ainda no mesmo
+# segundo, ganha um carimbo IGUAL ao `since` -- e `updated_at > since` a deixava
+# de fora para sempre: o celular nunca recebia o post-it editado no PC, nem a
+# exclusão. O mesmo vale para o carimbo do gatilho, que é o `now()` do INÍCIO
+# da transação que escreveu: ela pode terminar depois da leitura do `now`.
+#
+# Voltar dois minutos cobre os dois casos com folga. O preço é a repetição: o
+# que mudou nesses dois minutos vem de novo, e repetir é inofensivo -- o
+# aplicativo grava por id. Perder, não. Fica no servidor, e não no app, para
+# valer também para quem ainda tem uma versão antiga instalada.
+FOLGA = timedelta(minutes=2)
+
+_FORMATO = "%Y-%m-%dT%H:%M:%S"
+
+
+def _janela(since: str | None) -> str:
+    """De onde a pergunta começa: o `since`, menos a folga.
+
+    Um `since` que não é um instante (vazio, cortado, lixo) vale como primeira
+    sincronização. A comparação é de TEXTO, e "lixo" é maior que qualquer data:
+    a resposta viria vazia, o aplicativo guardaria o `now` dela e tudo o que
+    mudou antes disso ficaria para trás sem erro nenhum aparecer.
+    """
+    try:
+        instante = datetime.strptime(str(since), _FORMATO)
+    except (TypeError, ValueError):
+        return INICIO_DOS_TEMPOS
+    return max((instante - FOLGA).strftime(_FORMATO), INICIO_DOS_TEMPOS)
 
 
 def _agora(conn) -> str:
@@ -59,7 +93,7 @@ def coletar_mudancas(user_id: int, since: str | None) -> dict:
     repetida, o que não faz mal nenhum, porque o aplicativo grava por id. O
     contrário, perder a linha, seria permanente.
     """
-    desde = since or INICIO_DOS_TEMPOS
+    desde = _janela(since)
 
     with get_connection() as conn:
         agora = _agora(conn)
@@ -102,9 +136,20 @@ def coletar_mudancas(user_id: int, since: str | None) -> dict:
             (user_id, desde),
         ).fetchone()
 
+        # A lápide de uma linha que EXISTE de novo fica de fora. Dia do diário
+        # e tag se identificam pelo dia e pelo slug, que voltam: limpar um dia
+        # e escrever nele outra vez deixa uma lápide e uma linha viva com a
+        # mesma chave. O aplicativo aplica as lápides por último, então mandar
+        # as duas apagava no celular o dia que existe. Os ids numéricos nunca
+        # voltam, e para eles o filtro não acha nada.
         apagados = conn.execute(
-            "SELECT entity, entity_id FROM deletions"
-            " WHERE user_id = %s AND deleted_at > %s ORDER BY deleted_at",
+            "SELECT d.entity, d.entity_id FROM deletions d"
+            " WHERE d.user_id = %s AND d.deleted_at > %s"
+            " AND NOT (d.entity = 'diary_entries' AND EXISTS ("
+            "     SELECT 1 FROM diary_entries x WHERE x.user_id = d.user_id AND x.day = d.entity_id))"
+            " AND NOT (d.entity = 'event_tags' AND EXISTS ("
+            "     SELECT 1 FROM event_tags x WHERE x.user_id = d.user_id AND x.slug = d.entity_id))"
+            " ORDER BY d.deleted_at",
             (user_id, desde),
         ).fetchall()
 

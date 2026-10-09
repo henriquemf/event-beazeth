@@ -166,6 +166,17 @@ STATEMENTS = (
     # época em que nasceram, e trocar a senha a avança: o que foi emitido antes
     # deixa de valer na hora, inclusive no celular perdido. Ver `auth.py`.
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_epoch INTEGER NOT NULL DEFAULT 0",
+    # O contador de mudanças da conta: sobe a cada escrita em qualquer tabela
+    # sincronizada, de qualquer aparelho (o gatilho `marcar_versao`, abaixo).
+    #
+    # É o que deixa o site e o app perceberem em um ou dois segundos o que o
+    # outro lado gravou. Perguntar "o contador mudou?" sai de graça: a conta já
+    # é lida em toda requisição para conferir o login, e o número vem junto.
+    # Só quando ele muda é que se faz a pergunta cara, `/api/sync`. Uma conexão
+    # aberta por tela (WebSocket, SSE) seria instantânea de verdade, mas o
+    # servidor tem UM processo com oito threads: meia dúzia de telas abertas o
+    # travariam inteiro.
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS sync_versao BIGINT NOT NULL DEFAULT 0",
     # --- carimbo de tempo, para o app Android sincronizar por diferenca ------
     #
     # Sem saber QUANDO cada linha mudou, o aplicativo so teria duas opcoes:
@@ -274,6 +285,20 @@ STATEMENTS = (
     END;
     $$ LANGUAGE plpgsql
     """,
+    # Conta apagada não tem linha para atualizar: o UPDATE não acha nada e
+    # segue, sem erro -- o CASCADE continua inteiro.
+    """
+    CREATE OR REPLACE FUNCTION marcar_versao() RETURNS trigger AS $$
+    BEGIN
+        IF TG_OP = 'DELETE' THEN
+            UPDATE users SET sync_versao = sync_versao + 1 WHERE id = OLD.user_id;
+        ELSE
+            UPDATE users SET sync_versao = sync_versao + 1 WHERE id = NEW.user_id;
+        END IF;
+        RETURN NULL;
+    END;
+    $$ LANGUAGE plpgsql
+    """,
 )
 
 
@@ -308,6 +333,11 @@ def _gatilhos() -> list[str]:
             f"CREATE OR REPLACE TRIGGER trg_carimbo_{tabela}"
             f" BEFORE INSERT OR UPDATE ON {tabela}"
             f" FOR EACH ROW EXECUTE FUNCTION carimbar_atualizacao()"
+        )
+        comandos.append(
+            f"CREATE OR REPLACE TRIGGER trg_versao_{tabela}"
+            f" AFTER INSERT OR UPDATE OR DELETE ON {tabela}"
+            f" FOR EACH ROW EXECUTE FUNCTION marcar_versao()"
         )
         if coluna_id is not None:
             comandos.append(

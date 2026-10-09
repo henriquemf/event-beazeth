@@ -25,6 +25,8 @@ ENDPOINTS = (
     ("/api/me", "PATCH", True, ("ok", "user")),
     # A espinha dorsal do app offline: o que mudou e o que sumiu.
     ("/api/sync", "GET", True, ("ok", "now", "changed", "deleted")),
+    # A pergunta barata, a cada poucos segundos: só o contador de mudanças.
+    ("/api/sync/versao", "GET", True, ("ok", "versao")),
 
     # --- post-its ----------------------------------------------------------
     ("/api/notes", "GET", True, ("ok", "notes")),
@@ -48,6 +50,9 @@ ENDPOINTS = (
     ("/api/hydration", "GET", True, ("ok", "glasses", "goal", "glassMl", "enabled",
                                      "intervalMinutes", "nextIn", "limits")),
     ("/api/hydration/drink", "POST", True, ("ok", "glasses", "goal", "glassMl", "nextIn")),
+    # O histórico de quem usava o app sem conta: cada dia fica com o maior
+    # total entre o aparelho e a conta.
+    ("/api/hydration/historico", "POST", True, ("ok", "days")),
     # Ligar e ajustar o lembrete a partir do app. O site faz isso por
     # formulário; sem esta rota, quem só usa o celular nunca conseguia LIGAR o
     # lembrete de água — o padrão do banco é desligado.

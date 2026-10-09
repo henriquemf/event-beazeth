@@ -74,7 +74,30 @@
     notes.interactions.init(ctx);
     renderFilters();
 
-    notes.store.load(ctx).then(function () {
+    notes.store.reenviarGuardadas(ctx).then(function () {
+        return notes.store.load(ctx);
+    }).then(function () {
+        notes.store.aplicarGuardadas(ctx);
         notes.board.render(ctx);
     });
+
+    /* O que muda no celular ou noutra aba. Nunca no meio de um arrasto, com
+       escrita esperando para subir, ou com alguém digitando -- no quadro ou
+       na janela flutuante: a mudança espera a próxima volta. */
+    if (EN.aoVivo) {
+        EN.aoVivo.quando(["notes"], async function () {
+            const naJanela = ctx.pip && ctx.pip.win && !ctx.pip.win.closed && ctx.pip.win.document.hasFocus();
+            if (ctx.drag || ctx.pending.size || naJanela || EN.aoVivo.digitando(els.board)) {
+                return false;
+            }
+            const antes = JSON.stringify(ctx.items);
+            if (!(await notes.store.load(ctx))) {
+                return false;
+            }
+            if (JSON.stringify(ctx.items) !== antes) {
+                notes.board.render(ctx);
+            }
+            return true;
+        });
+    }
 })(EN.notes);

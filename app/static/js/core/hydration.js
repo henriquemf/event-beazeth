@@ -21,6 +21,18 @@ window.EN = window.EN || {};
     let state = null;
     let ticker = 0;
 
+    /* O dia de QUEM ESTÁ NA FRENTE DA TELA, e não o do servidor: ele roda em
+       UTC, e das 21:00 à meia-noite do Brasil já está no dia seguinte. O app
+       do celular conta pelo dia local, e o site tem de contar pelo mesmo --
+       senão os dois mostram (e gravam) dias diferentes. */
+    function diaLocal() {
+        const agora = new Date();
+        const dois = function (n) {
+            return n < 10 ? "0" + n : String(n);
+        };
+        return agora.getFullYear() + "-" + dois(agora.getMonth() + 1) + "-" + dois(agora.getDate());
+    }
+
     function readBoot() {
         /* Widget e tela carregam os mesmos `data-*`. O primeiro do documento
            serve: quando os dois existem, vieram da mesma requisição. */
@@ -31,6 +43,8 @@ window.EN = window.EN || {};
 
         const nextIn = node.dataset.nextIn;
         return {
+            /* O dia dos copos que vieram desenhados. */
+            day: node.dataset.day || diaLocal(),
             glasses: Number(node.dataset.glasses) || 0,
             goal: Math.max(1, Number(node.dataset.goal) || 8),
             glassMl: Math.max(1, Number(node.dataset.glassMl) || 250),
@@ -156,10 +170,11 @@ window.EN = window.EN || {};
                 const data = await EN.http.request(API, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ delta: passo }),
+                    body: JSON.stringify({ delta: passo, day: diaLocal() }),
                 }, "Não consegui registrar o copo.");
 
                 state.glasses = data.glasses;
+                state.day = diaLocal();
                 state.goal = data.goal || state.goal;
                 state.glassMl = data.glassMl || state.glassMl;
                 state.dueAt = data.nextIn === null || data.nextIn === undefined
@@ -185,6 +200,51 @@ window.EN = window.EN || {};
     if (state) {
         paintLevel();
         startTicker();
+    }
+
+    /* O dia de agora, do jeito que o servidor o tem. `false` se um gole subiu
+       no meio: a resposta dele é a palavra final sobre o total. */
+    async function recarregar() {
+        if (state.busy) {
+            return false;
+        }
+        const dia = diaLocal();
+        const data = await EN.http.request("/api/hydration?day=" + dia, {
+            headers: { Accept: "application/json" },
+        }, "Não consegui atualizar a água.");
+        if (state.busy) {
+            return false;
+        }
+        state.day = dia;
+        state.glasses = data.glasses;
+        state.goal = data.goal || state.goal;
+        state.glassMl = data.glassMl || state.glassMl;
+        state.dueAt = data.nextIn === null || data.nextIn === undefined
+            ? null
+            : Date.now() + data.nextIn * 1000;
+        paintLevel();
+        emit();
+        return true;
+    }
+
+    if (state) {
+        /* A página veio com os copos do dia do servidor; se o dia aqui é outro
+           (noite no Brasil), troca pelos do dia certo. E de minuto em minuto
+           confere a virada da meia-noite, com a tela aberta. */
+        if (state.day !== diaLocal()) {
+            recarregar().catch(function () {});
+        }
+        window.setInterval(function () {
+            if (state.day !== diaLocal()) {
+                recarregar().catch(function () {});
+            }
+        }, 60000);
+    }
+
+    /* Copo bebido no celular, ou meta trocada por lá: o widget e a tela de
+       água sobem juntos, porque os dois são assinantes deste motor. */
+    if (state && EN.aoVivo) {
+        EN.aoVivo.quando(["hydrationIntake", "hydrationSettings"], recarregar);
     }
 })(window.EN);
 

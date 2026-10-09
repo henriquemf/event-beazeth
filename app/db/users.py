@@ -48,7 +48,7 @@ def get_user(user_id: int):
     with get_connection() as conn:
         return conn.execute(
             """
-            SELECT u.id, u.email, u.display_name, u.auth_epoch,
+            SELECT u.id, u.email, u.display_name, u.auth_epoch, u.sync_versao,
                    COALESCE(h.enabled, FALSE)       AS water_enabled,
                    COALESCE(h.daily_goal, 8)        AS water_goal,
                    COALESCE(h.glass_ml, 250)        AS water_glass_ml,
@@ -121,9 +121,11 @@ def update_display_name(user_id: int, display_name: str) -> str:
     pedido, senão a tela mostra um nome que o banco não tem.
     """
     nome = (display_name or "").strip()[:MAX_NAME_LENGTH]
+    # O contador sobe junto: é assim que o outro aparelho fica sabendo da
+    # troca em segundos, e não só na próxima vez que o app abrir.
     with get_connection() as conn:
         conn.execute(
-            "UPDATE users SET display_name = %s WHERE id = %s",
+            "UPDATE users SET display_name = %s, sync_versao = sync_versao + 1 WHERE id = %s",
             (nome, user_id),
         )
     return nome
@@ -140,7 +142,7 @@ def update_email(user_id: int, email: str) -> bool:
     with get_connection() as conn:
         try:
             conn.execute(
-                "UPDATE users SET email = %s WHERE id = %s",
+                "UPDATE users SET email = %s, sync_versao = sync_versao + 1 WHERE id = %s",
                 (normalize_email(email), user_id),
             )
         except UniqueViolation:

@@ -8,6 +8,9 @@ EN.notes = EN.notes || {};
     notes.API = "/api/notes";
     notes.CACHE_KEY = "en_notes_cache";
     notes.FILTER_KEY = "en_notes_filter";
+    /* Escritas que o servidor não recebeu, guardadas para reenviar. Ver
+       `guardarFalha` em store.js. */
+    notes.UNSENT_KEY = "en_notes_nao_enviadas";
 
     notes.COLORS = ["sun", "rose", "mint", "blue", "peach", "lavender"];
 
@@ -29,6 +32,8 @@ EN.notes = EN.notes || {};
     notes.DRAG_THRESHOLD = 4;
     notes.SAVE_DELAY = 420;
     notes.CACHE_DELAY = 900;
+    /* Espera antes de reenviar uma escrita que não chegou ao servidor. */
+    notes.RETRY_DELAY = 8000;
 
     notes.DEFAULT_SIZE = { width: 232, height: 216 };
 

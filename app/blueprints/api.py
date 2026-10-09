@@ -20,6 +20,7 @@ from app.ratelimit import (
     registrar_conta_criada,
     registrar_falha,
 )
+from app.db.connection import utc_now_iso
 from app.db.sync import coletar_mudancas
 from app.db import (
     MIN_PASSWORD_LENGTH,
@@ -146,6 +147,19 @@ def signup():
     }), 201
 
 
+@bp.app_context_processor
+def instante_da_tela():
+    """O instante em que a tela foi montada, para o `core/ao-vivo.js`.
+
+    É o `since` da primeira pergunta que a página faz: tudo o que mudar depois
+    disto, num celular ou noutra aba, chega sem recarregar. Vai como função, e
+    não como valor, para só custar alguma coisa nas telas que o usam. O relógio
+    é o do Python e não o do banco, mas a folga de `app/db/sync.py` cobre de
+    sobra a diferença entre os dois.
+    """
+    return {"sync_agora": utc_now_iso}
+
+
 @bp.get("/api/sync")
 def sync():
     """O que mudou desde a última vez — a espinha dorsal do app offline.
@@ -159,8 +173,25 @@ def sync():
     adiantado, e um `since` no futuro faria a sincronização pular alterações
     para sempre, sem erro nenhum aparecer.
     """
-    return jsonify({"ok": True, **coletar_mudancas(current_user()["id"],
-                                                   request.args.get("since"))})
+    conta = current_user()
+    return jsonify({
+        "ok": True,
+        # Nome e e-mail vão em toda resposta: trocados no outro aparelho,
+        # chegam aqui na sincronização seguinte, sem depender de reabrir o app.
+        "account": _conta(conta),
+        **coletar_mudancas(conta["id"], request.args.get("since")),
+    })
+
+
+@bp.get("/api/sync/versao")
+def versao():
+    """O contador de mudanças da conta -- a pergunta barata, feita a cada
+    poucos segundos com a tela aberta. Mudou? Aí vale chamar `/api/sync`.
+
+    Não custa ida nenhuma ao banco além da que o guarda de sessão já fez para
+    conferir o login: o número veio junto com a conta.
+    """
+    return jsonify({"ok": True, "versao": current_user()["sync_versao"]})
 
 
 @bp.get("/api/me")

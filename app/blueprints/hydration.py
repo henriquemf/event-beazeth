@@ -1,7 +1,7 @@
 """Tela da água: meta do dia, copo animado e configuração do lembrete."""
 
 import json
-from datetime import datetime
+from datetime import date, datetime
 
 from flask import (
     Blueprint,
@@ -20,13 +20,17 @@ from app.db import (
     MAX_GOAL,
     MIN_GLASS_ML,
     MIN_GOAL,
+    MAX_COPOS_NO_DIA,
+    MAX_DIAS_NO_HISTORICO,
     change_hydration_glasses,
     dia_do_consumo,
+    juntar_historico,
     get_hydration_settings,
     get_hydration_today,
     list_push_subscriptions,
     next_reminder_seconds,
     seconds_until,
+    today_iso,
     update_hydration_last_sent,
     upsert_hydration_settings,
 )
@@ -98,9 +102,15 @@ def inject_water_widget():
     de carona na consulta que toda requisicao faz.
     """
     user = current_user()
+    # O dia do servidor, que é o dos copos desenhados na página. O navegador
+    # compara com o dia dele e, se não bater, pede o dia certo -- ver
+    # `core/hydration.js`.
     if not user or not user["water_enabled"]:
-        return {"water_next_in": None}
-    return {"water_next_in": seconds_until(user["water_last_sent"], user["water_interval"])}
+        return {"water_next_in": None, "water_day": today_iso()}
+    return {
+        "water_next_in": seconds_until(user["water_last_sent"], user["water_interval"]),
+        "water_day": today_iso(),
+    }
 
 
 @bp.route("/hydration", methods=["GET", "POST"])
@@ -190,7 +200,8 @@ def state():
 
     return jsonify({
         "ok": True,
-        "glasses": get_hydration_today(user_id),
+        # `?day=` é o dia de quem pergunta; sem ele, o do servidor.
+        "glasses": get_hydration_today(user_id, dia_do_consumo(request.args.get("day"))),
         "goal": settings["daily_goal"],
         "glassMl": settings["glass_ml"],
         "enabled": bool(settings["enabled"]),
@@ -284,6 +295,37 @@ def save_settings():
     )
 
 
+@bp.post("/api/hydration/historico")
+def historico():
+    """O histórico de água de quem usava o app sem conta e acabou de entrar.
+
+    `/drink` não serve para isso: ele só aceita ontem, hoje e amanhã, e soma.
+    Aqui cada dia fica com o maior total entre o aparelho e a conta -- ver
+    `juntar_historico`. Dia que não é data ou total fora do razoável é pulado,
+    e não derruba o resto.
+    """
+    payload = request.get_json(silent=True) or {}
+    dias = payload.get("days")
+    if not isinstance(dias, list) or len(dias) > MAX_DIAS_NO_HISTORICO:
+        return jsonify({"ok": False, "message": "Histórico inválido."}), 400
+
+    validos = []
+    for item in dias:
+        if not isinstance(item, dict):
+            continue
+        try:
+            dia = date.fromisoformat(str(item.get("day"))).isoformat()
+            copos = int(item.get("glasses"))
+        except (TypeError, ValueError, OverflowError):
+            continue
+        if 0 < copos <= MAX_COPOS_NO_DIA:
+            validos.append((dia, copos))
+
+    if validos:
+        juntar_historico(current_user()["id"], validos)
+    return jsonify({"ok": True, "days": len(validos)})
+
+
 @bp.post("/api/hydration/drink")
 def drink():
     """Registra (ou desfaz) um copo e devolve o dia recalculado.
@@ -302,7 +344,7 @@ def drink():
     delta = -1 if str(payload.get("delta", 1)).lstrip().startswith("-") else 1
 
     now = datetime.now().isoformat(timespec="seconds")
-    # O app manda em que dia está (ver `dia_do_consumo`); o site não manda.
+    # Os dois clientes mandam em que dia estão (ver `dia_do_consumo`).
     glasses = change_hydration_glasses(user_id, delta, now, dia_do_consumo(payload.get("day")))
 
     if delta > 0:

@@ -31,6 +31,8 @@
     });
 
     let celula = null;
+    /* Gravações no ar, para o ao vivo (fim do arquivo) esperar por elas. */
+    let guardando = 0;
 
     function dizer(texto) {
         aviso.textContent = texto;
@@ -92,6 +94,7 @@
         }
         const alvo = celula;
         dizer("Guardando…");
+        guardando += 1;
 
         try {
             const resposta = await EN.http.request(
@@ -115,7 +118,17 @@
             }
         } catch (erro) {
             dizer(erro.message);
+        } finally {
+            guardando -= 1;
         }
+    }
+
+    /* O editor tem algo que a célula (o que o servidor confirmou) não tem? */
+    function editorComMudanca() {
+        return Boolean(celula) && !editor.hidden && (
+            campo.value !== (celula.dataset.note || "") ||
+            humorEscolhido() !== (celula.dataset.mood || "")
+        );
     }
 
     grade.addEventListener("click", function (evento) {
@@ -142,4 +155,35 @@
     botaoLimpar.addEventListener("click", function () {
         guardar("", "");
     });
+
+    /* O que muda no celular ou noutra aba: a grade de novo, como o servidor a
+       desenha agora. O ouvinte mora em `grade`, que fica; só o miolo troca.
+       Espera o que está subindo e o editor com texto ainda não guardado --
+       a troca o reescreveria com a versão de lá. */
+    if (EN.aoVivo) {
+        EN.aoVivo.quando(["diaryEntries"], async function () {
+            if (guardando || editorComMudanca()) {
+                return false;
+            }
+            const nova = (await EN.aoVivo.buscarTela()).getElementById("diary-grid");
+            if (!nova) {
+                return true;
+            }
+            if (guardando || editorComMudanca()) {
+                return false;
+            }
+            const dia = celula ? celula.dataset.day : null;
+            grade.innerHTML = nova.innerHTML;
+            /* A célula aberta no editor agora é outro elemento: aponta para o
+               novo, e o editor mostra o que ele traz. */
+            if (dia) {
+                celula = grade.querySelector('.diary-cell[data-day="' + dia + '"]');
+                if (celula && !editor.hidden) {
+                    campo.value = celula.dataset.note || "";
+                    marcarHumor(celula.dataset.mood || "");
+                }
+            }
+            return true;
+        });
+    }
 })(window.EN);

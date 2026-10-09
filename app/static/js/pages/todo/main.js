@@ -24,6 +24,17 @@
     /* id -> timer do debounce de texto. */
     const pending = new Map();
 
+    /* Para o ao vivo (fim do arquivo) saber quando NÃO trocar a semana pela
+       versão do servidor: pedidos de escrita ainda no ar, e textos cuja
+       gravação falhou por rede -- esses só existem no campo, e a troca os
+       apagaria da tela. Recusa do servidor (4xx) não entra: repetir não muda
+       a resposta, e a semana ficaria congelada para sempre. */
+    let noAr = 0;
+    const naoSalvas = new Set();
+
+    /* A semana como o servidor a desenhou, para comparar com a próxima. */
+    let semanaDoServidor = week.innerHTML;
+
     function setStatus(message) {
         if (!statusEl) {
             return;
@@ -112,8 +123,8 @@
         }
 
         const day = field.dataset.day;
-        const list = week.querySelector('.todo-list[data-day="' + day + '"]');
         field.value = "";
+        noAr += 1;
 
         try {
             const data = await EN.http.request(API, {
@@ -122,7 +133,12 @@
                 body: JSON.stringify({ day: day, content: content }),
             }, "Não consegui criar a tarefa.");
 
-            list.appendChild(buildItem(data.item, field.getAttribute("aria-label")));
+            /* A lista é procurada DEPOIS da resposta: o ao vivo pode ter
+               trocado a semana enquanto o pedido subia. */
+            const list = week.querySelector('.todo-list[data-day="' + day + '"]');
+            if (list) {
+                list.appendChild(buildItem(data.item, field.getAttribute("aria-label")));
+            }
             refreshCounts();
             setStatus("");
         } catch (err) {
@@ -130,24 +146,33 @@
                por causa de uma falha de rede é pior que o próprio erro. */
             field.value = content;
             setStatus(err.message);
+        } finally {
+            noAr -= 1;
         }
     }
 
     /* ------------------------------------------------------------ atualizar */
 
     async function patch(id, fields, onError) {
+        noAr += 1;
         try {
             await EN.http.request(API + "/" + id, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(fields),
             }, "Não consegui salvar a tarefa.");
+            naoSalvas.delete(id);
             setStatus("");
         } catch (err) {
+            if ("content" in fields && (!err.status || err.status >= 500)) {
+                naoSalvas.add(id);
+            }
             setStatus(err.message);
             if (onError) {
                 onError();
             }
+        } finally {
+            noAr -= 1;
         }
     }
 
@@ -243,16 +268,21 @@
         window.clearTimeout(pending.get(id));
         pending.delete(id);
         li.classList.add("is-leaving");
+        noAr += 1;
 
         EN.http.request(API + "/" + id, { method: "DELETE" }, "Não consegui apagar a tarefa.")
             .then(function () {
                 li.remove();
+                naoSalvas.delete(id);
                 refreshCounts();
                 setStatus("");
             })
             .catch(function (err) {
                 li.classList.remove("is-leaving");
                 setStatus(err.message);
+            })
+            .finally(function () {
+                noAr -= 1;
             });
     });
 
@@ -267,6 +297,32 @@
             flushAll();
         }
     });
+
+    /* O que muda no celular ou noutra aba: a semana inteira de novo, como o
+       servidor a desenha agora. Os ouvintes moram em `week`, que fica; só o
+       miolo é trocado. Espera quem está digitando, o que ainda está subindo e
+       o que não conseguiu subir. */
+    if (EN.aoVivo) {
+        EN.aoVivo.quando(["todoItems"], async function () {
+            if (noAr || pending.size || naoSalvas.size || EN.aoVivo.digitando(week)) {
+                return false;
+            }
+            const nova = (await EN.aoVivo.buscarTela()).getElementById("todo-week");
+            if (!nova) {
+                return true;
+            }
+            /* A pessoa pode ter começado a escrever enquanto a tela vinha. */
+            if (noAr || pending.size || EN.aoVivo.digitando(week)) {
+                return false;
+            }
+            if (nova.innerHTML !== semanaDoServidor) {
+                semanaDoServidor = nova.innerHTML;
+                week.innerHTML = nova.innerHTML;
+                refreshCounts();
+            }
+            return true;
+        });
+    }
 
     refreshCounts();
 })(window.EN);

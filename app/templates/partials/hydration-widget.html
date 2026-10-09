@@ -9,6 +9,7 @@
 {% from 'partials/glass.html' import glass %}
 <div class="water-widget" id="water-widget"
      data-water-boot
+     data-day="{{ water_day }}"
      data-glasses="{{ current_user['water_glasses'] }}"
      data-goal="{{ current_user['water_goal'] }}"
      data-glass-ml="{{ current_user['water_glass_ml'] }}"

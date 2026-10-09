@@ -145,11 +145,12 @@ def update_hydration_last_sent(user_id: int, sent_at_iso: str) -> None:
         )
 
 
-def get_hydration_today(user_id: int) -> int:
+def get_hydration_today(user_id: int, day: str | None = None) -> int:
+    """Copos do dia. `day` é o do cliente, já conferido por `dia_do_consumo`."""
     with get_connection() as conn:
         row = conn.execute(
             "SELECT glasses FROM hydration_intake WHERE user_id = %s AND day = %s",
-            (user_id, today_iso()),
+            (user_id, day or today_iso()),
         ).fetchone()
     return row["glasses"] if row else 0
 
@@ -166,6 +167,10 @@ def dia_do_consumo(pedido) -> str:
     Aceita só o dia de ontem, hoje ou amanhã em relação ao servidor: é a maior
     distância que dois fusos reais produzem, e evita que um payload adulterado
     escreva consumo em 2019.
+
+    Hoje o site também manda (`core/hydration.js`): antes ele ficava no dia do
+    servidor, e das 21:00 à meia-noite o PC mostrava -- e gravava -- um dia
+    diferente do celular.
     """
     hoje = date.today()
     try:
@@ -175,6 +180,32 @@ def dia_do_consumo(pedido) -> str:
     if abs((dia - hoje).days) > 1:
         return hoje.isoformat()
     return dia.isoformat()
+
+
+# Teto de copos num dia e de dias num pedido de `juntar_historico`. Ninguém
+# bebe duzentos copos; dez anos de dias cabem com folga.
+MAX_COPOS_NO_DIA = 200
+MAX_DIAS_NO_HISTORICO = 3700
+
+
+def juntar_historico(user_id: int, dias: list[tuple[str, int]]) -> None:
+    """Junta à conta o histórico de água que um aparelho tinha sem ela.
+
+    Fica o MAIOR dos dois totais de cada dia, e não a soma: o mesmo copo pode
+    estar nos dois lugares (alguém que bebeu no modo local e depois entrou na
+    conta no mesmo dia), e somar o contaria duas vezes. E nunca o menor: o
+    que a conta já tem não diminui.
+    """
+    with get_connection() as conn, conn.cursor() as cursor:
+        cursor.executemany(
+            """
+            INSERT INTO hydration_intake (user_id, day, glasses)
+            VALUES (%s, %s, %s)
+            ON CONFLICT (user_id, day) DO UPDATE SET glasses = EXCLUDED.glasses
+            WHERE hydration_intake.glasses < EXCLUDED.glasses
+            """,
+            [(user_id, dia, copos) for dia, copos in dias],
+        )
 
 
 def change_hydration_glasses(

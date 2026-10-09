@@ -91,6 +91,16 @@ def insert_sticky_note(user_id: int, fields: dict) -> dict:
     }
 
     with get_connection() as conn:
+        # Sem `z`, o post-it novo vai para CIMA dos outros, como o site faz ao
+        # criar. O app do celular não manda `z`, e com o padrão 1 o post-it
+        # criado no celular aparecia no PC atrás de todos os que já existiam.
+        if "z" not in fields:
+            topo = conn.execute(
+                "SELECT COALESCE(MAX(z_index), 0) AS z FROM sticky_notes WHERE user_id = %s",
+                (user_id,),
+            ).fetchone()["z"]
+            data["z_index"] = min(topo + 1, NOTE_BOUNDS["z_index"][1])
+
         # Nomeado em `%(nome)s`, que é a forma do psycopg — o `:nome` de antes é
         # do driver SQLite. `RETURNING` no lugar do `lastrowid`, pelo mesmo motivo.
         row = conn.execute(
