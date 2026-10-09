@@ -24,6 +24,7 @@ from app.db.connection import get_connection
 from app.db.diary import _COLUNAS_DO_DIA, _linha_para_dia
 from app.db.events import _EVENT_SELECT
 from app.db.notes import _NOTE_COLUMNS, _row_to_note_dict
+from app.db.pomodoros import linha_para_dict as _pomodoro_para_dict
 from app.db.planner import _row_to_planner_dict
 from app.db.todo import _ITEM_COLUMNS, _row_to_item
 
@@ -130,6 +131,10 @@ def coletar_mudancas(user_id: int, since: str | None) -> dict:
             "SELECT " + _COLUNAS_DO_DIA + " FROM diary_entries"
             " WHERE user_id = %s AND updated_at > %s ORDER BY day"
         )
+        pomodoros = mudou(
+            "SELECT timer_id, dados FROM pomodoros"
+            " WHERE user_id = %s AND updated_at > %s ORDER BY timer_id"
+        )
         config = conn.execute(
             "SELECT enabled, daily_goal, glass_ml, interval_minutes, start_time, end_time"
             " FROM hydration_settings WHERE user_id = %s AND updated_at > %s",
@@ -165,6 +170,7 @@ def coletar_mudancas(user_id: int, since: str | None) -> dict:
             "tags": [dict(r) for r in tags],
             "hydrationIntake": [dict(r) for r in agua],
             "diaryEntries": [_linha_para_dia(r) for r in diario],
+            "pomodoros": [_pomodoro_para_dict(r) for r in pomodoros],
             # Uma linha por conta, então vem como objeto ou `None` — e `None`
             # aqui significa "não mudou", não "não existe".
             "hydrationSettings": dict(config) if config else None,

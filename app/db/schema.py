@@ -157,6 +157,19 @@ STATEMENTS = (
         PRIMARY KEY (user_id, day)
     )
     """,
+    # Os pomodoros da conta, um por linha: o principal e ate dez outros. A
+    # chave e o id que o proprio cliente gera ("principal" para o de cima), e
+    # o estado vai num JSON so -- ver `app/db/pomodoros.py`.
+    """
+    CREATE TABLE IF NOT EXISTS pomodoros (
+        user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        timer_id TEXT NOT NULL,
+        dados TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL DEFAULT '1970-01-01T00:00:00',
+        PRIMARY KEY (user_id, timer_id)
+    )
+    """,
     # Contas criadas antes da meta diaria existir. `IF NOT EXISTS` deixa isto
     # rodar em toda subida sem custo e sem quebrar em banco ja migrado -- e o
     # equivalente em Postgres das migracoes guardadas que o SQLite exigia.
@@ -318,6 +331,9 @@ TABELAS_SINCRONIZADAS = (
     # que nunca chegou. A chave da lapide e o DIA, que e o que identifica a
     # linha dos dois lados.
     ("diary_entries", "day"),
+    # Remover um dos outros pomodoros no PC tem de tira-lo do celular: a
+    # lapide leva o id do temporizador.
+    ("pomodoros", "timer_id"),
 )
 
 

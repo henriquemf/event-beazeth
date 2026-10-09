@@ -43,9 +43,9 @@ inscrições de push são todos por pessoa, e o espaço nasce montado — com as
 não abrir num formulário sem opção nenhuma para marcar.
 
 **O que é do aparelho fica no aparelho.** Tema, fonte, modo escuro, filtro dos
-post-its, zoom do planner e o estado do pomodoro vivem no `localStorage`: são
-escolhas de quem está olhando aquela tela, e sincronizá-las faria o celular
-herdar o tema e o cronômetro do notebook.
+post-its e zoom do planner vivem no `localStorage`: são escolhas de quem está
+olhando aquela tela, e sincronizá-las faria o celular herdar o tema do notebook.
+O pomodoro é da conta: o que se começa no PC aparece no celular, e o contrário.
 
 Além das telas: PWA com manifest e service worker, inscrição de Web Push pelo
 próprio menu, microanimações e sons curtos de interface — com um som próprio
@@ -294,11 +294,25 @@ minuto. O relógio do WebAudio roda em thread própria e não sofre isso, então
 sino toca na hora exata mesmo com a aba escondida. Quem detecta o fim consulta se
 o som já estava garantido, para não tocar duas vezes.
 
-**O estado mora no localStorage, não no banco.** O widget precisa aparecer já
-pintado a cada navegação; o que se guarda é `endsAt` (epoch absoluto), então
-recarregar ou dormir a máquina não desalinha a contagem; e um timer rodando é do
-aparelho — sincronizar pelo servidor faria o celular herdar o pomodoro do
-notebook.
+**O relógio roda no localStorage; o estado é da conta.** O widget precisa
+aparecer já pintado a cada navegação, e o que se guarda é `endsAt` (epoch
+absoluto), então recarregar ou dormir a máquina não desalinha a contagem.
+
+A conta guarda **a última ação** de cada temporizador: o principal e cada um
+dos outros dez são uma linha de `pomodoros` (`app/db/pomodoros.py`). Uma ação é
+começar, pausar, zerar, trocar o tempo, renomear, criar ou remover.
+`core/pomodoro-conta.js` sobe a ação e desce o que mudou, e o app Android faz o
+mesmo (`PomodoroNaConta.kt`). Começar no PC faz o celular contar em um ou dois
+segundos.
+
+**O que acontece sozinho não sobe.** O descanso que entra no fim do foco começa
+no instante em que o foco ACABOU, e não quando a aba percebeu. Assim os dois
+lados chegam ao mesmo segundo sem conversar. Se cada um subisse a sua versão,
+um sobrescreveria o outro com segundos de diferença.
+
+Sem rede, a ação fica numa lista no `localStorage` e sobe depois. O navegador
+que conversa com a conta pela primeira vez sobe os outros pomodoros que já
+tinha, e nada do que foi montado antes se perde.
 
 ## To-do da semana
 
@@ -931,6 +945,7 @@ leitura. O app precisa: ele pede os dados e monta a tela sozinho.
 | `GET /api/sync?since=` | o que mudou e o que sumiu desde a última vez, e o nome e o e-mail de agora |
 | `GET /api/sync/versao` | o contador de mudanças da conta: a pergunta barata, a cada 2 s |
 | `POST /api/hydration/historico` | a água do modo local ao entrar numa conta: cada dia fica com o maior total |
+| `GET /api/pomodoro`, `PUT`/`DELETE /api/pomodoro/<id>` | o estado de cada temporizador depois de cada ação (o principal e os outros dez) |
 
 ### Site e app ao vivo
 

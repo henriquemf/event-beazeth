@@ -95,6 +95,14 @@ from app.db.planner import (
     update_planner_block,
     delete_planner_block,
 )
+from app.db.pomodoros import (
+    MAX_POMODOROS,
+    PRINCIPAL as POMODORO_PRINCIPAL,
+    apagar_pomodoro,
+    gravar_pomodoro,
+    id_valido as id_de_pomodoro_valido,
+    listar_pomodoros,
+)
 from app.db.todo import (
     MAX_CONTENT,
     MAX_ITEMS_PER_DAY,
@@ -168,6 +176,12 @@ __all__ = [
     "MAX_DIAS_NO_HISTORICO",
     "change_hydration_glasses",
     "juntar_historico",
+    "MAX_POMODOROS",
+    "POMODORO_PRINCIPAL",
+    "apagar_pomodoro",
+    "gravar_pomodoro",
+    "id_de_pomodoro_valido",
+    "listar_pomodoros",
     "dia_do_consumo",
     "get_hydration_today",
     "next_reminder_seconds",

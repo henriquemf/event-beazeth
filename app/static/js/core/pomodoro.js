@@ -13,31 +13,31 @@
    quem sabe onde aquele estado mora. Duplicar a contagem para o sub seria ter
    dois lugares onde consertar o mesmo bug.
 
-   O principal guarda em `en_pomodoro`; os subs vivem todos numa lista só, em
-   `en_pomodoro_subs`, cada um com o próprio estado dentro da própria linha.
-   Uma chave só para os subs porque o evento `storage` entre abas chega uma vez
-   por chave: com onze chaves seriam onze ouvintes fazendo a mesma coisa.
+   O principal guarda em `en_pomodoro`. Os subs moram em
+   `core/pomodoro-subs.js`, montados com o mesmo `criarMotor` daqui.
 
-   Por que localStorage e não o banco:
+   O relógio roda no localStorage, e não num fetch:
    - O widget precisa aparecer já pintado a cada navegação. Vindo de fetch, toda
      troca de página teria um buraco na sidebar até a resposta chegar.
    - O que é guardado é `endsAt` (epoch absoluto), não "segundos restantes".
      Assim recarregar a página, dormir a máquina ou trocar de aba não desalinha
      a contagem: ela é sempre recalculada a partir do relógio.
-   - Um timer rodando é do aparelho, não da conta. Sincronizar via servidor faria
-     o celular herdar o pomodoro do notebook. */
+
+   Mas o pomodoro é da CONTA: o que se começa aqui aparece no celular, e o
+   contrário. Quem leva e traz é `core/pomodoro-conta.js`; daqui saem só duas
+   coisas para ele. Uma é o aviso de cada AÇÃO de quem está na tela (`aoAgir`).
+   A outra é a regra que faz os dois lados chegarem ao mesmo descanso sem
+   conversar: ele começa no instante em que o foco acabou, e não quando a aba
+   percebeu. */
 window.EN = window.EN || {};
 
 (function (EN) {
     "use strict";
 
     const KEY = "en_pomodoro";
-    const SUBS_KEY = "en_pomodoro_subs";
     const CHOICE_KEY = "en_pomodoro_choice";
     const AUTO_KEY = "en_pomodoro_auto_descanso";
     const PADRAO_MINUTOS = 25;
-    const MAX_SUBS = 10;
-    const MAX_NOME = 24;
     const TICK_MS = 250;
     const WARN_MS = 5 * 60 * 1000;
     const MIN_MINUTES = 1;
@@ -51,6 +51,17 @@ window.EN = window.EN || {};
         { ate: 59, minutos: 10 },
     ];
     const DESCANSO_LONGO = 15;
+
+    /* Quem quer saber de cada ação de quem está na tela: começar, pausar,
+       zerar, renomear, trocar o tempo. O que acontece sozinho (o descanso que
+       entra, o fim) não passa por aqui -- cada aparelho calcula o seu. */
+    const ouvintesDeAcao = [];
+
+    function agiu(id) {
+        ouvintesDeAcao.forEach(function (fn) {
+            fn(id);
+        });
+    }
 
     const VAZIO = { active: false, status: "idle", phase: "normal", mode: "foco", leftMs: 0, totalMs: 0, progress: 0, minutes: 0, label: "" };
 
@@ -216,12 +227,17 @@ window.EN = window.EN || {};
            recomeça. Voltar a focar é decisão de quem está lá. */
         function comecarDescanso() {
             const total = descansoDe(state.minutes) * 60000;
+            /* Do instante em que o foco ACABOU, e não de agora: assim o celular,
+               que calcula o mesmo descanso a partir do mesmo fim, chega ao
+               mesmo segundo. Com a aba dormindo, o descanso pode já ter
+               passado -- e aí o próximo pulso o encerra. */
+            const fimDoFoco = state.endsAt || Date.now();
             state = {
                 status: "running",
                 mode: "descanso",
                 totalMs: total,
                 minutes: total / 60000,
-                endsAt: Date.now() + total,
+                endsAt: fimDoFoco + total,
                 leftMs: total,
                 label: state.label || "",
             };
@@ -266,6 +282,37 @@ window.EN = window.EN || {};
             emit();
         }
 
+        /* Um foco que terminou longe daqui -- com a aba fechada, ou no celular
+           -- entra direto no ponto em que estaria, sem som: no descanso, se
+           ele ainda corre, ou concluído. Fim de agora (menos de `quieto` ms)
+           fica para o pulso, que comemora. */
+        function assentar(quieto) {
+            if (!state || state.status !== "running" || leftOf(state) > 0) {
+                return;
+            }
+            if (Date.now() - state.endsAt < quieto) {
+                return;
+            }
+            if (state.mode !== "descanso" && descansoAutomatico()) {
+                const total = descansoDe(state.minutes) * 60000;
+                const fimDoDescanso = state.endsAt + total;
+                if (Date.now() < fimDoDescanso) {
+                    state = {
+                        status: "running",
+                        mode: "descanso",
+                        totalMs: total,
+                        minutes: total / 60000,
+                        endsAt: fimDoDescanso,
+                        leftMs: total,
+                        label: state.label || "",
+                    };
+                    return;
+                }
+            }
+            state.status = "done";
+            state.leftMs = 0;
+        }
+
         function tick() {
             if (!state) {
                 return;
@@ -295,6 +342,7 @@ window.EN = window.EN || {};
                 armChime();
                 startTicker();
                 emit();
+                agiu(porta.id);
             },
 
             pause: function () {
@@ -307,6 +355,7 @@ window.EN = window.EN || {};
                 cancelChime();
                 stopTicker();
                 emit();
+                agiu(porta.id);
             },
 
             resume: function () {
@@ -319,6 +368,7 @@ window.EN = window.EN || {};
                 armChime();
                 startTicker();
                 emit();
+                agiu(porta.id);
             },
 
             stop: function () {
@@ -327,6 +377,7 @@ window.EN = window.EN || {};
                 cancelChime();
                 stopTicker();
                 emit();
+                agiu(porta.id);
             },
 
             /* Recalcula agora, sem esperar o próximo pulso. Serve para a aba que
@@ -338,6 +389,7 @@ window.EN = window.EN || {};
                mudou, e um eco daqui sobrescreveria o que acabou de chegar. */
             recarregar: function () {
                 state = normalizar(porta.ler());
+                assentar(3000);
                 armChime();
                 startTicker();
                 emit();
@@ -363,18 +415,14 @@ window.EN = window.EN || {};
             },
         };
 
-        /* Nascimento: adota o que estava guardado. */
+        /* Nascimento: adota o que estava guardado. Acabou com a aba fechada:
+           entra no descanso ou concluído, sem som -- o momento passou, e um
+           sino ao abrir a página só assustaria. */
         state = normalizar(porta.ler());
+        assentar(0);
         if (state && state.status === "running") {
-            if (leftOf(state) <= 0) {
-                /* Acabou com a aba fechada: já entra como concluído, sem som — o
-                   momento passou e um sino ao abrir a página só assustaria. */
-                state.status = "done";
-                state.leftMs = 0;
-            } else {
-                armChime();
-                startTicker();
-            }
+            armChime();
+            startTicker();
         }
         write();
 
@@ -384,6 +432,7 @@ window.EN = window.EN || {};
     /* ---------------------------------------------------------- principal */
 
     const principal = criarMotor({
+        id: "principal",
         ler: function () {
             return lerJson(KEY);
         },
@@ -424,6 +473,7 @@ window.EN = window.EN || {};
 
     principal.definirEscolha = function (minutos) {
         gravarJson(CHOICE_KEY, clampMinutes(minutos));
+        agiu("principal");
     };
 
     /* Um interruptor para os onze: o principal e os subs são o mesmo motor, e
@@ -433,6 +483,16 @@ window.EN = window.EN || {};
     principal.descansoAutomatico = descansoAutomatico;
     principal.definirDescansoAutomatico = function (ligado) {
         gravarJson(AUTO_KEY, !!ligado);
+        agiu("principal");
+    };
+
+    /* Para `core/pomodoro-conta.js`: as chaves e regras que ele precisa para
+       ler e escrever o mesmo estado, sem uma segunda cópia delas. */
+    principal.CHOICE_KEY = CHOICE_KEY;
+    principal.descansoDe = descansoDe;
+    principal.normalizar = normalizar;
+    principal.aoAgir = function (fn) {
+        ouvintesDeAcao.push(fn);
     };
 
     /* A frase de estado, em português e por extenso. Fica no motor porque a
@@ -469,190 +529,25 @@ window.EN = window.EN || {};
 
     EN.pomodoro = principal;
 
-    /* --------------------------------------------------- sub-pomodoros */
-
-    /* Cada linha é `{ id, nome, minutos, estado, timer }`. `estado` é o que vai
-       para o localStorage; `timer` é o motor vivo e não é serializado. */
-    let subs = [];
-    const ouvintesDaLista = [];
-    let carregando = true;
-
-    function quantosCorrendo() {
-        return subs.filter(function (sub) {
-            return sub.timer && sub.timer.snapshot().status === "running";
-        }).length;
-    }
-
-    function avisarLista() {
-        ouvintesDaLista.forEach(function (fn) {
-            fn(subs);
-        });
-    }
-
-    /* Chamado a cada transição de qualquer sub (é o `gravar` da porta deles) e
-       também quando a lista muda de tamanho ou de nome. Ou seja: NÃO roda a
-       cada pulso do relógio — só quando algo de verdade mudou. */
-    function gravarLista() {
-        if (carregando) {
-            return;
-        }
-        gravarJson(SUBS_KEY, subs.map(function (sub) {
-            return { id: sub.id, nome: sub.nome, minutos: sub.minutos, estado: sub.estado };
-        }));
-        document.documentElement.dataset.pomoSubs = String(quantosCorrendo());
-        avisarLista();
-    }
-
-    function acharSub(id) {
-        return subs.filter(function (sub) {
-            return sub.id === id;
-        })[0] || null;
-    }
-
-    function nascer(linha) {
-        const sub = {
-            id: linha.id,
-            nome: String(linha.nome || "").slice(0, MAX_NOME),
-            minutos: clampMinutes(linha.minutos),
-            estado: normalizar(linha.estado),
-            timer: null,
-        };
-        sub.timer = criarMotor({
-            ler: function () {
-                return sub.estado;
-            },
-            gravar: function (estado) {
-                sub.estado = estado;
-                gravarLista();
-            },
-        });
-        return sub;
-    }
-
-    function novoId() {
-        return Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7);
-    }
-
-    /* Realinha a lista com o que está gravado — usado no nascimento e quando
-       outra aba mexeu. Reaproveita os motores que continuam existindo: recriar
-       todos derrubaria as assinaturas da tela a cada tecla digitada num nome. */
-    function adotarGravado() {
-        const guardado = lerJson(SUBS_KEY);
-        const linhas = Array.isArray(guardado) ? guardado.slice(0, MAX_SUBS) : [];
-        const antigos = subs;
-        const vivos = {};
-
-        /* Enquanto adota, ninguém grava. Um motor recém-nascido grava o próprio
-           estado ao nascer, e nesse instante `subs` ainda é a lista velha: a
-           gravação sairia SEM o sub que acabou de chegar da outra aba e a
-           apagaria de volta lá. */
-        carregando = true;
-
-        subs = linhas.filter(function (linha) {
-            return linha && linha.id;
-        }).map(function (linha) {
-            vivos[linha.id] = true;
-            const sub = acharSub(linha.id);
-            if (!sub) {
-                return nascer(linha);
-            }
-            sub.nome = String(linha.nome || "").slice(0, MAX_NOME);
-            sub.minutos = clampMinutes(linha.minutos);
-            sub.estado = normalizar(linha.estado);
-            sub.timer.recarregar();
-            return sub;
-        });
-
-        antigos.forEach(function (sub) {
-            if (!vivos[sub.id]) {
-                sub.timer.encerrar();
-            }
-        });
-
-        carregando = false;
-        document.documentElement.dataset.pomoSubs = String(quantosCorrendo());
-    }
-
-    EN.pomodoroSubs = {
-        MAX: MAX_SUBS,
-        MAX_NOME: MAX_NOME,
-
-        lista: function () {
-            return subs.slice();
-        },
-
-        correndo: quantosCorrendo,
-
-        /* Nasce com o tempo do principal: é o que "um pomodoro igual" quer
-           dizer. Devolve a linha nova, ou null quando os 10 já estão de pé. */
-        criar: function (minutos, nome) {
-            if (subs.length >= MAX_SUBS) {
-                return null;
-            }
-            const sub = nascer({ id: novoId(), nome: nome || "", minutos: minutos });
-            subs.push(sub);
-            gravarLista();
-            return sub;
-        },
-
-        remover: function (id) {
-            const sub = acharSub(id);
-            if (!sub) {
-                return;
-            }
-            sub.timer.encerrar();
-            subs = subs.filter(function (item) {
-                return item !== sub;
-            });
-            gravarLista();
-        },
-
-        renomear: function (id, nome) {
-            const sub = acharSub(id);
-            if (!sub) {
-                return;
-            }
-            sub.nome = String(nome || "").slice(0, MAX_NOME);
-            gravarLista();
-        },
-
-        definirMinutos: function (id, minutos) {
-            const sub = acharSub(id);
-            if (!sub) {
-                return;
-            }
-            sub.minutos = clampMinutes(minutos);
-            gravarLista();
-        },
-
-        /* Avisa quando a lista muda: alguém entrou, alguém saiu, alguém trocou
-           de nome ou algum deles começou/parou de contar. */
-        subscribe: function (fn) {
-            ouvintesDaLista.push(fn);
-            fn(subs);
-            return function () {
-                const index = ouvintesDaLista.indexOf(fn);
-                if (index !== -1) {
-                    ouvintesDaLista.splice(index, 1);
-                }
-            };
-        },
+    /* O motor e as regras, para `core/pomodoro-subs.js` montar os outros dez
+       com exatamente o mesmo relógio -- e não com uma segunda cópia dele. */
+    principal.interno = {
+        criarMotor: criarMotor,
+        clampMinutes: clampMinutes,
+        normalizar: normalizar,
+        lerJson: lerJson,
+        gravarJson: gravarJson,
+        agiu: agiu,
     };
 
     /* ------------------------------------------------------ inicialização */
 
-    adotarGravado();
-
     /* Aba em segundo plano tem setInterval estrangulado. Ao voltar, recalcula
        na hora em vez de esperar o próximo pulso. */
     document.addEventListener("visibilitychange", function () {
-        if (document.visibilityState !== "visible") {
-            return;
+        if (document.visibilityState === "visible") {
+            principal.tick();
         }
-        principal.tick();
-        subs.forEach(function (sub) {
-            sub.timer.tick();
-        });
     });
 
     /* Duas abas abertas ficam em sincronia: quem não fez a mudança recebe o
@@ -660,9 +555,6 @@ window.EN = window.EN || {};
     window.addEventListener("storage", function (event) {
         if (event.key === KEY) {
             principal.recarregar();
-        } else if (event.key === SUBS_KEY) {
-            adotarGravado();
-            avisarLista();
         }
     });
 })(window.EN);

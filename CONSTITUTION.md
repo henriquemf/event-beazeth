@@ -460,8 +460,9 @@ A linha não é de gosto, é de custo e de verdade:
 
 - **Da conta**: o que identifica quem está falando e o que o site também mostra
   — nome de exibição, e-mail, senha. Muda pela API, vale nos dois lados.
-- **Do aparelho**: tema, fonte, modo escuro, o estado do pomodoro, a foto de
-  perfil. O tema do computador nunca teve de mandar no do celular; a foto não
+- **Do aparelho**: tema, fonte, modo escuro, a foto de perfil. O pomodoro
+  já esteve aqui e saiu: o que se começava no PC não aparecia no celular, e a
+  pessoa o usa nos dois. Ele é da conta (ver a seção seguinte). O tema do computador nunca teve de mandar no do celular; a foto não
   sobe porque o banco é cobrado por byte e o disco do Render some a cada deploy.
   Guardá-la lá pediria uma coluna de bytes ou um serviço de arquivos novo, para
   um app de duas pessoas.
@@ -493,6 +494,12 @@ era o que acontecia, não é.
 
 "Hoje" é o dia de quem está na frente da tela, nos dois lados: o servidor roda
 em UTC, e das 21:00 à meia-noite já está no dia seguinte.
+
+**Estado com relógio sobe a AÇÃO, não a transição.** O pomodoro sobe começar,
+pausar, zerar. O que o tempo faz sozinho (o descanso que entra, o fim) cada lado
+calcula a partir do mesmo instante, e por isso os dois chegam ao mesmo
+resultado. Subir a transição faria dois aparelhos sobrescreverem um ao outro
+com segundos de diferença.
 
 ### O aviso é do aparelho; a regra é do servidor
 

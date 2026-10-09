@@ -59,6 +59,14 @@ ENDPOINTS = (
     ("/api/hydration/settings", "PATCH", True,
      ("ok", "enabled", "intervalMinutes", "startTime", "endTime", "goal", "glassMl", "nextIn")),
 
+    # --- pomodoro ----------------------------------------------------------
+    #
+    # O estado de cada temporizador depois de cada ação. O relógio continua
+    # rodando em cada aparelho; ver `app/db/pomodoros.py`.
+    ("/api/pomodoro", "GET", True, ("ok", "pomodoros")),
+    ("/api/pomodoro/<timer_id>", "PUT", True, ("ok", "pomodoro")),
+    ("/api/pomodoro/<timer_id>", "DELETE", True, ("ok",)),
+
     # --- diário ------------------------------------------------------------
     #
     # Uma rota só: humor e texto são editados juntos, e limpar os dois apaga a

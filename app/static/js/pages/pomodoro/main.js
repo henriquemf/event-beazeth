@@ -172,6 +172,11 @@
         }
     });
 
+    /* O mesmo quando a mudança veio do celular (core/pomodoro-conta.js). */
+    document.addEventListener("en:pomodoro-conta", function () {
+        els.auto.checked = EN.pomodoro.descansoAutomatico();
+    });
+
     EN.pomodoro.subscribe(function (snap) {
         stage.dataset.pomoStatus = snap.status;
         stage.dataset.pomoPhase = snap.phase;

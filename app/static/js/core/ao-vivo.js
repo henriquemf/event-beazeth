@@ -47,6 +47,7 @@ window.EN = window.EN || {};
         events: "events",
         event_tags: "tags",
         diary_entries: "diaryEntries",
+        pomodoros: "pomodoros",
     };
 
     /* O que identifica a linha em cada entidade. */
